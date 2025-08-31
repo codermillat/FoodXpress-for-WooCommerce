@@ -1,0 +1,15 @@
+---
+globs: *.php
+---
+# WordPress & WooCommerce Coding Standards
+
+Refer to [wordpress-development-guidelines.md](mdc:.clinerules/wordpress-development-guidelines.md) for complete details. Essential points:
+
+• Use strict typing where possible: `declare(strict_types=1);`
+• Follow WordPress coding standards: camelCase for variables/functions, PascalCase for classes.
+• Prefer hooks (`add_action`, `add_filter`) over editing core files.
+• Sanitize and escape ALL inputs/outputs (`sanitize_text_field`, `esc_html`, etc.).
+• Use `$wpdb->prepare()` for database queries; avoid raw SQL.
+• Protect forms with nonces (`wp_verify_nonce`).
+• Enqueue assets via `wp_enqueue_script()` / `wp_enqueue_style()`.
+• Check WooCommerce activation & version before hooking.

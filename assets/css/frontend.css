@@ -1,0 +1,380 @@
+/* General App-like Styles */
+html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.fxw-app-dashboard {
+    background-color: #f0f2f5;
+    min-height: 100vh;
+}
+
+.fxw-app-header {
+    background-color: #ffffff;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.fxw-app-header h1 {
+    margin: 0;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.fxw-tabs {
+    display: flex;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 60px; /* Adjust based on header height */
+    z-index: 999;
+}
+
+.fxw-tab-link {
+    flex-grow: 1;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: 1em;
+    color: #555;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.fxw-tab-link.active {
+    color: #007cba;
+    border-bottom-color: #007cba;
+    font-weight: 600;
+}
+
+.fxw-app-main {
+    padding: 15px;
+}
+
+.fxw-tab-content {
+    display: none;
+}
+
+.fxw-tab-content.active {
+    display: block;
+}
+
+.fxw-order-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
+    overflow: hidden;
+}
+
+.fxw-card-header {
+    padding: 15px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fxw-card-header h3 {
+    margin: 0;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.fxw-status-badge {
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    color: #fff;
+    text-transform: capitalize;
+    font-weight: 500;
+}
+
+.status-fxw-assigned {
+    background-color: #ffb900;
+}
+
+.status-fxw-picked-up {
+    background-color: #1e88e5;
+}
+
+.fxw-card-body {
+    padding: 15px;
+}
+
+.fxw-card-section {
+    margin-bottom: 15px;
+}
+
+.fxw-card-section:last-child {
+    margin-bottom: 0;
+}
+
+.fxw-card-section p {
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    font-size: 0.95em;
+    color: #333;
+}
+
+.fxw-card-section p strong {
+    color: #111;
+}
+
+.fxw-icon {
+    margin-right: 12px;
+    font-size: 1.4em;
+    width: 24px;
+    text-align: center;
+    color: #007cba;
+}
+
+.fxw-collect-amount {
+    font-weight: bold;
+    color: #d32f2f;
+    font-size: 1.1em;
+}
+
+.fxw-card-footer {
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+}
+
+.fxw-action-form, .fxw-button {
+    flex: 1;
+    margin: 0;
+}
+
+.fxw-button {
+    text-decoration: none;
+    padding: 18px;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+}
+
+.fxw-button .fxw-icon {
+    margin-right: 8px;
+}
+
+.fxw-button-map {
+    background-color: #f0f0f0;
+    color: #333;
+    border-bottom-left-radius: 12px;
+}
+
+.fxw-button-pickup {
+    background-color: #ffb900;
+    color: #fff;
+    border-bottom-right-radius: 12px;
+}
+
+.fxw-button-deliver {
+    background-color: #28a745;
+    color: #fff;
+    border-bottom-right-radius: 12px;
+}
+
+.fxw-no-orders {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+}
+
+/* Order Tracking Page Styles */
+.fxw-track-order-page .fxw-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0;
+}
+
+.fxw-track-order-form-container {
+    background: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.fxw-track-order-form-container h2 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.8em;
+}
+
+.fxw-track-order-form-container p {
+    text-align: center;
+    color: #777;
+    margin-bottom: 30px;
+}
+
+.fxw-track-order-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.fxw-track-order-form .form-row {
+    display: flex;
+    flex-direction: column;
+}
+
+.fxw-track-order-form label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.fxw-track-order-form input[type="text"],
+.fxw-track-order-form input[type="email"] {
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+.fxw-button-track {
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #007cba;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1em;
+    width: 100%;
+}
+
+.fxw-order-status-wrapper {
+    background: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.fxw-order-status-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.fxw-order-status-header h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.8em;
+}
+
+.fxw-current-status-text {
+    color: #333;
+    font-size: 1.2em;
+    font-weight: 500;
+    margin: 0;
+}
+
+.fxw-status-tracker {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin: 50px 0;
+}
+
+.fxw-status-line {
+    position: absolute;
+    top: 12px;
+    left: 10%;
+    right: 10%;
+    height: 4px;
+    background-color: #e0e0e0;
+    z-index: 1;
+}
+
+.status-step {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    width: 25%;
+}
+
+.status-step .dot {
+    width: 24px;
+    height: 24px;
+    background-color: #fff;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid #e0e0e0;
+    transition: all 0.4s ease;
+}
+
+.status-step .dot .fxw-icon {
+    font-size: 14px;
+    color: #fff;
+}
+
+.status-step .label {
+    display: block;
+    margin-top: 15px;
+    font-size: 0.9em;
+    color: #777;
+    font-weight: 500;
+}
+
+.status-step.completed .dot {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.status-step.current .dot {
+    background-color: #ffb900;
+    border-color: #ffb900;
+    transform: scale(1.2);
+}
+
+.fxw-delivery-boy-info {
+    margin-top: 40px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.fxw-delivery-boy-info h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.fxw-delivery-boy-info p {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.fxw-button-call {
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background-color: #007cba;
+    color: #fff;
+    font-weight: 600;
+}

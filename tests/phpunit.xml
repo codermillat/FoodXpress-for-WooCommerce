@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    bootstrap="bootstrap.php"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    processIsolation="false"
+    stopOnFailure="false"
+    testSuiteLoaderClass="PHPUnit\Runner\StandardTestSuiteLoader"
+    testSuiteLoaderFile=""
+    verbose="true">
+
+    <testsuites>
+        <testsuite name="Security Tests">
+            <directory>unit/security</directory>
+        </testsuite>
+        <testsuite name="Core Tests">
+            <directory>unit/core</directory>
+        </testsuite>
+        <testsuite name="Integration Tests">
+            <directory>integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <filter>
+        <whitelist>
+            <directory suffix=".php">../includes</directory>
+            <exclude>
+                <file>../includes/class-fxw-admin-bar.php</file>
+            </exclude>
+        </whitelist>
+    </filter>
+
+    <logging>
+        <log type="coverage-html" target="coverage-report"/>
+        <log type="coverage-clover" target="coverage.xml"/>
+    </logging>
+</phpunit>

@@ -1,0 +1,115 @@
+<?php
+/**
+ * Manages the delivery boy view.
+ *
+ * @since      1.0.0
+ * @package    FoodXpress
+ * @author     MD MILLAT HOSEN <https://github.com/codermillat>
+ */
+class FXW_Delivery_Boy_View {
+
+	/**
+	 * Initialize the class and set its properties.
+	 *
+	 * @since    1.0.0
+	 */
+public function __construct() {
+add_filter( 'woocommerce_login_redirect', array( $this, 'login_redirect' ), 10, 2 );
+add_action( 'admin_post_fxw_mark_picked_up', array( $this, 'mark_picked_up' ) );
+add_action( 'admin_post_fxw_mark_delivered', array( $this, 'mark_delivered' ) );
+}
+
+	/**
+	 * Redirect delivery boys to their dashboard after login.
+	 *
+	 * @param   string    $redirect   The redirect URL.
+	 * @param   WP_User   $user       The user object.
+	 * @return  string                The modified redirect URL.
+	 * @since   1.0.0
+	 */
+	public function login_redirect( $redirect, $user ) {
+		if ( in_array( 'delivery_boy', (array) $user->roles ) ) {
+			$redirect = home_url( '/delivery-dashboard/' );
+		}
+		return $redirect;
+	}
+
+
+
+
+/**
+ * Handle "Picked Up" action from Delivery Dashboard.
+ *
+ * @since 1.0.0
+ */
+public function mark_picked_up() {
+if ( ! is_user_logged_in() || ! current_user_can( 'fxw_delivery_access' ) ) {
+wp_die( __( 'Unauthorized.', 'foodxpress' ) );
+}
+
+$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+if ( ! wp_verify_nonce( $nonce, 'fxw_delivery_action' ) ) {
+wp_die( __( 'Invalid nonce.', 'foodxpress' ) );
+}
+
+$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+$order    = $order_id ? wc_get_order( $order_id ) : false;
+
+if ( ! $order ) {
+wp_die( __( 'Invalid order.', 'foodxpress' ) );
+}
+
+$assigned_id = $order->get_meta( '_fxw_delivery_boy_id', true );
+
+if ( empty( $assigned_id ) || (int) $assigned_id !== (int) get_current_user_id() ) {
+    wp_die( __( 'You are not assigned to this order.', 'foodxpress' ) );
+}
+
+// Update status to picked up
+if ( is_callable( array( $order, 'update_status' ) ) ) {
+    $order->update_status( 'fxw-picked-up', __( 'Order picked up by delivery agent.', 'foodxpress' ) );
+}
+
+wp_safe_redirect( home_url( '/delivery-dashboard/?updated=1' ) );
+exit;
+}
+
+/**
+ * Handle "Delivered" action from Delivery Dashboard.
+ *
+ * @since 1.0.0
+ */
+public function mark_delivered() {
+if ( ! is_user_logged_in() || ! current_user_can( 'fxw_delivery_access' ) ) {
+wp_die( __( 'Unauthorized.', 'foodxpress' ) );
+}
+
+$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+if ( ! wp_verify_nonce( $nonce, 'fxw_delivery_action' ) ) {
+wp_die( __( 'Invalid nonce.', 'foodxpress' ) );
+}
+
+$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+$order    = $order_id ? wc_get_order( $order_id ) : false;
+
+if ( ! $order ) {
+wp_die( __( 'Invalid order.', 'foodxpress' ) );
+}
+
+$assigned_id = $order->get_meta( '_fxw_delivery_boy_id', true );
+
+if ( empty( $assigned_id ) || (int) $assigned_id !== (int) get_current_user_id() ) {
+    wp_die( __( 'You are not assigned to this order.', 'foodxpress' ) );
+}
+
+// Finalize delivery - mark completed
+if ( is_callable( array( $order, 'update_status' ) ) ) {
+    $order->update_status( 'completed', __( 'Order delivered by delivery agent.', 'foodxpress' ) );
+}
+
+wp_safe_redirect( home_url( '/delivery-dashboard/?delivered=1' ) );
+exit;
+}
+}
+
+new FXW_Delivery_Boy_View();

@@ -1,0 +1,11 @@
+---
+globs: tests/**/*.js,tests/**/*.php
+---
+# Testing Standards
+
+See [project-guidelines.md](mdc:.clinerules/project-guidelines.md) §Documentation & Testing for full requirements.
+
+• Unit tests for business logic (`WP_UnitTestCase` for PHP).
+• Integration tests for API endpoints and shipping flows.
+• E2E tests for critical user journeys with Playwright under `tests/e2e`.
+• Keep fixtures in `tests/fixtures` and bootstrap via `tests/bootstrap.php`.

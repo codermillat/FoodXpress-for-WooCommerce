@@ -102,16 +102,23 @@ class FXW_Core {
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . '../assets/js/admin.js', array( 'jquery' ), $this->version, true );
 	}
 
-	/**
-	 * Enqueue scripts for the delivery dashboard.
-	 *
-	 * @since    1.0.1
-	 */
-	public function enqueue_delivery_dashboard_scripts() {
-		if ( is_page_template( 'templates/delivery-dashboard-template.php' ) ) {
-			wp_enqueue_script( 'fxw-delivery-dashboard', plugin_dir_url( __FILE__ ) . '../assets/js/delivery-dashboard.js', array( 'jquery' ), $this->version, true );
-		}
-	}
+/**
+ * Enqueue scripts for the delivery dashboard page.
+ *
+ * @since    1.0.0
+ */
+public function enqueue_delivery_dashboard_scripts() {
+// Check if we're on the delivery dashboard page
+if ( get_query_var( 'is_delivery_dashboard' ) || is_page_template( 'templates/delivery-dashboard-template.php' ) ) {
+wp_enqueue_script( 'fxw-delivery-dashboard', plugin_dir_url( __FILE__ ) . '../assets/js/delivery-dashboard.js', array( 'jquery' ), $this->version, true );
+       
+// Localize script with AJAX parameters for delivery dashboard
+wp_localize_script( 'fxw-delivery-dashboard', 'fxw_checkout_params', array(
+'ajax_url' => admin_url( 'admin-ajax.php' ),
+'nonce'    => wp_create_nonce( 'fxw_print_receipt' ),
+) );
+}
+}
 
 /**
  * Define the hooks for the plugin.
@@ -119,16 +126,17 @@ class FXW_Core {
  * @since    1.0.0
  * @access   private
  */
-private function define_hooks() {
-add_action( 'after_setup_theme', array( $this, 'disable_admin_bar' ) );
-add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_delivery_dashboard_scripts' ) );
-add_action( 'init', array( $this, 'add_rewrite_rules' ) );
-add_filter( 'query_vars', array( $this, 'add_query_vars' ) );
-add_filter( 'template_include', array( $this, 'template_include' ) );
-add_action( 'woocommerce_shipping_init', array( $this, 'load_shipping_method' ) );
-add_filter( 'woocommerce_shipping_methods', array( $this, 'add_shipping_method' ) );
-add_filter( 'woocommerce_shipping_chosen_method', array( $this, 'prefer_fxw_shipping' ), 10, 2 );
-}
+	private function define_hooks() {
+		add_action( 'after_setup_theme', array( $this, 'disable_admin_bar' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_delivery_dashboard_scripts' ) );
+		add_action( 'init', array( $this, 'add_rewrite_rules' ) );
+		add_filter( 'query_vars', array( $this, 'add_query_vars' ) );
+		add_action( 'template_redirect', array( $this, 'handle_delivery_dashboard_access' ) );
+		add_filter( 'template_include', array( $this, 'template_include' ) );
+		add_action( 'woocommerce_shipping_init', array( $this, 'load_shipping_method' ) );
+		add_filter( 'woocommerce_shipping_methods', array( $this, 'add_shipping_method' ) );
+		add_filter( 'woocommerce_shipping_chosen_method', array( $this, 'prefer_fxw_shipping' ), 10, 2 );
+	}
 
 /**
  * Add rewrite rules for delivery dashboard.
@@ -149,6 +157,20 @@ add_rewrite_rule( '^delivery-dashboard/?$', 'index.php?is_delivery_dashboard=tru
 public function add_query_vars( $vars ) {
 $vars[] = 'is_delivery_dashboard';
 return $vars;
+}
+
+/**
+ * Handle access control for delivery dashboard before any output is sent.
+ *
+ * @since    1.0.0
+ */
+public function handle_delivery_dashboard_access() {
+if ( get_query_var( 'is_delivery_dashboard' ) ) {
+if ( ! is_user_logged_in() || ! current_user_can( 'fxw_delivery_access' ) ) {
+wp_redirect( home_url() );
+exit;
+}
+}
 }
 
 /**

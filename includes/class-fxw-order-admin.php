@@ -8,17 +8,18 @@
  */
 class FXW_Order_Admin {
 
-	/**
-	 * Initialize the class and set its properties.
-	 *
-	 * @since    1.0.0
-	 */
-	public function __construct() {
-		add_action( 'add_meta_boxes', array( $this, 'add_delivery_meta_box' ) );
-		add_action( 'save_post_shop_order', array( $this, 'save_delivery_meta_box_data' ) );
-		add_action( 'template_redirect', array( $this, 'print_receipt_template' ) );
-		add_action( 'admin_init', array( $this, 'handle_order_actions' ) );
-	}
+/**
+ * Initialize the class and set its properties.
+ *
+ * @since    1.0.0
+ */
+public function __construct() {
+add_action( 'add_meta_boxes', array( $this, 'add_delivery_meta_box' ) );
+add_action( 'save_post_shop_order', array( $this, 'save_delivery_meta_box_data' ) );
+add_action( 'template_redirect', array( $this, 'print_receipt_template' ) );
+add_action( 'admin_init', array( $this, 'handle_order_actions' ) );
+add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
+}
 
 /**
  * Handle order actions.
@@ -58,6 +59,39 @@ exit;
 }
 
 /**
+ * Enqueue admin scripts and styles.
+ *
+ * @param string $hook The current admin page hook.
+ * @since 1.0.0
+ */
+public function enqueue_admin_scripts( $hook ) {
+// Only load on order edit pages
+if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
+return;
+}
+
+global $post;
+if ( ! $post || 'shop_order' !== $post->post_type ) {
+return;
+}
+
+// Enqueue delivery dashboard script for order admin pages
+wp_enqueue_script(
+'fxw-delivery-dashboard',
+plugin_dir_url( __FILE__ ) . '../assets/js/delivery-dashboard.js',
+array( 'jquery' ),
+FXW_VERSION,
+true
+);
+
+// Localize script with AJAX parameters
+wp_localize_script( 'fxw-delivery-dashboard', 'fxw_checkout_params', array(
+'ajax_url' => admin_url( 'admin-ajax.php' ),
+'nonce'    => wp_create_nonce( 'fxw_print_receipt' ),
+) );
+}
+
+/**
  * Load the receipt template.
  *
  * @since    1.0.0
@@ -77,6 +111,10 @@ $order = wc_get_order( $order_id );
 if ( ! $order ) {
 wp_die( __( 'Invalid order.', 'foodxpress' ) );
 }
+
+// Set the global order variable for the template
+global $order;
+$GLOBALS['order'] = $order;
 
 include_once FXW_PLUGIN_DIR . 'templates/receipt-template.php';
 exit;
@@ -110,14 +148,37 @@ exit;
 		$order = wc_get_order( $post->ID );
 $delivery_boy_id = $order ? $order->get_meta( '_fxw_delivery_boy_id', true ) : '';
 		$delivery_boys   = get_users( array( 'role' => 'delivery_boy' ) );
-		$order           = wc_get_order( $post->ID );
-		$payment_method  = $order->get_payment_method_title();
-$shipping_address = $order->get_formatted_shipping_address();
-$unit = get_post_meta( $post->ID, '_fxw_address_unit', true );
-?>
-<?php if ( $unit ) : ?>
-<p><strong><?php _e( 'Flat/House/Unit:', 'foodxpress' ); ?></strong> <?php echo esc_html( $unit ); ?></p>
-<?php endif; ?>
+	$order           = wc_get_order( $post->ID );
+	$payment_method  = $order->get_payment_method_title();
+	$shipping_address = $order->get_formatted_shipping_address();
+	
+	// Get new delivery details
+	$delivery_address = $order->get_meta( '_fxw_delivery_address', true );
+	$delivery_lat = $order->get_meta( '_fxw_delivery_lat', true );
+	$delivery_lng = $order->get_meta( '_fxw_delivery_lng', true );
+	$delivery_distance = $order->get_meta( '_fxw_delivery_distance', true );
+	
+	// Fallback to old unit field for backward compatibility
+	$unit = get_post_meta( $post->ID, '_fxw_address_unit', true );
+	?>
+	<?php if ( $delivery_address ) : ?>
+		<div style="margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-left: 4px solid #0073aa;">
+			<p><strong><?php _e( 'Delivery Address:', 'foodxpress' ); ?></strong><br>
+			<?php echo esc_html( $delivery_address ); ?></p>
+			
+			<?php if ( $delivery_distance ) : ?>
+				<p><strong><?php _e( 'Delivery Distance:', 'foodxpress' ); ?></strong> 
+				<?php echo esc_html( $delivery_distance ); ?> km</p>
+			<?php endif; ?>
+			
+			<?php if ( $delivery_lat && $delivery_lng ) : ?>
+				<p><strong><?php _e( 'Coordinates:', 'foodxpress' ); ?></strong> 
+				<?php echo esc_html( $delivery_lat ); ?>, <?php echo esc_html( $delivery_lng ); ?></p>
+			<?php endif; ?>
+		</div>
+	<?php elseif ( $unit ) : ?>
+		<p><strong><?php _e( 'Flat/House/Unit:', 'foodxpress' ); ?></strong> <?php echo esc_html( $unit ); ?></p>
+	<?php endif; ?>
 <p>
 <strong><?php _e( 'Payment Method:', 'foodxpress' ); ?></strong><br>
 			<?php echo esc_html( $payment_method ); ?>
@@ -141,10 +202,21 @@ $unit = get_post_meta( $post->ID, '_fxw_address_unit', true );
 				<p><?php _e( 'No delivery boys found. Please create a user with the "Delivery Boy" role.', 'foodxpress' ); ?></p>
 			<?php endif; ?>
 		</p>
-		<p>
-			<a href="https://www.google.com/maps/search/?api=1&query=<?php echo urlencode( $shipping_address ); ?>" target="_blank" class="button"><?php _e( 'View on Map', 'foodxpress' ); ?></a>
-			<a href="#" class="button" onclick="window.open('<?php echo esc_url( add_query_arg( 'fxw_print_receipt', $post->ID ) ); ?>', '_blank'); return false;"><?php _e( 'Print Receipt', 'foodxpress' ); ?></a>
-		</p>
+<p>
+<?php
+// Create precise map link using coordinates if available
+if ( $delivery_lat && $delivery_lng ) {
+	$map_url = "https://www.google.com/maps?q=" . urlencode( $delivery_lat . ',' . $delivery_lng );
+	$map_label = __( 'Open Exact Location', 'foodxpress' );
+} else {
+	// Fallback to address-based search
+	$map_url = "https://www.google.com/maps/search/?api=1&query=" . urlencode( $shipping_address );
+	$map_label = __( 'Search Location', 'foodxpress' );
+}
+?>
+<a href="<?php echo esc_url( $map_url ); ?>" target="_blank" class="button"><?php echo esc_html( $map_label ); ?></a>
+<a href="#" class="button" onclick="window.open('<?php echo esc_url( add_query_arg( 'fxw_print_receipt', $post->ID ) ); ?>', '_blank'); return false;"><?php _e( 'Print Receipt', 'foodxpress' ); ?></a>
+</p>
 		<p>
 			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'fxw_action', 'reject', get_edit_post_link( $post->ID ) ), 'fxw_order_action' ) ); ?>" class="button button-danger"><?php _e( 'Reject Order', 'foodxpress' ); ?></a>
 			<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'fxw_action', 'reassign', get_edit_post_link( $post->ID ) ), 'fxw_order_action' ) ); ?>" class="button"><?php _e( 'Re-assign', 'foodxpress' ); ?></a>

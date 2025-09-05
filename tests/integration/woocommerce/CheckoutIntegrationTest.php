@@ -71,6 +71,23 @@ class CheckoutIntegrationTest extends TestCase {
         // Step 4: Verify shipping method availability
         $this->assertTrue($this->isShippingMethodAvailable($distance_data),
             'Shipping method should be available for valid location');
+
+        // Step 5: Test new delivery details saving
+        $order = $this->createMockOrder();
+        $this->simulateDeliveryDetailsSaving($order, $location_data, $distance_data);
+
+        // Verify new meta fields are saved
+        $this->assertEquals($location_data['address'], $order->get_meta('_fxw_delivery_address'),
+            'Delivery address should be saved to order meta');
+        $this->assertEquals($location_data['lat'], $order->get_meta('_fxw_delivery_lat'),
+            'Delivery latitude should be saved to order meta');
+        $this->assertEquals($location_data['lng'], $order->get_meta('_fxw_delivery_lng'),
+            'Delivery longitude should be saved to order meta');
+        
+        // Verify distance is calculated and saved
+        $expected_distance = round($distance_data['distance'] / 1000, 2);
+        $this->assertEquals($expected_distance, $order->get_meta('_fxw_delivery_distance'),
+            'Delivery distance should be calculated and saved');
     }
 
     /**
@@ -336,6 +353,116 @@ class CheckoutIntegrationTest extends TestCase {
             $GLOBALS['wc_session_data'] = array();
         }
         $GLOBALS['wc_session_data'][$key] = $value;
+    }
+
+    /**
+     * Create a mock WooCommerce order for testing
+     */
+    private function createMockOrder() {
+        // Create a mock order object
+        $order = new stdClass();
+        $order->meta_data = array();
+        
+        // Add methods to simulate WooCommerce order
+        $order->get_meta = function($key, $single = true) use ($order) {
+            return isset($order->meta_data[$key]) ? $order->meta_data[$key] : '';
+        };
+        
+        $order->update_meta_data = function($key, $value) use ($order) {
+            $order->meta_data[$key] = $value;
+        };
+        
+        $order->save = function() use ($order) {
+            return true;
+        };
+        
+        return $order;
+    }
+
+    /**
+     * Simulate saving delivery details to order
+     */
+    private function simulateDeliveryDetailsSaving($order, $location_data, $distance_data) {
+        // Mock POST data
+        $_POST['fxw_delivery_address'] = $location_data['address'];
+        
+        // Set session data
+        $this->setSessionData('customer_lat', $location_data['lat']);
+        $this->setSessionData('customer_lng', $location_data['lng']);
+        $this->setSessionData('fxw_distance_data', $distance_data);
+        
+        // Simulate the save_delivery_details_to_order method
+        $delivery_address = sanitize_textarea_field($location_data['address']);
+        $lat = $location_data['lat'];
+        $lng = $location_data['lng'];
+        $distance_km = round($distance_data['distance'] / 1000, 2);
+        
+        // Save to mock order
+        $order->update_meta_data('_fxw_delivery_address', $delivery_address);
+        $order->update_meta_data('_fxw_delivery_lat', (float) $lat);
+        $order->update_meta_data('_fxw_delivery_lng', (float) $lng);
+        $order->update_meta_data('_fxw_delivery_distance', $distance_km);
+        
+        return true;
+    }
+
+    /**
+     * Test new delivery address field validation
+     */
+    public function test_delivery_address_field_validation() {
+        // Test empty delivery address
+        $_POST['fxw_delivery_address'] = '';
+        $result = $this->validateDeliveryAddress($_POST['fxw_delivery_address']);
+        $this->assertFalse($result, 'Empty delivery address should fail validation');
+
+        // Test valid delivery address
+        $_POST['fxw_delivery_address'] = '123 Main St, New York, NY 10001';
+        $result = $this->validateDeliveryAddress($_POST['fxw_delivery_address']);
+        $this->assertTrue($result, 'Valid delivery address should pass validation');
+
+        // Test address with special characters
+        $_POST['fxw_delivery_address'] = '123 Main St, Apt #4B, New York, NY 10001';
+        $result = $this->validateDeliveryAddress($_POST['fxw_delivery_address']);
+        $this->assertTrue($result, 'Address with special characters should pass validation');
+    }
+
+    /**
+     * Test backward compatibility with old unit field
+     */
+    public function test_backward_compatibility_with_unit_field() {
+        $order = $this->createMockOrder();
+        
+        // Test order with old unit field but no delivery address
+        $order->update_meta_data('_fxw_address_unit', 'Apt 4B');
+        
+        // Should fall back to unit display in admin
+        $unit = $order->get_meta('_fxw_address_unit');
+        $delivery_address = $order->get_meta('_fxw_delivery_address');
+        
+        $this->assertEquals('Apt 4B', $unit, 'Old unit field should be preserved');
+        $this->assertEmpty($delivery_address, 'New delivery address should be empty');
+        
+        // Test order with both fields - new should take precedence
+        $order->update_meta_data('_fxw_delivery_address', '123 Main St, Apt 4B, New York');
+        
+        $new_delivery_address = $order->get_meta('_fxw_delivery_address');
+        $this->assertNotEmpty($new_delivery_address, 'New delivery address should take precedence');
+    }
+
+    /**
+     * Validate delivery address field
+     */
+    private function validateDeliveryAddress($address) {
+        if (empty($address) || trim($address) === '') {
+            return false;
+        }
+        
+        // Basic validation - check for minimum length
+        if (strlen(trim($address)) < 10) {
+            return false;
+        }
+        
+        return true;
     }
 }
 

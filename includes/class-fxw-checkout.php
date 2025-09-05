@@ -28,9 +28,7 @@ add_action( 'wp_ajax_nopriv_fxw_debug_status', array( $this, 'debug_status' ) );
 add_action( 'woocommerce_checkout_update_user_meta', array( $this, 'save_customer_address' ), 10, 2 );
 add_action( 'woocommerce_cart_calculate_fees', array( $this, 'add_delivery_fee' ) );
 add_filter( 'woocommerce_cart_shipping_method_full_label', array( $this, 'append_eta_to_label' ), 10, 2 );
-add_action( 'woocommerce_checkout_create_order', array( $this, 'save_unit_to_order' ), 10, 2 );
-add_action( 'woocommerce_admin_order_data_after_billing_address', array( $this, 'admin_show_unit' ), 10, 1 );
-add_action( 'woocommerce_order_details_after_order_table', array( $this, 'frontend_show_unit' ), 10, 1 );
+add_action( 'woocommerce_checkout_create_order', array( $this, 'save_delivery_details_to_order' ), 10, 2 );
 
 // Register script loader filter once for Google Maps defer attribute
 add_filter( 'script_loader_tag', array( $this, 'add_async_defer_to_maps_script' ), 10, 2 );
@@ -451,88 +449,109 @@ WC()->cart->calculate_totals();
 wp_send_json_success( array( 'lat' => $lat, 'lng' => $lng ) );
 }
 
-	/**
-	 * Save customer address to user meta.
-	 *
-	 * @param int   $customer_id The customer ID.
-	 * @param array $data        The posted data.
-	 * @since 1.0.0
-	 */
+/**
+ * Save customer address to user meta.
+ *
+ * @param int   $customer_id The customer ID.
+ * @param array $data        The posted data.
+ * @since 1.0.0
+ */
 public function save_customer_address( $customer_id, $data ) {
-    if ( ! empty( $_POST['fxw_location-search-input'] ) ) {
+    if ( ! empty( $_POST['fxw_location-search-input'] ) || ! empty( $_POST['fxw_delivery_address'] ) ) {
         $distance_data = WC()->session->get( 'fxw_distance_data' );
+        $delivery_address = isset( $_POST['fxw_delivery_address'] ) ? sanitize_textarea_field( wp_unslash( $_POST['fxw_delivery_address'] ) ) : '';
+        
         $profile = array(
-            'address_1'     => $data['shipping_address_1'],
-            'address_2'     => $data['shipping_address_2'],
-            'city'          => $data['shipping_city'],
-            'state'         => $data['shipping_state'],
-            'postcode'      => $data['shipping_postcode'],
-            'country'       => $data['shipping_country'],
-            'lat'           => WC()->session->get( 'customer_lat' ),
-            'lng'           => WC()->session->get( 'customer_lng' ),
-            'unit'          => isset( $_POST['fxw_address_unit'] ) ? sanitize_text_field( $_POST['fxw_address_unit'] ) : '',
-            'distance_data' => $distance_data,
+            'address_1'         => $data['shipping_address_1'],
+            'address_2'         => $data['shipping_address_2'],
+            'city'              => $data['shipping_city'],
+            'state'             => $data['shipping_state'],
+            'postcode'          => $data['shipping_postcode'],
+            'country'           => $data['shipping_country'],
+            'lat'               => WC()->session->get( 'customer_lat' ),
+            'lng'               => WC()->session->get( 'customer_lng' ),
+            'delivery_address'  => $delivery_address,
+            'distance_data'     => $distance_data,
         );
         update_user_meta( $customer_id, '_fxw_delivery_profile', $profile );
     }
 }
 
-    /**
-     * Save Flat/House/Unit to order meta during checkout.
-     *
-     * @param WC_Order $order
-     * @param array    $data
-     */
-    public function save_unit_to_order( $order, $data ) {
-        if ( isset( $_POST['fxw_address_unit'] ) ) {
-            $unit = sanitize_text_field( wp_unslash( $_POST['fxw_address_unit'] ) );
-            if ( is_a( $order, 'WC_Order' ) && $unit !== '' ) {
-                $order->update_meta_data( '_fxw_address_unit', $unit );
-            }
-        }
+/**
+ * Save delivery details to order meta during checkout.
+ *
+ * @param WC_Order $order
+ * @param array    $data
+ * @since 1.0.0
+ */
+public function save_delivery_details_to_order( $order, $data ) {
+    if ( ! is_a( $order, 'WC_Order' ) ) {
+        return;
     }
 
-    /**
-     * Show Flat/House/Unit in admin order details.
-     *
-     * @param WC_Order $order
-     */
-    public function admin_show_unit( $order ) {
-        $unit = is_a( $order, 'WC_Order' ) ? $order->get_meta( '_fxw_address_unit', true ) : '';
-        if ( ! empty( $unit ) ) {
-            echo '<p><strong>' . esc_html__( 'Flat/House/Unit', 'foodxpress' ) . ':</strong> ' . esc_html( $unit ) . '</p>';
-        }
+    // Get the full delivery address from POST data
+    $delivery_address = '';
+    if ( isset( $_POST['fxw_delivery_address'] ) ) {
+        $delivery_address = sanitize_textarea_field( wp_unslash( $_POST['fxw_delivery_address'] ) );
     }
 
-    /**
-     * Show Flat/House/Unit on customer order details page.
-     *
-     * @param WC_Order|int $order
-     */
-    public function frontend_show_unit( $order ) {
-        if ( ! is_a( $order, 'WC_Order' ) ) {
-            $order = wc_get_order( $order );
-        }
-        if ( ! $order ) {
-            return;
-        }
-        $unit = $order->get_meta( '_fxw_address_unit', true );
-        if ( ! empty( $unit ) ) {
-            echo '<p class="fxw-order-unit"><strong>' . esc_html__( 'Flat/House/Unit', 'foodxpress' ) . ':</strong> ' . esc_html( $unit ) . '</p>';
-        }
+    // Get coordinates from session
+    $lat = WC()->session->get( 'customer_lat' );
+    $lng = WC()->session->get( 'customer_lng' );
+
+    // Get distance data from session
+    $distance_data = WC()->session->get( 'fxw_distance_data' );
+    $distance_km = 0;
+    if ( $distance_data && isset( $distance_data['distance'] ) && is_object( $distance_data['distance'] ) && isset( $distance_data['distance']->value ) ) {
+        $distance_km = round( $distance_data['distance']->value / 1000, 2 );
     }
+
+    // Save all delivery details to order meta
+    if ( ! empty( $delivery_address ) ) {
+        $order->update_meta_data( '_fxw_delivery_address', $delivery_address );
+    }
+
+    if ( $lat && $lng ) {
+        $order->update_meta_data( '_fxw_delivery_lat', (float) $lat );
+        $order->update_meta_data( '_fxw_delivery_lng', (float) $lng );
+    }
+
+    if ( $distance_km > 0 ) {
+        $order->update_meta_data( '_fxw_delivery_distance', $distance_km );
+    }
+
+    // Log the saved data for debugging
+    if ( function_exists( 'wc_get_logger' ) ) {
+        wc_get_logger()->debug( sprintf( 
+            'save_delivery_details_to_order: order_id=%d, address=%s, lat=%s, lng=%s, distance=%s km', 
+            $order->get_id(), 
+            $delivery_address, 
+            $lat, 
+            $lng, 
+            $distance_km 
+        ), array( 'source' => 'foodxpress' ) );
+    }
+}
 
 /**
  * Add custom fields to the checkout page.
-	 *
-	 * @since    1.0.0
-	 */
+ *
+ * @since    1.0.0
+ */
 public function add_checkout_fields() {
-    $saved_address_value = '';
+    $saved_delivery_address = '';
     if ( is_user_logged_in() ) {
         $profile = get_user_meta( get_current_user_id(), '_fxw_delivery_profile', true );
         if ( ! empty( $profile['address_1'] ) ) {
-            $saved_address_value = $profile['address_1'];
+            // Combine saved address components for the single field
+            $address_parts = array_filter( array(
+                $profile['address_1'],
+                $profile['address_2'],
+                $profile['city'],
+                $profile['state'],
+                $profile['postcode']
+            ) );
+            $saved_delivery_address = implode( ', ', $address_parts );
         }
     }
     ?>
@@ -541,7 +560,7 @@ public function add_checkout_fields() {
 <p><?php esc_html_e( 'Search for your address or use the map to set your delivery location.', 'foodxpress' ); ?></p>
 
 <div class="fxw-location-search-wrapper">
-<input id="fxw-location-search-input" type="text" placeholder="<?php esc_attr_e( 'Search for your address...', 'foodxpress' ); ?>" class="input-text" value="<?php echo esc_attr( $saved_address_value ); ?>" />
+<input id="fxw-location-search-input" type="text" placeholder="<?php esc_attr_e( 'Search for your address...', 'foodxpress' ); ?>" class="input-text" value="<?php echo esc_attr( $saved_delivery_address ); ?>" />
 <a href="#" id="fxw-get-location" class="button"><?php esc_html_e( 'Use My Location', 'foodxpress' ); ?></a>
 </div>
 
@@ -549,10 +568,19 @@ public function add_checkout_fields() {
 
 <div id="fxw-geolocation-error" class="woocommerce-error" style="display:none;"></div>
 
-<p class="form-row form-row-wide">
-    <label for="fxw_address_unit"><?php esc_html_e( 'Flat/House/Unit No. (optional)', 'foodxpress' ); ?></label>
-    <input type="text" name="fxw_address_unit" id="fxw_address_unit" class="input-text" placeholder="<?php esc_attr_e( 'e.g. Flat 12B, Tower 3', 'foodxpress' ); ?>" value="<?php echo esc_attr( WC()->checkout->get_value( 'fxw_address_unit' ) ); ?>" autocomplete="off" />
-</p>
+<?php
+// Single address field that combines address and delivery instructions
+woocommerce_form_field( 'fxw_delivery_address', array(
+    'type'        => 'textarea',
+    'class'       => array( 'form-row-wide' ),
+    'label'       => __( 'Complete Delivery Address', 'foodxpress' ),
+    'placeholder' => __( 'Full address including flat/house number, building name, delivery instructions...', 'foodxpress' ),
+    'required'    => true,
+    'custom_attributes' => array(
+        'rows' => 3,
+    ),
+), WC()->checkout->get_value( 'fxw_delivery_address' ) );
+?>
 
 <?php if ( is_user_logged_in() ) : ?>
 <p class="form-row form-row-wide">
@@ -563,12 +591,6 @@ public function add_checkout_fields() {
 <?php endif; ?>
 </div>
 <?php
-woocommerce_form_field( 'fxw_delivery_notes', array(
-'type'        => 'textarea',
-'class'       => array( 'form-row-wide' ),
-'label'       => __( 'Delivery Notes', 'foodxpress' ),
-'placeholder' => __( 'e.g. knock loudly, beware of the dog', 'foodxpress' ),
-), WC()->checkout->get_value( 'fxw_delivery_notes' ) );
 }
 
 /**
@@ -583,6 +605,47 @@ $options = get_option( 'fxw_settings' );
 $radius  = isset( $options['fxw_delivery_zone_radius'] ) ? (float) $options['fxw_delivery_zone_radius'] : FXW_Config::DEFAULT_DELIVERY_RADIUS;
 $is_open_raw = isset( $options['fxw_is_open'] ) ? $options['fxw_is_open'] : 'yes';
 $is_open = in_array( $is_open_raw, array( 'yes', 'true', 1, '1', true ), true );
+
+    // Enhanced address field validation - ensure delivery address is complete and detailed
+    $delivery_address = isset( $_POST['fxw_delivery_address'] ) ? trim( sanitize_textarea_field( wp_unslash( $_POST['fxw_delivery_address'] ) ) ) : '';
+    
+    if ( empty( $delivery_address ) ) {
+        $errors->add( 'delivery_address', __( 'Please provide a complete delivery address. Use the map to select your location or search for your address.', 'foodxpress' ) );
+        return;
+    }
+
+    // Enhanced address completeness validation with better thresholds
+    if ( strlen( $delivery_address ) < 20 ) {
+        $errors->add( 'delivery_address', __( 'Please provide more detailed delivery address information. Include building name, flat/house number, and any delivery instructions to help our delivery agent find you easily.', 'foodxpress' ) );
+        return;
+    }
+
+    // Validate address contains essential components for successful delivery
+    $completeness_check = $this->validate_address_completeness( $delivery_address );
+    if ( ! $completeness_check['is_complete'] ) {
+        $specific_message = $completeness_check['message'];
+        $errors->add( 'delivery_address', sprintf( 
+            __( 'Please improve your delivery address: %s. This helps our delivery agent find you quickly and accurately.', 'foodxpress' ), 
+            $specific_message 
+        ) );
+        return;
+    }
+
+    // Enhanced coordinate validation
+    $customer_lat = WC()->session->get( 'customer_lat' );
+    $customer_lng = WC()->session->get( 'customer_lng' );
+    
+    // Ensure coordinates are present and valid
+    if ( ! $customer_lat || ! $customer_lng || ! is_numeric( $customer_lat ) || ! is_numeric( $customer_lng ) ) {
+        $errors->add( 'delivery_zone', __( 'Please select your exact location on the map. This ensures accurate delivery and helps our delivery agent find you.', 'foodxpress' ) );
+        return;
+    }
+
+    // Validate coordinate precision (must be reasonable GPS coordinates)
+    if ( abs( $customer_lat ) > 90 || abs( $customer_lng ) > 180 ) {
+        $errors->add( 'delivery_zone', __( 'Invalid location coordinates detected. Please select your location again using the map.', 'foodxpress' ) );
+        return;
+    }
 
 // Check if restaurant address is configured
 $restaurant_address = isset( $options['fxw_restaurant_address'] ) ? trim( $options['fxw_restaurant_address'] ) : '';
@@ -691,8 +754,119 @@ if ( function_exists( 'wc_get_logger' ) ) {
 wc_get_logger()->info( 'validate_delivery_zone: out of zone', array( 'source' => 'foodxpress' ) );
 }
 $errors->add( 'delivery_zone', __( 'Sorry, we do not deliver to your location.', 'foodxpress' ) );
+return;
 }
-	}
+
+// Store the validated distance data for order processing
+WC()->session->set( 'fxw_distance_data', $distance_data );
+
+// Log successful validation with delivery details
+if ( function_exists( 'wc_get_logger' ) ) {
+wc_get_logger()->debug( sprintf( 
+    'validate_delivery_zone: success - distance=%.3f km, address_length=%d chars', 
+    $distance_in_km, 
+    strlen( $delivery_address ) 
+), array( 'source' => 'foodxpress' ) );
+}
+}
+
+/**
+ * Validate address completeness for delivery with detailed feedback.
+ *
+ * @param string $address The delivery address to validate.
+ * @return array Array with 'is_complete' boolean and 'message' string.
+ * @since 1.0.0
+ */
+private function validate_address_completeness( $address ) {
+    if ( empty( $address ) ) {
+        return array(
+            'is_complete' => false,
+            'message' => __( 'address field is empty', 'foodxpress' )
+        );
+    }
+
+    if ( strlen( $address ) < 20 ) {
+        return array(
+            'is_complete' => false,
+            'message' => __( 'address is too short - please provide more details', 'foodxpress' )
+        );
+    }
+
+    // Check for essential address components
+    $address_lower = strtolower( $address );
+    $has_building_info = false;
+    $has_location_info = false;
+    $has_numbers = false;
+
+    // Enhanced building/location indicators
+    $building_keywords = array( 'flat', 'apartment', 'apt', 'floor', 'building', 'block', 'house', 'home', 'tower', 'complex', 'society', 'villa', 'bungalow', 'street', 'road', 'lane', 'avenue', 'plaza', 'square', 'mall', 'shop', 'office' );
+    $location_keywords = array( 'near', 'opposite', 'behind', 'next to', 'beside', 'landmark', 'gate', 'entrance', 'main', 'sector', 'area', 'locality', 'colony', 'nagar', 'city', 'town', 'metro', 'station', 'market', 'hospital', 'school' );
+
+    foreach ( $building_keywords as $keyword ) {
+        if ( strpos( $address_lower, $keyword ) !== false ) {
+            $has_building_info = true;
+            break;
+        }
+    }
+
+    foreach ( $location_keywords as $keyword ) {
+        if ( strpos( $address_lower, $keyword ) !== false ) {
+            $has_location_info = true;
+            break;
+        }
+    }
+
+    // Check for numbers (house/flat numbers, postal codes)
+    $has_numbers = preg_match( '/\d+/', $address );
+
+    // Specific validation checks with helpful messages
+    if ( ! $has_numbers ) {
+        return array(
+            'is_complete' => false,
+            'message' => __( 'please include building/house/flat number', 'foodxpress' )
+        );
+    }
+
+    if ( ! $has_building_info && ! $has_location_info ) {
+        return array(
+            'is_complete' => false,
+            'message' => __( 'please add building name, street name, or nearby landmark', 'foodxpress' )
+        );
+    }
+
+    // Check for delivery instructions or additional details
+    $has_delivery_hints = false;
+    $delivery_keywords = array( 'floor', 'gate', 'entrance', 'lift', 'stairs', 'parking', 'security', 'guard', 'bell', 'intercom', 'buzzer', 'call', 'ring', 'door', 'left', 'right', 'behind', 'front' );
+    
+    foreach ( $delivery_keywords as $keyword ) {
+        if ( strpos( $address_lower, $keyword ) !== false ) {
+            $has_delivery_hints = true;
+            break;
+        }
+    }
+
+    // All basic checks passed
+    if ( strlen( $address ) > 30 && $has_building_info && $has_numbers ) {
+        return array(
+            'is_complete' => true,
+            'message' => __( 'address looks complete', 'foodxpress' )
+        );
+    }
+
+    // Moderate completeness - warn but allow
+    if ( $has_building_info && $has_numbers ) {
+        return array(
+            'is_complete' => true,
+            'message' => __( 'address is acceptable but could use more detail', 'foodxpress' )
+        );
+    }
+
+    // Fallback - minimal requirements met
+    return array(
+        'is_complete' => ( $has_building_info || $has_location_info ) && $has_numbers,
+        'message' => __( 'please add more specific delivery details like floor, gate number, or landmarks', 'foodxpress' )
+    );
+}
 
 
 public function customize_checkout_fields( $fields ) {

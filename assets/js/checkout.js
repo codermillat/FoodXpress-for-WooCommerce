@@ -13,26 +13,26 @@ if (window.console && window.console.log) {
     console.log('FXW: Defining global callback function fxwInitMap');
 }
 
-// Global callback function for Google Maps API - MUST be defined immediately
-// This function MUST be available in global scope when Google Maps loads
+// Global callback function for Google Maps API
 window.fxwInitMap = function() {
+    // DEBUG: Log every time the callback is triggered
     if (window.console && window.console.log) {
-        console.log('FXW: fxwInitMap callback called by Google Maps');
+        console.log('FXW: Global callback fxwInitMap triggered');
     }
     
-    // Check if map container exists
-    var mapContainer = document.getElementById('fxw-map');
-    if (!mapContainer) {
-        if (window.console && window.console.log) {
-            console.log('FXW: Map container #fxw-map not found, retrying in 100ms');
+    // Check retry limit to prevent infinite loops
+    if (fxwMapRetryScheduled && typeof fxw_checkout_params !== 'undefined' && fxw_checkout_params.max_retries) {
+        var currentRetries = parseInt(window.fxwRetryCount || 0);
+        if (currentRetries >= fxw_checkout_params.max_retries) {
+            if (window.console && window.console.error) {
+                console.error('FXW: Max retries exceeded, aborting map initialization');
+            }
+            return;
         }
-        setTimeout(function() {
-            window.fxwInitMap();
-        }, 100);
-        return;
+        window.fxwRetryCount = currentRetries + 1;
     }
     
-    // Check if jQuery is available
+    // Ensure jQuery is available before proceeding
     if (typeof jQuery === 'undefined') {
         if (window.console && window.console.log) {
             console.log('FXW: jQuery not available, retrying in 100ms');
@@ -230,6 +230,163 @@ jQuery(function($) {
     }
 
     /**
+     * Validates address completeness for delivery requirements with detailed feedback.
+     * @param {string} address - The address to validate
+     * @returns {object} Object with 'isComplete' boolean, 'message' string, and 'severity' string
+     */
+    function validateAddressCompleteness(address) {
+        if (!address || address.trim().length === 0) {
+            return {
+                isComplete: false,
+                message: 'Address field is empty',
+                severity: 'error'
+            };
+        }
+
+        if (address.length < 20) {
+            return {
+                isComplete: false,
+                message: 'Address is too short - please provide more details',
+                severity: 'warning'
+            };
+        }
+
+        var addressLower = address.toLowerCase();
+        var hasBuildingInfo = false;
+        var hasLocationInfo = false;
+        var hasNumbers = false;
+
+        // Enhanced building/location indicators
+        var buildingKeywords = ['flat', 'apartment', 'apt', 'floor', 'building', 'block', 'house', 'home', 'tower', 'complex', 'society', 'villa', 'bungalow', 'street', 'road', 'lane', 'avenue', 'plaza', 'square', 'mall', 'shop', 'office'];
+        var locationKeywords = ['near', 'opposite', 'behind', 'next to', 'beside', 'landmark', 'gate', 'entrance', 'main', 'sector', 'area', 'locality', 'colony', 'nagar', 'city', 'town', 'metro', 'station', 'market', 'hospital', 'school'];
+
+        for (var i = 0; i < buildingKeywords.length; i++) {
+            if (addressLower.indexOf(buildingKeywords[i]) !== -1) {
+                hasBuildingInfo = true;
+                break;
+            }
+        }
+
+        for (var i = 0; i < locationKeywords.length; i++) {
+            if (addressLower.indexOf(locationKeywords[i]) !== -1) {
+                hasLocationInfo = true;
+                break;
+            }
+        }
+
+        // Check for numbers (house/flat numbers, postal codes)
+        hasNumbers = /\d+/.test(address);
+
+        // Specific validation checks with helpful messages
+        if (!hasNumbers) {
+            return {
+                isComplete: false,
+                message: 'Please include building/house/flat number',
+                severity: 'warning'
+            };
+        }
+
+        if (!hasBuildingInfo && !hasLocationInfo) {
+            return {
+                isComplete: false,
+                message: 'Please add building name, street name, or nearby landmark',
+                severity: 'warning'
+            };
+        }
+
+        // Check for delivery instructions or additional details
+        var hasDeliveryHints = false;
+        var deliveryKeywords = ['floor', 'gate', 'entrance', 'lift', 'stairs', 'parking', 'security', 'guard', 'bell', 'intercom', 'buzzer', 'call', 'ring', 'door', 'left', 'right', 'behind', 'front'];
+        
+        for (var i = 0; i < deliveryKeywords.length; i++) {
+            if (addressLower.indexOf(deliveryKeywords[i]) !== -1) {
+                hasDeliveryHints = true;
+                break;
+            }
+        }
+
+        // All basic checks passed
+        if (address.length > 30 && hasBuildingInfo && hasNumbers) {
+            return {
+                isComplete: true,
+                message: 'Address looks complete and detailed',
+                severity: 'success'
+            };
+        }
+
+        // Moderate completeness - warn but allow
+        if (hasBuildingInfo && hasNumbers) {
+            return {
+                isComplete: true,
+                message: 'Address is acceptable but could use more detail',
+                severity: 'info'
+            };
+        }
+
+        // Fallback - minimal requirements met
+        return {
+            isComplete: (hasBuildingInfo || hasLocationInfo) && hasNumbers,
+            message: 'Please add more specific delivery details like floor, gate number, or landmarks',
+            severity: 'warning'
+        };
+    }
+
+    // Update address field feedback with visual indicators
+    function updateAddressFieldFeedback(result) {
+        const addressField = $('#fxw_delivery_address');
+        const feedbackContainer = addressField.closest('.form-row').find('.fxw-address-feedback');
+        
+        // Create feedback container if it doesn't exist
+        if (feedbackContainer.length === 0) {
+            addressField.closest('.form-row').append('<div class="fxw-address-feedback"></div>');
+        }
+        
+        const container = addressField.closest('.form-row').find('.fxw-address-feedback');
+        
+        // Clear previous feedback
+        container.removeClass('success info warning error').empty();
+        
+        if (result.message) {
+            container.addClass(result.severity).html(
+                '<i class="fxw-icon fxw-icon-' + result.severity + '"></i>' + result.message
+            );
+        }
+    }
+
+    // Real-time address validation handler
+    function handleAddressValidation() {
+        const addressField = $('#fxw_delivery_address');
+        let validationTimeout;
+
+        // Debounced validation to avoid excessive API calls
+        function debounceValidation() {
+            clearTimeout(validationTimeout);
+            validationTimeout = setTimeout(() => {
+                const result = validateAddressCompleteness(addressField.val());
+                updateAddressFieldFeedback(result);
+                
+                // Update field styling based on validation
+                addressField.removeClass('fxw-valid fxw-invalid fxw-incomplete');
+                if (result.isComplete) {
+                    addressField.addClass('fxw-valid');
+                } else if (result.severity === 'error') {
+                    addressField.addClass('fxw-invalid');
+                } else {
+                    addressField.addClass('fxw-incomplete');
+                }
+            }, 500); // Wait 500ms after user stops typing
+        }
+
+        // Bind validation events
+        addressField.on('input paste keyup', debounceValidation);
+        
+        // Initial validation on page load
+        if (addressField.val().length > 0) {
+            debounceValidation();
+        }
+    }
+
+    /**
      * Initializes the map and all related components using modern Google Maps APIs.
      */
     async function initMap() {
@@ -406,12 +563,12 @@ jQuery(function($) {
             console.log('FXW: Map initialization completed successfully');
         }
 
-    // Fetch restaurant location to center the map
-    fetchRestaurantLocation();
+        // Fetch restaurant location to center the map
+        fetchRestaurantLocation();
 
-    // Attempt to prefill session from existing shipping fields if present (saved address flow)
-    setTimeout(tryPrefillFromShippingFields, 0);
-}
+        // Attempt to prefill session from existing shipping fields if present (saved address flow)
+        setTimeout(tryPrefillFromShippingFields, 0);
+    }
 
     function setupLegacyAutocomplete(searchInput) {
         var fields = ['address_components', 'geometry', 'name', 'formatted_address'];
@@ -669,7 +826,7 @@ jQuery(function($) {
     }
 
     /**
-     * Updates the WooCommerce checkout address fields.
+     * Updates the WooCommerce checkout address fields and the new single delivery address field.
      * Accepts either a legacy PlaceResult/GeocoderResult or a normalized object built in handlePlaceResult.
      * @param {object} place - The place/geocoder result.
      */
@@ -722,6 +879,58 @@ jQuery(function($) {
                 address1 += (address1 ? ', ' : '') + sublocality;
             }
 
+            // Build complete address for the single delivery address field
+            var fullDeliveryAddress = '';
+            var formattedAddress = place.formatted_address || place.formattedAddress || '';
+            if (formattedAddress) {
+                fullDeliveryAddress = formattedAddress;
+            } else {
+                // Fallback: build address from components
+                var addressParts = [];
+                if (address1) addressParts.push(address1);
+                if (city) addressParts.push(city);
+                if (state) addressParts.push(state);
+                if (postcode) addressParts.push(postcode);
+                if (country) addressParts.push(country);
+                fullDeliveryAddress = addressParts.join(', ');
+            }
+
+            // Enhanced delivery address field update with validation
+            if (fullDeliveryAddress && $('#fxw_delivery_address').length) {
+                var currentValue = $('#fxw_delivery_address').val().trim();
+                var hasUserContent = currentValue.length > 0 && !currentValue.includes(formattedAddress);
+                
+                if (!hasUserContent || currentValue.length < 15) {
+                    // Replace with new address if field is empty or has insufficient detail
+                    $('#fxw_delivery_address').val(fullDeliveryAddress).trigger('change');
+                } else {
+                    // If user has added custom content, append new address
+                    var combinedAddress = fullDeliveryAddress;
+                    if (hasUserContent && !currentValue.includes(fullDeliveryAddress)) {
+                        combinedAddress = fullDeliveryAddress + '\n' + currentValue;
+                    }
+                    $('#fxw_delivery_address').val(combinedAddress).trigger('change');
+                }
+                
+                // Enhanced visual feedback for address completion
+                var $addressField = $('#fxw_delivery_address');
+                $addressField.removeClass('fxw-address-incomplete fxw-address-error').addClass('fxw-address-complete');
+                
+                // Add completion indicator
+                if (!$('.fxw-address-status').length) {
+                    $addressField.after('<div class="fxw-address-status fxw-address-status-complete">✓ Address selected from map</div>');
+                } else {
+                    $('.fxw-address-status').removeClass('fxw-address-status-incomplete fxw-address-status-error')
+                        .addClass('fxw-address-status-complete')
+                        .text('✓ Address selected from map');
+                }
+                
+                // Validate address completeness in real-time
+                var result = validateAddressCompleteness($addressField.val());
+                updateAddressFieldFeedback(result);
+            }
+
+            // Still update hidden WooCommerce fields for backend compatibility
             setValAndChange('#billing_address_1', (address1 || '').trim());
             setValAndChange('#billing_city', city);
             setValAndChange('#billing_postcode', postcode);
@@ -827,77 +1036,89 @@ jQuery(function($) {
         console.log('FXW: fxwInternalInit function is now available');
     }
 
-    // Initialize immediately if Google Maps is already loaded (fallback)
-    // Ensure native browser autocomplete does not interfere with Places Autocomplete UX
-    if ($('#fxw-location-search-input').length) {
-        $('#fxw-location-search-input').attr('autocomplete', 'off');
-    }
-    
-    // If Google Maps is already loaded, init immediately
-    if (typeof google !== 'undefined' && google.maps && $('#fxw-map').length) {
-        initMap();
-    } else if ($('#fxw-map').length) {
-        // If the map container exists but Google Maps isn't loaded, it's likely blocked.
-        // Wait a moment to see if it loads, then show an error.
-        setTimeout(function() {
-            if (!window.fxwMapInitialized) {
-                showError('Google Maps failed to load. Please check your internet connection and any ad-blockers, and ensure a valid API key and Map ID are configured.');
-            }
-        }, 2500);
-    }
-
-    // On checkout update, restore coords from hidden fields if present
-    $(document).on('updated_checkout', function() {
-        var $lat = $('#fxw_lat');
-        var $lng = $('#fxw_lng');
-        if ($lat.length && $lng.length && $lat.val() && $lng.val()) {
-            var lat = parseFloat($lat.val());
-            var lng = parseFloat($lng.val());
-            if (!isNaN(lat) && !isNaN(lng)) {
-                lockCoords(lat, lng);
-            }
+    // Initialize on document ready
+    function initializeGoogleMaps() {
+        // Initialize immediately if Google Maps is already loaded (fallback)
+        // Ensure native browser autocomplete does not interfere with Places Autocomplete UX
+        if ($('#fxw-location-search-input').length) {
+            $('#fxw-location-search-input').attr('autocomplete', 'off');
         }
-    });
-
-    // Debug helper: fetch FXW status (settings, zones, session)
-    function fxwDebugStatus() {
-        var payload = {
-            action: 'fxw_debug_status',
-            nonce: fxw_checkout_params.nonce
-        };
-        $.post(fxw_checkout_params.ajax_url, payload)
-            .done(function(response) {
-                if (fxw_checkout_params && fxw_checkout_params.debug) {
-                    console.log('fxw_debug_status: response', response);
+        
+        // If Google Maps is already loaded, init immediately
+        if (typeof google !== 'undefined' && google.maps && $('#fxw-map').length) {
+            initMap();
+        } else if ($('#fxw-map').length) {
+            // If the map container exists but Google Maps isn't loaded, it's likely blocked.
+            // Wait a moment to see if it loads, then show an error.
+            setTimeout(function() {
+                if (!window.fxwMapInitialized) {
+                    showError('Google Maps failed to load. Please check your internet connection and any ad-blockers, and ensure a valid API key and Map ID are configured.');
                 }
-                if (!response || !response.success) {
-                    var msg = (response && response.data) ? (typeof response.data === 'string' ? response.data : JSON.stringify(response.data)) : 'Unknown error';
-                    showError('FXW Debug error: ' + msg);
-                } else {
-                    showError('FXW Debug OK. See console for details.');
-                }
-            })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                var serverMsg = (jqXHR.responseJSON && (jqXHR.responseJSON.data || jqXHR.responseJSON.message)) || jqXHR.responseText || errorThrown || textStatus;
-                showError('FXW Debug request failed: ' + serverMsg);
-                if (fxw_checkout_params && fxw_checkout_params.debug) {
-                    console.log('fxw_debug_status: fail', { status: jqXHR.status, textStatus: textStatus, errorThrown: errorThrown, responseText: jqXHR.responseText });
-                }
-            });
+            }, 2500);
+        }
     }
 
-    // If debug mode, add a debug button to trigger status dump
-    if (fxw_checkout_params && fxw_checkout_params.debug) {
-        var $debugBtn = $('<a/>', { href: '#', id: 'fxw-debug-status', class: 'button', text: 'FXW Debug' });
-        $('.fxw-location-search-wrapper').append($debugBtn);
-        $(document).on('click', '#fxw-debug-status', function(e) {
-            e.preventDefault();
-            fxwDebugStatus();
+    function setupCheckoutValidation() {
+        // On checkout update, restore coords from hidden fields if present
+        $(document).on('updated_checkout', function() {
+            var $lat = $('#fxw_lat');
+            var $lng = $('#fxw_lng');
+            if ($lat.length && $lng.length && $lat.val() && $lng.val()) {
+                var lat = parseFloat($lat.val());
+                var lng = parseFloat($lng.val());
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    lockCoords(lat, lng);
+                }
+            }
         });
-        // Expose to window for manual triggering
-        window.fxwDebugStatus = fxwDebugStatus;
+
+        // Debug helper: fetch FXW status (settings, zones, session)
+        function fxwDebugStatus() {
+            var payload = {
+                action: 'fxw_debug_status',
+                nonce: fxw_checkout_params.nonce
+            };
+            $.post(fxw_checkout_params.ajax_url, payload)
+                .done(function(response) {
+                    if (fxw_checkout_params && fxw_checkout_params.debug) {
+                        console.log('fxw_debug_status: response', response);
+                    }
+                    if (!response || !response.success) {
+                        var msg = (response && response.data) ? (typeof response.data === 'string' ? response.data : JSON.stringify(response.data)) : 'Unknown error';
+                        showError('FXW Debug error: ' + msg);
+                    } else {
+                        showError('FXW Debug OK. See console for details.');
+                    }
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    var serverMsg = (jqXHR.responseJSON && (jqXHR.responseJSON.data || jqXHR.responseJSON.message)) || jqXHR.responseText || errorThrown || textStatus;
+                    showError('FXW Debug request failed: ' + serverMsg);
+                    if (fxw_checkout_params && fxw_checkout_params.debug) {
+                        console.log('fxw_debug_status: fail', { status: jqXHR.status, textStatus: textStatus, errorThrown: errorThrown, responseText: jqXHR.responseText });
+                    }
+                });
+        }
+
+        // If debug mode, add a debug button to trigger status dump
+        if (fxw_checkout_params && fxw_checkout_params.debug) {
+            var $debugBtn = $('<a/>', { href: '#', id: 'fxw-debug-status', class: 'button', text: 'FXW Debug' });
+            $('.fxw-location-search-wrapper').append($debugBtn);
+            $(document).on('click', '#fxw-debug-status', function(e) {
+                e.preventDefault();
+                fxwDebugStatus();
+            });
+            // Expose to window for manual triggering
+            window.fxwDebugStatus = fxwDebugStatus;
+        }
+
+        // Trigger a checkout update on page load to ensure shipping options are displayed correctly.
+        $(document.body).trigger('update_checkout');
     }
 
-    // Trigger a checkout update on page load to ensure shipping options are displayed correctly.
-    $(document.body).trigger('update_checkout');
+    // Initialize on document ready
+    $(document).ready(function() {
+        initializeGoogleMaps();
+        setupCheckoutValidation();
+        handleAddressValidation(); // Initialize real-time address validation
+    });
 });

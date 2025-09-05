@@ -8,11 +8,6 @@
 </head>
 <body <?php body_class(); ?>>
     <?php
-    if ( ! is_user_logged_in() || ! current_user_can( 'fxw_delivery_access' ) ) {
-        wp_redirect( home_url() );
-        exit;
-    }
-
     $delivery_boy_id = get_current_user_id();
     $new_orders = wc_get_orders( array(
         'limit' => -1,
@@ -67,6 +62,14 @@
     <?php
     function fxw_render_order_card( $order ) {
         $shipping_address = $order->get_formatted_shipping_address();
+        
+        // Get new delivery details
+        $delivery_address = $order->get_meta( '_fxw_delivery_address', true );
+        $delivery_lat = $order->get_meta( '_fxw_delivery_lat', true );
+        $delivery_lng = $order->get_meta( '_fxw_delivery_lng', true );
+        $delivery_distance = $order->get_meta( '_fxw_delivery_distance', true );
+        
+        // Fallback to old unit field for backward compatibility
         $unit = $order->get_meta( '_fxw_address_unit', true );
         $status = $order->get_status();
         ?>
@@ -79,9 +82,17 @@
                 <div class="fxw-card-section">
                     <p><span class="fxw-icon">&#128100;</span><strong><?php _e( 'Customer:', 'foodxpress' ); ?></strong> <?php echo esc_html( $order->get_formatted_billing_full_name() ); ?></p>
                     <p><span class="fxw-icon">&#128222;</span><strong><?php _e( 'Phone:', 'foodxpress' ); ?></strong> <a href="tel:<?php echo esc_attr( $order->get_billing_phone() ); ?>"><?php echo esc_html( $order->get_billing_phone() ); ?></a></p>
-                    <p><span class="fxw-icon">&#127968;</span><strong><?php _e( 'Address:', 'foodxpress' ); ?></strong> <?php echo wp_kses_post( $shipping_address ); ?></p>
-                    <?php if ( $unit ) : ?>
-                        <p><span class="fxw-icon">&#128190;</span><strong><?php _e( 'Unit:', 'foodxpress' ); ?></strong> <?php echo esc_html( $unit ); ?></p>
+                    
+                    <?php if ( $delivery_address ) : ?>
+                        <p><span class="fxw-icon">&#127968;</span><strong><?php _e( 'Delivery Address:', 'foodxpress' ); ?></strong> <?php echo esc_html( $delivery_address ); ?></p>
+                        <?php if ( $delivery_distance ) : ?>
+                            <p><span class="fxw-icon">&#128207;</span><strong><?php _e( 'Distance:', 'foodxpress' ); ?></strong> <?php echo esc_html( $delivery_distance ); ?> km</p>
+                        <?php endif; ?>
+                    <?php else : ?>
+                        <p><span class="fxw-icon">&#127968;</span><strong><?php _e( 'Address:', 'foodxpress' ); ?></strong> <?php echo wp_kses_post( $shipping_address ); ?></p>
+                        <?php if ( $unit ) : ?>
+                            <p><span class="fxw-icon">&#128190;</span><strong><?php _e( 'Unit:', 'foodxpress' ); ?></strong> <?php echo esc_html( $unit ); ?></p>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
                 <div class="fxw-card-section">
@@ -92,7 +103,26 @@
                 </div>
             </div>
             <div class="fxw-card-footer">
-                <a href="https://www.google.com/maps/search/?api=1&query=<?php echo urlencode( strip_tags( $shipping_address ) ); ?>" target="_blank" class="fxw-button fxw-button-map"><span class="fxw-icon">&#128205;</span><?php _e( 'Open in Map', 'foodxpress' ); ?></a>
+                <?php
+                // Create precise map link using coordinates if available
+                if ( $delivery_lat && $delivery_lng && is_numeric( $delivery_lat ) && is_numeric( $delivery_lng ) ) {
+                    // Use precise coordinate-based map link for exact pinpoint location
+                    $map_url = "https://www.google.com/maps?q=" . urlencode( trim( $delivery_lat ) . ',' . trim( $delivery_lng ) );
+                    $map_label = __( 'Open Exact Location', 'foodxpress' );
+                    $map_class = 'fxw-button-map-precise';
+                } elseif ( $delivery_address ) {
+                    // Use delivery address if coordinates are missing but delivery address exists
+                    $map_url = "https://www.google.com/maps/search/?api=1&query=" . urlencode( trim( strip_tags( $delivery_address ) ) );
+                    $map_label = __( 'Search Delivery Address', 'foodxpress' );
+                    $map_class = 'fxw-button-map-address';
+                } else {
+                    // Final fallback to shipping address
+                    $map_url = "https://www.google.com/maps/search/?api=1&query=" . urlencode( trim( strip_tags( $shipping_address ) ) );
+                    $map_label = __( 'Search Location', 'foodxpress' );
+                    $map_class = 'fxw-button-map-fallback';
+                }
+                ?>
+                <a href="<?php echo esc_url( $map_url ); ?>" target="_blank" class="fxw-button fxw-button-map <?php echo esc_attr( $map_class ); ?>"><span class="fxw-icon">&#128205;</span><?php echo esc_html( $map_label ); ?></a>
                 <?php if ( 'fxw-assigned' === $status ) : ?>
                     <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="fxw-action-form">
                         <?php wp_nonce_field( 'fxw_delivery_action' ); ?>

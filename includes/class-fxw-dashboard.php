@@ -18,6 +18,7 @@ add_action( 'admin_menu', array( $this, 'add_dashboard_menu' ) );
 add_action( 'admin_post_fxw_assign_delivery', array( $this, 'assign_delivery' ) );
 add_action( 'admin_post_fxw_update_order_status', array( $this, 'update_order_status' ) );
 add_action( 'admin_notices', array( $this, 'show_admin_notices' ) );
+add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 }
 
 	/**
@@ -137,6 +138,11 @@ array(
 <?php endif; ?>
 </td>
 <td>
+<div class="fxw-action-buttons">
+<button type="button" class="button button-small fxw-print-receipt" data-order-id="<?php echo esc_attr( $order->get_id() ); ?>" title="<?php _e( 'Print Receipt', 'foodxpress' ); ?>">
+<span class="dashicons dashicons-media-text"></span>
+<span class="button-text"><?php _e( 'Print Receipt', 'foodxpress' ); ?></span>
+</button>
 <?php $delivery_boys = get_users( array( 'role' => 'delivery_boy' ) ); ?>
 <?php if ( ! empty( $delivery_boys ) ) : ?>
 <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;">
@@ -196,6 +202,11 @@ $delivery_boy = $delivery_boy_id ? get_user_by( 'id', $delivery_boy_id ) : null;
 <?php endif; ?>
 </td>
 <td>
+<div class="fxw-action-buttons">
+<button type="button" class="button button-small fxw-print-receipt" data-order-id="<?php echo esc_attr( $order->get_id() ); ?>" title="<?php _e( 'Print Receipt', 'foodxpress' ); ?>">
+<span class="dashicons dashicons-media-text"></span>
+<span class="button-text"><?php _e( 'Print Receipt', 'foodxpress' ); ?></span>
+</button>
 <?php if ( 'fxw-assigned' === $order->get_status() ) : ?>
 <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block; margin-right:5px;">
 <?php wp_nonce_field( 'fxw_update_status' ); ?>
@@ -252,6 +263,11 @@ $delivery_boy = $delivery_boy_id ? get_user_by( 'id', $delivery_boy_id ) : null;
 <?php endif; ?>
 </td>
 <td>
+<div class="fxw-action-buttons">
+<button type="button" class="button button-small fxw-print-receipt" data-order-id="<?php echo esc_attr( $order->get_id() ); ?>" title="<?php _e( 'Print Receipt', 'foodxpress' ); ?>">
+<span class="dashicons dashicons-media-text"></span>
+<span class="button-text"><?php _e( 'Print Receipt', 'foodxpress' ); ?></span>
+</button>
 <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;">
 <?php wp_nonce_field( 'fxw_update_status' ); ?>
 <input type="hidden" name="action" value="fxw_update_order_status" />
@@ -368,6 +384,36 @@ $order->update_status( $new_status, __( 'Status updated from dashboard.', 'foodx
 
 wp_safe_redirect( wp_get_referer() );
 exit;
+}
+
+/**
+ * Enqueue admin scripts for the dashboard.
+ *
+ * @since 1.0.1
+ */
+public function enqueue_admin_scripts( $hook ) {
+// Only load on our deliveries dashboard page
+if ( 'toplevel_page_fxw-deliveries-dashboard' !== $hook ) {
+return;
+}
+
+// Enqueue jQuery
+wp_enqueue_script( 'jquery' );
+
+// Enqueue our print receipt JavaScript
+wp_enqueue_script( 
+'fxw-admin-dashboard', 
+FXW_PLUGIN_URL . 'assets/js/delivery-dashboard.js', 
+array( 'jquery' ), 
+FXW_VERSION, 
+true 
+);
+
+// Localize script for AJAX
+wp_localize_script( 'fxw-admin-dashboard', 'fxw_checkout_params', array(
+'ajax_url' => admin_url( 'admin-ajax.php' ),
+'nonce'    => wp_create_nonce( 'fxw_nonce' ),
+) );
 }
 
 /**

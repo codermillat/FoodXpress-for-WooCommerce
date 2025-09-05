@@ -63,8 +63,7 @@ get_header();
 							</div>
 						</div>
 						<div class="fxw-card-footer">
-							<a href="https://www.google.com/maps/search/?api=1&query=<?php echo urlencode( strip_tags( $shipping_address ) ); ?>" target="_blank" class="fxw-button button-secondary"><?php _e( 'Open in Map', 'foodxpress' ); ?></a>
-							<a href="#" class="fxw-button button-secondary fxw-print-receipt" data-order-id="<?php echo esc_attr( $order->get_id() ); ?>"><?php _e( 'Print Receipt', 'foodxpress' ); ?></a>
+<a href="https://www.google.com/maps/search/?api=1&query=<?php echo urlencode( strip_tags( $shipping_address ) ); ?>" target="_blank" class="fxw-button button-secondary"><?php _e( 'Open in Map', 'foodxpress' ); ?></a>
 							<?php if ( 'fxw-assigned' === $status ) : ?>
 								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 									<?php wp_nonce_field( 'fxw_delivery_action' ); ?>

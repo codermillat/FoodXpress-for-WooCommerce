@@ -230,146 +230,235 @@ jQuery(function($) {
     }
 
     /**
+     * Calculate address completeness score (0-100).
+     * @param {string} address - The address to score
+     * @returns {number} Score from 0 to 100
+     */
+    function calculateAddressScore(address) {
+        if (!address || address.trim().length === 0) {
+            return 0;
+        }
+
+        var score = 0;
+        var addressLower = address.toLowerCase();
+
+        // Length scoring (max 25 points)
+        if (address.length >= 20) score += 10;
+        if (address.length >= 40) score += 10;
+        if (address.length >= 60) score += 5;
+
+        // Number presence (15 points)
+        if (/\d+/.test(address)) score += 15;
+
+        // Building info (20 points)
+        var buildingKeywords = ['flat', 'apartment', 'apt', 'floor', 'building', 'block', 'house', 'home', 'tower', 'complex', 'society', 'villa', 'bungalow', 'street', 'road', 'lane', 'avenue'];
+        for (var i = 0; i < buildingKeywords.length; i++) {
+            if (addressLower.indexOf(buildingKeywords[i]) !== -1) {
+                score += 20;
+                break;
+            }
+        }
+
+        // Location context (15 points)
+        var locationKeywords = ['near', 'opposite', 'behind', 'next to', 'beside', 'landmark', 'gate', 'entrance', 'sector', 'area', 'locality', 'colony', 'city', 'town'];
+        for (var i = 0; i < locationKeywords.length; i++) {
+            if (addressLower.indexOf(locationKeywords[i]) !== -1) {
+                score += 15;
+                break;
+            }
+        }
+
+        // Delivery hints (15 points)
+        var deliveryKeywords = ['floor', 'gate', 'entrance', 'lift', 'stairs', 'bell', 'security', 'guard', 'door', 'parking'];
+        for (var i = 0; i < deliveryKeywords.length; i++) {
+            if (addressLower.indexOf(deliveryKeywords[i]) !== -1) {
+                score += 15;
+                break;
+            }
+        }
+
+        // Punctuation indicating structure (10 points)
+        if (/[,;]/.test(address)) score += 10;
+
+        return Math.min(100, score);
+    }
+
+    /**
+     * Generate actionable suggestions to improve address.
+     * @param {string} address - The address to analyze
+     * @param {object} validationResult - The validation result object
+     * @returns {array} Array of suggestion strings
+     */
+    function generateAddressSuggestions(address, validationResult) {
+        var suggestions = [];
+        var addressLower = address.toLowerCase();
+        var hasNumbers = /\d+/.test(address);
+        
+        var buildingKeywords = ['flat', 'apartment', 'apt', 'floor', 'building', 'block', 'house', 'home', 'tower', 'complex', 'society', 'street', 'road', 'lane'];
+        var hasBuildingInfo = buildingKeywords.some(function(kw) { return addressLower.indexOf(kw) !== -1; });
+        
+        var deliveryKeywords = ['floor', 'gate', 'entrance', 'lift', 'stairs', 'bell', 'security', 'door'];
+        var hasDeliveryHints = deliveryKeywords.some(function(kw) { return addressLower.indexOf(kw) !== -1; });
+
+        // Generate specific suggestions based on what's missing
+        if (!hasNumbers) {
+            suggestions.push('Add your flat/house/building number');
+        }
+
+        if (!hasBuildingInfo) {
+            suggestions.push('Include building or street name');
+        }
+
+        if (address.length < 40) {
+            suggestions.push('Add more context (e.g., nearby landmarks, cross streets)');
+        }
+
+        if (!hasDeliveryHints && address.length < 60) {
+            suggestions.push('Add delivery instructions (e.g., "2nd floor, ring bell twice")');
+        }
+
+        // Positive reinforcement
+        if (validationResult.score >= 80 && suggestions.length === 0) {
+            suggestions.push('Great! Your address is detailed and complete.');
+        }
+
+        return suggestions;
+    }
+
+    /**
      * Validates address completeness for delivery requirements with detailed feedback.
      * @param {string} address - The address to validate
-     * @returns {object} Object with 'isComplete' boolean, 'message' string, and 'severity' string
+     * @returns {object} Object with 'isComplete' boolean, 'message' string, 'severity' string, 'score' number, 'suggestions' array
      */
     function validateAddressCompleteness(address) {
+        var score = calculateAddressScore(address);
+        var result = {
+            isComplete: false,
+            message: '',
+            severity: 'error',
+            score: score,
+            suggestions: []
+        };
+
         if (!address || address.trim().length === 0) {
-            return {
-                isComplete: false,
-                message: 'Address field is empty',
-                severity: 'error'
-            };
+            result.message = 'Address field is empty';
+            result.severity = 'error';
+            result.suggestions = ['Use the map to select your location', 'Or search for your address above'];
+            return result;
         }
 
         if (address.length < 20) {
-            return {
-                isComplete: false,
-                message: 'Address is too short - please provide more details',
-                severity: 'warning'
-            };
+            result.message = 'Address is too short - please provide more details';
+            result.severity = 'warning';
+            result.suggestions = generateAddressSuggestions(address, result);
+            return result;
         }
 
         var addressLower = address.toLowerCase();
-        var hasBuildingInfo = false;
-        var hasLocationInfo = false;
-        var hasNumbers = false;
-
-        // Enhanced building/location indicators
-        var buildingKeywords = ['flat', 'apartment', 'apt', 'floor', 'building', 'block', 'house', 'home', 'tower', 'complex', 'society', 'villa', 'bungalow', 'street', 'road', 'lane', 'avenue', 'plaza', 'square', 'mall', 'shop', 'office'];
-        var locationKeywords = ['near', 'opposite', 'behind', 'next to', 'beside', 'landmark', 'gate', 'entrance', 'main', 'sector', 'area', 'locality', 'colony', 'nagar', 'city', 'town', 'metro', 'station', 'market', 'hospital', 'school'];
-
-        for (var i = 0; i < buildingKeywords.length; i++) {
-            if (addressLower.indexOf(buildingKeywords[i]) !== -1) {
-                hasBuildingInfo = true;
-                break;
-            }
-        }
-
-        for (var i = 0; i < locationKeywords.length; i++) {
-            if (addressLower.indexOf(locationKeywords[i]) !== -1) {
-                hasLocationInfo = true;
-                break;
-            }
-        }
-
-        // Check for numbers (house/flat numbers, postal codes)
-        hasNumbers = /\d+/.test(address);
-
-        // Specific validation checks with helpful messages
-        if (!hasNumbers) {
-            return {
-                isComplete: false,
-                message: 'Please include building/house/flat number',
-                severity: 'warning'
-            };
-        }
-
-        if (!hasBuildingInfo && !hasLocationInfo) {
-            return {
-                isComplete: false,
-                message: 'Please add building name, street name, or nearby landmark',
-                severity: 'warning'
-            };
-        }
-
-        // Check for delivery instructions or additional details
-        var hasDeliveryHints = false;
-        var deliveryKeywords = ['floor', 'gate', 'entrance', 'lift', 'stairs', 'parking', 'security', 'guard', 'bell', 'intercom', 'buzzer', 'call', 'ring', 'door', 'left', 'right', 'behind', 'front'];
+        var hasNumbers = /\d+/.test(address);
         
-        for (var i = 0; i < deliveryKeywords.length; i++) {
-            if (addressLower.indexOf(deliveryKeywords[i]) !== -1) {
-                hasDeliveryHints = true;
-                break;
-            }
+        var buildingKeywords = ['flat', 'apartment', 'apt', 'floor', 'building', 'block', 'house', 'home', 'tower', 'complex', 'society', 'villa', 'bungalow', 'street', 'road', 'lane', 'avenue'];
+        var hasBuildingInfo = buildingKeywords.some(function(kw) { return addressLower.indexOf(kw) !== -1; });
+        
+        var locationKeywords = ['near', 'opposite', 'behind', 'next to', 'beside', 'landmark', 'gate', 'entrance', 'sector', 'area', 'locality', 'colony', 'city', 'town'];
+        var hasLocationInfo = locationKeywords.some(function(kw) { return addressLower.indexOf(kw) !== -1; });
+
+        // Score-based evaluation
+        if (score >= 80) {
+            result.isComplete = true;
+            result.message = 'Excellent! Your address is complete and detailed';
+            result.severity = 'success';
+        } else if (score >= 60) {
+            result.isComplete = true;
+            result.message = 'Good address - consider adding more details for easier delivery';
+            result.severity = 'info';
+        } else if (score >= 40) {
+            result.isComplete = (hasBuildingInfo || hasLocationInfo) && hasNumbers;
+            result.message = result.isComplete ? 'Address is acceptable but could be improved' : 'Please add more specific details';
+            result.severity = 'warning';
+        } else {
+            result.isComplete = false;
+            result.message = 'Address needs more information for successful delivery';
+            result.severity = 'error';
         }
 
-        // All basic checks passed
-        if (address.length > 30 && hasBuildingInfo && hasNumbers) {
-            return {
-                isComplete: true,
-                message: 'Address looks complete and detailed',
-                severity: 'success'
-            };
-        }
-
-        // Moderate completeness - warn but allow
-        if (hasBuildingInfo && hasNumbers) {
-            return {
-                isComplete: true,
-                message: 'Address is acceptable but could use more detail',
-                severity: 'info'
-            };
-        }
-
-        // Fallback - minimal requirements met
-        return {
-            isComplete: (hasBuildingInfo || hasLocationInfo) && hasNumbers,
-            message: 'Please add more specific delivery details like floor, gate number, or landmarks',
-            severity: 'warning'
-        };
+        result.suggestions = generateAddressSuggestions(address, result);
+        return result;
     }
 
-    // Update address field feedback with visual indicators
+    // Update address field feedback with progressive disclosure and visual indicators
     function updateAddressFieldFeedback(result) {
-        const addressField = $('#fxw_delivery_address');
-        const feedbackContainer = addressField.closest('.form-row').find('.fxw-address-feedback');
-        
+        var addressField = $('#fxw_delivery_address');
+        var feedbackContainer = addressField.closest('.form-row').find('.fxw-address-feedback');
+
         // Create feedback container if it doesn't exist
         if (feedbackContainer.length === 0) {
             addressField.closest('.form-row').append('<div class="fxw-address-feedback"></div>');
         }
-        
-        const container = addressField.closest('.form-row').find('.fxw-address-feedback');
-        
+
+        var container = addressField.closest('.form-row').find('.fxw-address-feedback');
+
         // Clear previous feedback
-        container.removeClass('success info warning error').empty();
-        
+        container.removeClass('success info warning error visible').empty();
+
         if (result.message) {
-            container.addClass(result.severity).html(
-                '<i class="fxw-icon fxw-icon-' + result.severity + '"></i>' + result.message
-            );
+            // Build feedback HTML with progressive disclosure
+            var feedbackHTML = '<span class="fxw-feedback-icon"></span>';
+            feedbackHTML += '<div class="fxw-feedback-content">';
+            feedbackHTML += '<p class="fxw-feedback-message">' + result.message + '</p>';
+            
+            // Add score indicator for non-error states
+            if (result.score > 0) {
+                feedbackHTML += '<div class="fxw-completeness-score">';
+                feedbackHTML += '<span>Completeness:</span>';
+                feedbackHTML += '<div class="fxw-score-bar"><div class="fxw-score-fill" style="width: ' + result.score + '%"></div></div>';
+                feedbackHTML += '<span>' + result.score + '%</span>';
+                feedbackHTML += '</div>';
+            }
+            
+            // Add suggestions with progressive disclosure
+            if (result.suggestions && result.suggestions.length > 0) {
+                feedbackHTML += '<button type="button" class="fxw-suggestions-toggle">Show suggestions</button>';
+                feedbackHTML += '<ul class="fxw-address-suggestions">';
+                result.suggestions.forEach(function(suggestion) {
+                    feedbackHTML += '<li>' + suggestion + '</li>';
+                });
+                feedbackHTML += '</ul>';
+            }
+            
+            feedbackHTML += '</div>';
+            
+            container.addClass(result.severity + ' visible').html(feedbackHTML);
+            
+            // Bind toggle for suggestions
+            container.find('.fxw-suggestions-toggle').on('click', function(e) {
+                e.preventDefault();
+                var btn = $(this);
+                var list = btn.next('.fxw-address-suggestions');
+                btn.toggleClass('expanded');
+                list.toggleClass('visible');
+                btn.text(btn.hasClass('expanded') ? 'Hide suggestions' : 'Show suggestions');
+            });
         }
     }
 
-    // Real-time address validation handler
+    // Real-time address validation handler with debouncing
     function handleAddressValidation() {
-        const addressField = $('#fxw_delivery_address');
-        let validationTimeout;
+        var addressField = $('#fxw_delivery_address');
+        var validationTimeout;
 
-        // Debounced validation to avoid excessive API calls
+        // Debounced validation to avoid excessive checks
         function debounceValidation() {
             clearTimeout(validationTimeout);
-            validationTimeout = setTimeout(() => {
-                const result = validateAddressCompleteness(addressField.val());
+            validationTimeout = setTimeout(function() {
+                var result = validateAddressCompleteness(addressField.val());
                 updateAddressFieldFeedback(result);
-                
+
                 // Update field styling based on validation
                 addressField.removeClass('fxw-valid fxw-invalid fxw-incomplete');
-                if (result.isComplete) {
+                if (result.isComplete && result.score >= 80) {
                     addressField.addClass('fxw-valid');
-                } else if (result.severity === 'error') {
+                } else if (!result.isComplete || result.severity === 'error') {
                     addressField.addClass('fxw-invalid');
                 } else {
                     addressField.addClass('fxw-incomplete');
@@ -379,12 +468,19 @@ jQuery(function($) {
 
         // Bind validation events
         addressField.on('input paste keyup', debounceValidation);
-        
+
         // Initial validation on page load
         if (addressField.val().length > 0) {
             debounceValidation();
         }
     }
+
+    // Initialize address validation when DOM is ready
+    $(document).ready(function() {
+        if ($('#fxw_delivery_address').length > 0) {
+            handleAddressValidation();
+        }
+    });
 
     /**
      * Initializes the map and all related components using modern Google Maps APIs.
@@ -552,13 +648,13 @@ jQuery(function($) {
 
         // Mark map as successfully initialized
         window.fxwMapInitialized = true;
-        
+
         // Store global references for potential external access
         fxwMap = map;
         fxwMarker = marker;
         fxwGeocoder = geocoder;
         fxwAutocomplete = autocomplete;
-        
+
         if (window.console && window.console.log) {
             console.log('FXW: Map initialization completed successfully');
         }
@@ -648,6 +744,7 @@ jQuery(function($) {
             showError('Please select a valid address from the suggestions.');
         }
     }
+
 
     /**
      * Fetches the restaurant's location to center the map.

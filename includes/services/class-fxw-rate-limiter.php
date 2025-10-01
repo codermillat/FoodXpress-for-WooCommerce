@@ -36,7 +36,22 @@ class FXW_Rate_Limiter {
             return ( $current_time - $timestamp ) < $period;
         } );
 
-        if ( count( $requests ) >= $limit ) {
+        $current_count = count( $requests );
+
+        // Log warnings at thresholds (80% and 90% of limit)
+        $usage_percent = ( $limit > 0 ) ? ( $current_count / $limit ) : 0;
+        if ( $usage_percent >= 0.8 && $usage_percent < 1.0 ) {
+            self::log_rate_limit_warning( $action, $usage_percent );
+        }
+
+        if ( $current_count >= $limit ) {
+            // Log when limit is exceeded
+            if ( function_exists( 'wc_get_logger' ) ) {
+                wc_get_logger()->warning(
+                    sprintf( 'Rate limit exceeded for action "%s" (IP: %s, limit: %d/%ds)', $action, $ip_address, $limit, $period ),
+                    array( 'source' => 'foodxpress-rate-limiter' )
+                );
+            }
             return new WP_Error( 'rate_limit_exceeded', __( 'You are making too many requests. Please wait a moment and try again.', 'foodxpress' ) );
         }
 
@@ -45,6 +60,66 @@ class FXW_Rate_Limiter {
         set_transient( $transient_key, $requests, $period );
 
         return true;
+    }
+
+    /**
+     * Get remaining request quota for a given action without consuming a request.
+     *
+     * @param string $action A unique name for the action being limited.
+     * @param int    $limit  The number of allowed requests per period.
+     * @param int    $period The time period in seconds.
+     * @return int Number of remaining requests in the current period.
+     */
+    public static function get_remaining_quota( $action, $limit = 20, $period = MINUTE_IN_SECONDS ) {
+        $ip_address = self::get_ip_address();
+        if ( ! $ip_address ) {
+            return $limit; // Cannot determine IP, return full quota
+        }
+
+        $transient_key = 'fxw_rl_' . $action . '_' . md5( $ip_address );
+        $requests = get_transient( $transient_key );
+
+        if ( false === $requests ) {
+            return $limit; // No requests yet, full quota available
+        }
+
+        $current_time = time();
+        // Count only requests within the current period
+        $recent_requests = array_filter( $requests, function( $timestamp ) use ( $current_time, $period ) {
+            return ( $current_time - $timestamp ) < $period;
+        } );
+
+        $remaining = $limit - count( $recent_requests );
+        return max( 0, $remaining );
+    }
+
+    /**
+     * Log warning when approaching rate limit thresholds.
+     *
+     * @param string $action        The action being rate limited.
+     * @param float  $usage_percent The current usage as a percentage (0.0 to 1.0).
+     * @return void
+     */
+    public static function log_rate_limit_warning( $action, $usage_percent ) {
+        if ( ! function_exists( 'wc_get_logger' ) ) {
+            return;
+        }
+
+        $percent_display = round( $usage_percent * 100 );
+        $ip_address = self::get_ip_address();
+
+        // Only log at specific thresholds to avoid spam
+        if ( $usage_percent >= 0.9 ) {
+            wc_get_logger()->warning(
+                sprintf( 'Rate limit WARNING: %d%% quota used for action "%s" (IP: %s)', $percent_display, $action, $ip_address ),
+                array( 'source' => 'foodxpress-rate-limiter' )
+            );
+        } elseif ( $usage_percent >= 0.8 ) {
+            wc_get_logger()->info(
+                sprintf( 'Rate limit notice: %d%% quota used for action "%s" (IP: %s)', $percent_display, $action, $ip_address ),
+                array( 'source' => 'foodxpress-rate-limiter' )
+            );
+        }
     }
 
     /**

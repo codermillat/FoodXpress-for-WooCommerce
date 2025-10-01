@@ -850,17 +850,33 @@ html, body {
     }
 }
 
-/* Address feedback validation styles */
+/* Address feedback validation styles with progressive disclosure */
 .fxw-address-feedback {
     margin-top: 8px;
-    padding: 8px 12px;
-    border-radius: 4px;
+    padding: 10px 14px;
+    border-radius: 6px;
     font-size: 0.9em;
     font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display: none;
+    align-items: flex-start;
+    gap: 8px;
     transition: all 0.3s ease;
+    animation: fxw-fade-in 0.3s ease;
+}
+
+.fxw-address-feedback.visible {
+    display: flex;
+}
+
+@keyframes fxw-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .fxw-address-feedback.success {
@@ -906,26 +922,141 @@ html, body {
 }
 
 /* Icons for feedback messages */
-.fxw-icon-success::before {
+.fxw-feedback-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.fxw-address-feedback.success .fxw-feedback-icon::before {
     content: "✓";
-    color: #28a745;
-    font-weight: bold;
+    color: #155724;
 }
 
-.fxw-icon-info::before {
+.fxw-address-feedback.info .fxw-feedback-icon::before {
     content: "ℹ";
-    color: #17a2b8;
-    font-weight: bold;
+    color: #0c5460;
 }
 
-.fxw-icon-warning::before {
+.fxw-address-feedback.warning .fxw-feedback-icon::before {
     content: "⚠";
-    color: #ffc107;
+    color: #856404;
+}
+
+.fxw-address-feedback.error .fxw-feedback-icon::before {
+    content: "✗";
+    color: #721c24;
+}
+
+/* Feedback message content */
+.fxw-feedback-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fxw-feedback-message {
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Address suggestions list */
+.fxw-address-suggestions {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0 0;
+    display: none;
+}
+
+.fxw-address-suggestions.visible {
+    display: block;
+    animation: fxw-slide-down 0.3s ease;
+}
+
+@keyframes fxw-slide-down {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 200px;
+    }
+}
+
+.fxw-address-suggestions li {
+    padding: 6px 0;
+    padding-left: 20px;
+    position: relative;
+    font-size: 0.95em;
+    line-height: 1.5;
+    color: inherit;
+}
+
+.fxw-address-suggestions li::before {
+    content: "•";
+    position: absolute;
+    left: 6px;
     font-weight: bold;
 }
 
-.fxw-icon-error::before {
-    content: "✗";
-    color: #dc3545;
-    font-weight: bold;
+/* Completeness score indicator */
+.fxw-completeness-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.fxw-score-bar {
+    width: 80px;
+    height: 6px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.fxw-score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #dc3545 0%, #ffc107 50%, #28a745 100%);
+    transition: width 0.4s ease;
+    border-radius: 3px;
+}
+
+/* Progressive disclosure: show suggestions toggle */
+.fxw-suggestions-toggle {
+    margin-top: 6px;
+    padding: 4px 8px;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 0.85em;
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 600;
+    transition: opacity 0.2s ease;
+}
+
+.fxw-suggestions-toggle:hover {
+    opacity: 0.8;
+}
+
+.fxw-suggestions-toggle::after {
+    content: " ▼";
+    font-size: 0.8em;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.fxw-suggestions-toggle.expanded::after {
+    transform: rotate(180deg);
 }

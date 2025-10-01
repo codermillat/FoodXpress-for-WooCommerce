@@ -673,6 +673,16 @@ wc_get_logger()->debug( sprintf( 'validate_delivery_zone session lat=%s lng=%s',
 
 if ( ! $customer_lat || ! $customer_lng ) {
     // Fallback: try to geocode current shipping address when session coords are missing
+    // Apply stricter rate limiting for automated fallback operations (5 per minute)
+    $rate_limit_check = FXW_Rate_Limiter::check_rate_limit( 'fallback_geocode', 5, MINUTE_IN_SECONDS );
+    if ( is_wp_error( $rate_limit_check ) ) {
+        if ( function_exists( 'wc_get_logger' ) ) {
+            wc_get_logger()->warning( 'validate_delivery_zone: fallback geocode rate limit exceeded', array( 'source' => 'foodxpress' ) );
+        }
+        $errors->add( 'delivery_zone', __( 'Too many address verification attempts. Please use the map to select your exact location instead of relying on automatic address lookup.', 'foodxpress' ) );
+        return;
+    }
+
     if ( function_exists( 'wc_get_logger' ) ) {
         wc_get_logger()->warning( 'validate_delivery_zone: missing coords, attempting fallback geocode from shipping address', array( 'source' => 'foodxpress' ) );
     }
@@ -695,7 +705,7 @@ if ( ! $customer_lat || ! $customer_lng ) {
             if ( function_exists( 'wc_get_logger' ) ) {
                 wc_get_logger()->error( 'validate_delivery_zone: fallback geocode failed - ' . $coords->get_error_message(), array( 'source' => 'foodxpress' ) );
             }
-            $errors->add( 'delivery_zone', __( 'Please select your location on the map.', 'foodxpress' ) );
+            $errors->add( 'delivery_zone', __( 'We could not verify your address automatically. Please use the interactive map above to pinpoint your exact delivery location.', 'foodxpress' ) );
             return;
         }
 
@@ -715,14 +725,14 @@ if ( ! $customer_lat || ! $customer_lng ) {
             if ( function_exists( 'wc_get_logger' ) ) {
                 wc_get_logger()->error( 'validate_delivery_zone: fallback geocode returned invalid coords', array( 'source' => 'foodxpress' ) );
             }
-            $errors->add( 'delivery_zone', __( 'Please select your location on the map.', 'foodxpress' ) );
+            $errors->add( 'delivery_zone', __( 'We could not determine your coordinates from the address provided. Please use the map to select your location.', 'foodxpress' ) );
             return;
         }
     } else {
         if ( function_exists( 'wc_get_logger' ) ) {
             wc_get_logger()->warning( 'validate_delivery_zone: no shipping address to geocode', array( 'source' => 'foodxpress' ) );
         }
-        $errors->add( 'delivery_zone', __( 'Please select your location on the map.', 'foodxpress' ) );
+        $errors->add( 'delivery_zone', __( 'Please select your location on the map to enable accurate delivery.', 'foodxpress' ) );
         return;
     }
 }

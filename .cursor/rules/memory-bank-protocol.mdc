@@ -1,7 +1,0 @@
----
-alwaysApply: true
----
-# Memory Bank Protocol
-
-Always begin by reading [ProjectIndex.md](mdc:memory-bank/ProjectIndex.md) to gain high-level context.
-Then consult only the relevant documents inside `memory-bank/` as directed in [project-workspace-rules.md](mdc:.clinerules/project-workspace-rules.md) §4.

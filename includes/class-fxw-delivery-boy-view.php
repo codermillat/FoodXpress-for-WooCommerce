@@ -1,4 +1,7 @@
 <?php
+if (!defined('ABSPATH')) {
+	exit;
+}
 /**
  * Manages the delivery boy view.
  *
@@ -6,18 +9,66 @@
  * @package    FoodXpress
  * @author     MD MILLAT HOSEN <https://github.com/codermillat>
  */
-class FXW_Delivery_Boy_View {
+class FXW_Delivery_Boy_View
+{
 
 	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
 	 */
-public function __construct() {
-add_filter( 'woocommerce_login_redirect', array( $this, 'login_redirect' ), 10, 2 );
-add_action( 'admin_post_fxw_mark_picked_up', array( $this, 'mark_picked_up' ) );
-add_action( 'admin_post_fxw_mark_delivered', array( $this, 'mark_delivered' ) );
-}
+	public function __construct()
+	{
+		add_filter('woocommerce_login_redirect', array($this, 'login_redirect'), 10, 2);
+		add_action('admin_post_fxw_mark_picked_up', array($this, 'mark_picked_up'));
+		add_action('admin_post_fxw_mark_delivered', array($this, 'mark_delivered'));
+		add_action('wp_ajax_fxw_update_delivery_status', array($this, 'ajax_update_delivery_status'));
+	}
+
+	/**
+	 * Handle AJAX delivery status updates.
+	 *
+	 * @since 1.0.0
+	 */
+	public function ajax_update_delivery_status()
+	{
+		check_ajax_referer('fxw_delivery_action', 'nonce');
+
+		if (!is_user_logged_in() || !current_user_can('fxw_delivery_access')) {
+			wp_send_json_error(array('message' => __('Unauthorized access.', 'foodxpress')));
+		}
+
+		$order_id = isset($_POST['order_id']) ? absint($_POST['order_id']) : 0;
+		$status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
+
+		if (!$order_id || !$status) {
+			wp_send_json_error(array('message' => __('Missing order ID or status.', 'foodxpress')));
+		}
+
+		$order = wc_get_order($order_id);
+
+		if (!$order) {
+			wp_send_json_error(array('message' => __('Invalid order.', 'foodxpress')));
+		}
+
+		$assigned_id = $order->get_meta('_fxw_delivery_boy_id', true);
+
+		if (empty($assigned_id) || (int) $assigned_id !== (int) get_current_user_id()) {
+			wp_send_json_error(array('message' => __('You are not assigned to this order.', 'foodxpress')));
+		}
+
+		// Update status
+		if (is_callable(array($order, 'update_status'))) {
+			$note = ('fxw-picked-up' === $status) ? __('Order picked up by delivery agent (AJAX).', 'foodxpress') : __('Order delivered by delivery agent (AJAX).', 'foodxpress');
+			if ($order->update_status($status, $note)) {
+				wp_send_json_success(array('message' => __('Status updated successfully.', 'foodxpress')));
+			} else {
+				wp_send_json_error(array('message' => __('Failed to update order status.', 'foodxpress')));
+			}
+		} else {
+			wp_send_json_error(array('message' => __('Order update not callable.', 'foodxpress')));
+		}
+	}
 
 	/**
 	 * Redirect delivery boys to their dashboard after login.
@@ -27,9 +78,10 @@ add_action( 'admin_post_fxw_mark_delivered', array( $this, 'mark_delivered' ) );
 	 * @return  string                The modified redirect URL.
 	 * @since   1.0.0
 	 */
-	public function login_redirect( $redirect, $user ) {
-		if ( in_array( 'delivery_boy', (array) $user->roles ) ) {
-			$redirect = home_url( '/delivery-dashboard/' );
+	public function login_redirect($redirect, $user)
+	{
+		if (in_array('delivery_boy', (array) $user->roles)) {
+			$redirect = home_url('/delivery-dashboard/');
 		}
 		return $redirect;
 	}
@@ -37,79 +89,81 @@ add_action( 'admin_post_fxw_mark_delivered', array( $this, 'mark_delivered' ) );
 
 
 
-/**
- * Handle "Picked Up" action from Delivery Dashboard.
- *
- * @since 1.0.0
- */
-public function mark_picked_up() {
-if ( ! is_user_logged_in() || ! current_user_can( 'fxw_delivery_access' ) ) {
-wp_die( __( 'Unauthorized.', 'foodxpress' ) );
-}
+	/**
+	 * Handle "Picked Up" action from Delivery Dashboard.
+	 *
+	 * @since 1.0.0
+	 */
+	public function mark_picked_up()
+	{
+		if (!is_user_logged_in() || !current_user_can('fxw_delivery_access')) {
+			wp_die(__('Unauthorized.', 'foodxpress'));
+		}
 
-$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
-if ( ! wp_verify_nonce( $nonce, 'fxw_delivery_action' ) ) {
-wp_die( __( 'Invalid nonce.', 'foodxpress' ) );
-}
+		$nonce = isset($_POST['_wpnonce']) ? sanitize_text_field(wp_unslash($_POST['_wpnonce'])) : '';
+		if (!wp_verify_nonce($nonce, 'fxw_delivery_action')) {
+			wp_die(__('Invalid nonce.', 'foodxpress'));
+		}
 
-$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
-$order    = $order_id ? wc_get_order( $order_id ) : false;
+		$order_id = isset($_POST['order_id']) ? absint($_POST['order_id']) : 0;
+		$order = $order_id ? wc_get_order($order_id) : false;
 
-if ( ! $order ) {
-wp_die( __( 'Invalid order.', 'foodxpress' ) );
-}
+		if (!$order) {
+			wp_die(__('Invalid order.', 'foodxpress'));
+		}
 
-$assigned_id = $order->get_meta( '_fxw_delivery_boy_id', true );
+		$assigned_id = $order->get_meta('_fxw_delivery_boy_id', true);
 
-if ( empty( $assigned_id ) || (int) $assigned_id !== (int) get_current_user_id() ) {
-    wp_die( __( 'You are not assigned to this order.', 'foodxpress' ) );
-}
+		if (empty($assigned_id) || (int) $assigned_id !== (int) get_current_user_id()) {
+			wp_die(__('You are not assigned to this order.', 'foodxpress'));
+		}
 
-// Update status to picked up
-if ( is_callable( array( $order, 'update_status' ) ) ) {
-    $order->update_status( 'fxw-picked-up', __( 'Order picked up by delivery agent.', 'foodxpress' ) );
-}
+		// Update status to picked up
+		if (is_callable(array($order, 'update_status'))) {
+			$order->update_status('fxw-picked-up', __('Order picked up by delivery agent.', 'foodxpress'));
+		}
 
-wp_safe_redirect( home_url( '/delivery-dashboard/?updated=1' ) );
-exit;
-}
+		wp_safe_redirect(home_url('/delivery-dashboard/?updated=1'));
+		exit;
+	}
 
-/**
- * Handle "Delivered" action from Delivery Dashboard.
- *
- * @since 1.0.0
- */
-public function mark_delivered() {
-if ( ! is_user_logged_in() || ! current_user_can( 'fxw_delivery_access' ) ) {
-wp_die( __( 'Unauthorized.', 'foodxpress' ) );
-}
+	/**
+	 * Handle "Delivered" action from Delivery Dashboard.
+	 *
+	 * @since 1.0.0
+	 */
+	public function mark_delivered()
+	{
+		if (!is_user_logged_in() || !current_user_can('fxw_delivery_access')) {
+			wp_die(__('Unauthorized.', 'foodxpress'));
+		}
 
-$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
-if ( ! wp_verify_nonce( $nonce, 'fxw_delivery_action' ) ) {
-wp_die( __( 'Invalid nonce.', 'foodxpress' ) );
-}
+		$nonce = isset($_POST['_wpnonce']) ? sanitize_text_field(wp_unslash($_POST['_wpnonce'])) : '';
+		if (!wp_verify_nonce($nonce, 'fxw_delivery_action')) {
+			wp_die(__('Invalid nonce.', 'foodxpress'));
+		}
 
-$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
-$order    = $order_id ? wc_get_order( $order_id ) : false;
+		$order_id = isset($_POST['order_id']) ? absint($_POST['order_id']) : 0;
+		$order = $order_id ? wc_get_order($order_id) : false;
 
-if ( ! $order ) {
-wp_die( __( 'Invalid order.', 'foodxpress' ) );
-}
+		if (!$order) {
+			wp_die(__('Invalid order.', 'foodxpress'));
+		}
 
-$assigned_id = $order->get_meta( '_fxw_delivery_boy_id', true );
+		$assigned_id = $order->get_meta('_fxw_delivery_boy_id', true);
 
-if ( empty( $assigned_id ) || (int) $assigned_id !== (int) get_current_user_id() ) {
-    wp_die( __( 'You are not assigned to this order.', 'foodxpress' ) );
-}
+		if (empty($assigned_id) || (int) $assigned_id !== (int) get_current_user_id()) {
+			wp_die(__('You are not assigned to this order.', 'foodxpress'));
+		}
 
-// Finalize delivery - mark completed
-if ( is_callable( array( $order, 'update_status' ) ) ) {
-    $order->update_status( 'completed', __( 'Order delivered by delivery agent.', 'foodxpress' ) );
-}
+		// Finalize delivery - mark completed
+		if (is_callable(array($order, 'update_status'))) {
+			$order->update_status('completed', __('Order delivered by delivery agent.', 'foodxpress'));
+		}
 
-wp_safe_redirect( home_url( '/delivery-dashboard/?delivered=1' ) );
-exit;
-}
+		wp_safe_redirect(home_url('/delivery-dashboard/?delivered=1'));
+		exit;
+	}
 }
 
 new FXW_Delivery_Boy_View();

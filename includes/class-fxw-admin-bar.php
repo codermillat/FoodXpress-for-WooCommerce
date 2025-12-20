@@ -1,4 +1,7 @@
 <?php
+if (!defined('ABSPATH')) {
+	exit;
+}
 /**
  * Manages the admin bar functionality.
  *
@@ -6,16 +9,18 @@
  * @package    FoodXpress
  * @author     MD MILLAT HOSEN <https://github.com/codermillat>
  */
-class FXW_Admin_Bar {
+class FXW_Admin_Bar
+{
 
 	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
 	 */
-	public function __construct() {
-		add_action( 'admin_bar_menu', array( $this, 'add_delivery_status_toggle' ), 999 );
-		add_action( 'wp_ajax_fxw_toggle_delivery_status', array( $this, 'toggle_delivery_status' ) );
+	public function __construct()
+	{
+		add_action('admin_bar_menu', array($this, 'add_delivery_status_toggle'), 999);
+		add_action('wp_ajax_fxw_toggle_delivery_status', array($this, 'toggle_delivery_status'));
 	}
 
 	/**
@@ -24,22 +29,23 @@ class FXW_Admin_Bar {
 	 * @param   WP_Admin_Bar  $wp_admin_bar   The admin bar object.
 	 * @since   1.0.0
 	 */
-	public function add_delivery_status_toggle( $wp_admin_bar ) {
-		$options = get_option( 'fxw_settings' );
-		$is_open = isset( $options['fxw_is_open'] ) ? $options['fxw_is_open'] : true;
+	public function add_delivery_status_toggle($wp_admin_bar)
+	{
+		$options = get_option('fxw_settings');
+		$is_open = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : true;
 
-		$title = $is_open ? __( 'Deliveries: Open', 'foodxpress' ) : __( 'Deliveries: Closed', 'foodxpress' );
-		$href  = '#';
+		$title = $is_open ? __('Deliveries: Open', 'foodxpress') : __('Deliveries: Closed', 'foodxpress');
+		$href = '#';
 
-		$wp_admin_bar->add_node( array(
-			'id'    => 'fxw-delivery-status',
+		$wp_admin_bar->add_node(array(
+			'id' => 'fxw-delivery-status',
 			'title' => $title,
-			'href'  => $href,
-			'meta'  => array(
+			'href' => $href,
+			'meta' => array(
 				'class' => 'fxw-delivery-status-toggle',
 				'onclick' => 'fxw_toggle_delivery_status(this); return false;',
 			),
-		) );
+		));
 	}
 
 	/**
@@ -47,17 +53,29 @@ class FXW_Admin_Bar {
 	 *
 	 * @since    1.0.0
 	 */
-	public function toggle_delivery_status() {
-		$options = get_option( 'fxw_settings' );
-		$is_open = isset( $options['fxw_is_open'] ) ? $options['fxw_is_open'] : true;
+	public function toggle_delivery_status()
+	{
+		// Security: Check user capability
+		if (!current_user_can('manage_options')) {
+			wp_send_json_error(array('message' => __('Unauthorized access.', 'foodxpress')), 403);
+		}
 
-		$options['fxw_is_open'] = ! $is_open;
-		update_option( 'fxw_settings', $options );
+		// Security: Verify nonce to prevent CSRF attacks
+		$nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+		if (!wp_verify_nonce($nonce, 'fxw-admin-nonce')) {
+			wp_send_json_error(array('message' => __('Security verification failed.', 'foodxpress')), 403);
+		}
 
-		wp_send_json_success( array(
+		$options = get_option('fxw_settings');
+		$is_open = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : true;
+
+		$options['fxw_is_open'] = !$is_open;
+		update_option('fxw_settings', $options);
+
+		wp_send_json_success(array(
 			'is_open' => $options['fxw_is_open'],
-			'label'   => $options['fxw_is_open'] ? __( 'Deliveries: Open', 'foodxpress' ) : __( 'Deliveries: Closed', 'foodxpress' ),
-		) );
+			'label' => $options['fxw_is_open'] ? __('Deliveries: Open', 'foodxpress') : __('Deliveries: Closed', 'foodxpress'),
+		));
 	}
 }
 

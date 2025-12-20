@@ -1,4 +1,7 @@
 <?php
+if (!defined('ABSPATH')) {
+    exit;
+}
 /**
  * Configuration for the FoodXpress plugin.
  *
@@ -6,7 +9,8 @@
  * @package    FoodXpress
  * @author     MD MILLAT HOSEN <https://github.com/codermillat>
  */
-class FXW_Config {
+class FXW_Config
+{
 
     /**
      * The default preparation time in minutes.

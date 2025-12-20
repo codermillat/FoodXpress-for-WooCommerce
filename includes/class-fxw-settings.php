@@ -1,4 +1,7 @@
 <?php
+if (!defined('ABSPATH')) {
+	exit;
+}
 /**
  * Manages the settings page for the plugin.
  *
@@ -6,16 +9,18 @@
  * @package    FoodXpress
  * @author     MD MILLAT HOSEN <https://github.com/codermillat>
  */
-class FXW_Settings {
+class FXW_Settings
+{
 
 	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
 	 */
-	public function __construct() {
-		add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
-		add_action( 'admin_init', array( $this, 'register_settings' ) );
+	public function __construct()
+	{
+		add_action('admin_menu', array($this, 'add_settings_page'));
+		add_action('admin_init', array($this, 'register_settings'));
 	}
 
 	/**
@@ -23,13 +28,14 @@ class FXW_Settings {
 	 *
 	 * @since    1.0.0
 	 */
-	public function add_settings_page() {
+	public function add_settings_page()
+	{
 		add_options_page(
-			__( 'FoodXpress Settings', 'foodxpress' ),
-			__( 'FoodXpress', 'foodxpress' ),
+			__('FoodXpress Settings', 'foodxpress'),
+			__('FoodXpress', 'foodxpress'),
 			'manage_options',
 			'foodxpress-settings',
-			array( $this, 'render_settings_page' )
+			array($this, 'render_settings_page')
 		);
 	}
 
@@ -38,14 +44,15 @@ class FXW_Settings {
 	 *
 	 * @since    1.0.0
 	 */
-	public function render_settings_page() {
+	public function render_settings_page()
+	{
 		?>
 		<div class="wrap">
-			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+			<h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 			<form action="options.php" method="post">
 				<?php
-				settings_fields( 'fxw_settings_group' );
-				do_settings_sections( 'foodxpress-settings' );
+				settings_fields('fxw_settings_group');
+				do_settings_sections('foodxpress-settings');
 				submit_button();
 				?>
 			</form>
@@ -58,86 +65,163 @@ class FXW_Settings {
 	 *
 	 * @since    1.0.0
 	 */
-	public function register_settings() {
-		register_setting( 'fxw_settings_group', 'fxw_settings' );
+	public function register_settings()
+	{
+		register_setting('fxw_settings_group', 'fxw_settings', array(
+			'sanitize_callback' => array($this, 'sanitize_settings'),
+		));
 
 		// General Settings Section
 		add_settings_section(
 			'fxw_general_settings_section',
-			__( 'General Settings', 'foodxpress' ),
+			__('General Settings', 'foodxpress'),
 			null,
 			'foodxpress-settings'
 		);
 
 		add_settings_field(
 			'fxw_google_maps_api_key',
-			__( 'Google Maps API Key', 'foodxpress' ),
-			array( $this, 'render_text_field' ),
+			__('Google Maps API Key', 'foodxpress'),
+			array($this, 'render_text_field'),
 			'foodxpress-settings',
 			'fxw_general_settings_section',
-			array( 'id' => 'fxw_google_maps_api_key' )
+			array('id' => 'fxw_google_maps_api_key')
 		);
 
 		add_settings_field(
 			'fxw_restaurant_address',
-			__( 'Restaurant Address', 'foodxpress' ),
-			array( $this, 'render_text_field' ),
+			__('Restaurant Address', 'foodxpress'),
+			array($this, 'render_text_field'),
 			'foodxpress-settings',
 			'fxw_general_settings_section',
-			array( 'id' => 'fxw_restaurant_address' )
+			array('id' => 'fxw_restaurant_address')
 		);
 
 		add_settings_field(
 			'fxw_preparation_time',
-			__( 'Default Preparation Time (minutes)', 'foodxpress' ),
-			array( $this, 'render_number_field' ),
+			__('Default Preparation Time (minutes)', 'foodxpress'),
+			array($this, 'render_number_field'),
 			'foodxpress-settings',
 			'fxw_general_settings_section',
-			array( 'id' => 'fxw_preparation_time', 'default' => 20 )
+			array('id' => 'fxw_preparation_time', 'default' => 20)
 		);
 
 		// Delivery Fee Settings Section
 		add_settings_section(
 			'fxw_delivery_fee_settings_section',
-			__( 'Delivery Fee Settings', 'foodxpress' ),
+			__('Delivery Fee Settings', 'foodxpress'),
 			null,
 			'foodxpress-settings'
 		);
 
 		add_settings_field(
 			'fxw_delivery_fee_base',
-			__( 'Base Fee', 'foodxpress' ),
-			array( $this, 'render_number_field' ),
+			__('Base Fee', 'foodxpress'),
+			array($this, 'render_number_field'),
 			'foodxpress-settings',
 			'fxw_delivery_fee_settings_section',
-			array( 'id' => 'fxw_delivery_fee_base', 'default' => 5.00, 'step' => 0.01 )
+			array('id' => 'fxw_delivery_fee_base', 'default' => 5.00, 'step' => 0.01)
 		);
 
 		add_settings_field(
 			'fxw_delivery_fee_per_km',
-			__( 'Fee Per Kilometer', 'foodxpress' ),
-			array( $this, 'render_number_field' ),
+			__('Fee Per Kilometer', 'foodxpress'),
+			array($this, 'render_number_field'),
 			'foodxpress-settings',
 			'fxw_delivery_fee_settings_section',
-			array( 'id' => 'fxw_delivery_fee_per_km', 'default' => 1.50, 'step' => 0.01 )
+			array('id' => 'fxw_delivery_fee_per_km', 'default' => 1.50, 'step' => 0.01)
 		);
 
 		// Delivery Zone Settings Section
 		add_settings_section(
 			'fxw_delivery_zone_settings_section',
-			__( 'Delivery Zone Settings', 'foodxpress' ),
+			__('Delivery Zone Settings', 'foodxpress'),
 			null,
 			'foodxpress-settings'
 		);
 
 		add_settings_field(
 			'fxw_delivery_zone_radius',
-			__( 'Delivery Radius (km)', 'foodxpress' ),
-			array( $this, 'render_number_field' ),
+			__('Delivery Radius (km)', 'foodxpress'),
+			array($this, 'render_number_field'),
 			'foodxpress-settings',
 			'fxw_delivery_zone_settings_section',
-			array( 'id' => 'fxw_delivery_zone_radius', 'default' => 10 )
+			array('id' => 'fxw_delivery_zone_radius', 'default' => 10)
 		);
+
+		// Receipt Branding Settings Section
+		add_settings_section(
+			'fxw_receipt_branding_section',
+			__('Receipt Branding', 'foodxpress'),
+			array($this, 'render_receipt_branding_description'),
+			'foodxpress-settings'
+		);
+
+		add_settings_field(
+			'fxw_receipt_logo',
+			__('Receipt Logo', 'foodxpress'),
+			array($this, 'render_image_upload_field'),
+			'foodxpress-settings',
+			'fxw_receipt_branding_section',
+			array('id' => 'fxw_receipt_logo', 'description' => __('Recommended: 200x80px, PNG or JPG', 'foodxpress'))
+		);
+
+		add_settings_field(
+			'fxw_receipt_restaurant_name',
+			__('Restaurant Name (for Receipt)', 'foodxpress'),
+			array($this, 'render_text_field'),
+			'foodxpress-settings',
+			'fxw_receipt_branding_section',
+			array('id' => 'fxw_receipt_restaurant_name', 'description' => __('Leave empty to use site name', 'foodxpress'))
+		);
+
+		add_settings_field(
+			'fxw_receipt_address',
+			__('Restaurant Address (for Receipt)', 'foodxpress'),
+			array($this, 'render_textarea_field'),
+			'foodxpress-settings',
+			'fxw_receipt_branding_section',
+			array('id' => 'fxw_receipt_address', 'description' => __('Full address as it appears on receipts', 'foodxpress'))
+		);
+
+		add_settings_field(
+			'fxw_receipt_phone',
+			__('Restaurant Phone (for Receipt)', 'foodxpress'),
+			array($this, 'render_text_field'),
+			'foodxpress-settings',
+			'fxw_receipt_branding_section',
+			array('id' => 'fxw_receipt_phone')
+		);
+
+		add_settings_field(
+			'fxw_receipt_tagline',
+			__('Receipt Tagline', 'foodxpress'),
+			array($this, 'render_text_field'),
+			'foodxpress-settings',
+			'fxw_receipt_branding_section',
+			array('id' => 'fxw_receipt_tagline', 'description' => __('Optional tagline shown below logo (e.g., "Delicious Food, Delivered Fast!")', 'foodxpress'))
+		);
+
+		add_settings_field(
+			'fxw_receipt_footer_message',
+			__('Receipt Footer Message', 'foodxpress'),
+			array($this, 'render_text_field'),
+			'foodxpress-settings',
+			'fxw_receipt_branding_section',
+			array('id' => 'fxw_receipt_footer_message', 'default' => 'Thank You! Have a great day!')
+		);
+	}
+
+	/**
+	 * Render receipt branding section description.
+	 *
+	 * @since   1.0.0
+	 */
+	public function render_receipt_branding_description()
+	{
+		?>
+		<p class="description"><?php esc_html_e('Customize your delivery receipts with your restaurant branding. These settings are used only for printed receipts.', 'foodxpress'); ?></p>
+		<?php
 	}
 
 	/**
@@ -146,12 +230,111 @@ class FXW_Settings {
 	 * @param   array   $args   The arguments for the field.
 	 * @since   1.0.0
 	 */
-	public function render_text_field( $args ) {
-		$options = get_option( 'fxw_settings' );
-		$id      = $args['id'];
-		$value   = isset( $options[ $id ] ) ? $options[ $id ] : '';
+	public function render_text_field($args)
+	{
+		$options = get_option('fxw_settings');
+		$id = $args['id'];
+		$default = isset($args['default']) ? $args['default'] : '';
+		$value = isset($options[$id]) ? $options[$id] : $default;
+		$description = isset($args['description']) ? $args['description'] : '';
 		?>
-		<input type="text" name="fxw_settings[<?php echo esc_attr( $id ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="regular-text">
+		<input type="text" name="fxw_settings[<?php echo esc_attr($id); ?>]" value="<?php echo esc_attr($value); ?>"
+			class="regular-text">
+		<?php if ($description) : ?>
+			<p class="description"><?php echo esc_html($description); ?></p>
+		<?php endif;
+	}
+
+	/**
+	 * Render a textarea field.
+	 *
+	 * @param   array   $args   The arguments for the field.
+	 * @since   1.0.0
+	 */
+	public function render_textarea_field($args)
+	{
+		$options = get_option('fxw_settings');
+		$id = $args['id'];
+		$value = isset($options[$id]) ? $options[$id] : '';
+		$description = isset($args['description']) ? $args['description'] : '';
+		?>
+		<textarea name="fxw_settings[<?php echo esc_attr($id); ?>]" rows="3" class="large-text"><?php echo esc_textarea($value); ?></textarea>
+		<?php if ($description) : ?>
+			<p class="description"><?php echo esc_html($description); ?></p>
+		<?php endif;
+	}
+
+	/**
+	 * Render an image upload field using WordPress Media Library.
+	 *
+	 * @param   array   $args   The arguments for the field.
+	 * @since   1.0.0
+	 */
+	public function render_image_upload_field($args)
+	{
+		$options = get_option('fxw_settings');
+		$id = $args['id'];
+		$value = isset($options[$id]) ? $options[$id] : '';
+		$description = isset($args['description']) ? $args['description'] : '';
+		
+		// Enqueue media scripts
+		wp_enqueue_media();
+		?>
+		<div class="fxw-image-upload-wrapper">
+			<input type="hidden" name="fxw_settings[<?php echo esc_attr($id); ?>]" id="<?php echo esc_attr($id); ?>" value="<?php echo esc_attr($value); ?>">
+			
+			<div id="<?php echo esc_attr($id); ?>_preview" style="margin-bottom: 10px;">
+				<?php if ($value) : ?>
+					<img src="<?php echo esc_url($value); ?>" style="max-width: 200px; max-height: 80px; display: block; margin-bottom: 5px;">
+				<?php endif; ?>
+			</div>
+			
+			<button type="button" class="button fxw-upload-image-btn" data-target="<?php echo esc_attr($id); ?>">
+				<?php esc_html_e('Upload Logo', 'foodxpress'); ?>
+			</button>
+			
+			<?php if ($value) : ?>
+				<button type="button" class="button fxw-remove-image-btn" data-target="<?php echo esc_attr($id); ?>">
+					<?php esc_html_e('Remove Logo', 'foodxpress'); ?>
+				</button>
+			<?php endif; ?>
+			
+			<?php if ($description) : ?>
+				<p class="description"><?php echo esc_html($description); ?></p>
+			<?php endif; ?>
+		</div>
+		
+		<script type="text/javascript">
+		jQuery(document).ready(function($) {
+			$('.fxw-upload-image-btn').on('click', function(e) {
+				e.preventDefault();
+				var targetId = $(this).data('target');
+				var frame = wp.media({
+					title: '<?php esc_html_e('Select or Upload Logo', 'foodxpress'); ?>',
+					button: { text: '<?php esc_html_e('Use this logo', 'foodxpress'); ?>' },
+					library: { type: 'image' },
+					multiple: false
+				});
+				
+				frame.on('select', function() {
+					var attachment = frame.state().get('selection').first().toJSON();
+					$('#' + targetId).val(attachment.url);
+					$('#' + targetId + '_preview').html('<img src="' + attachment.url + '" style="max-width: 200px; max-height: 80px; display: block; margin-bottom: 5px;">');
+					$('.fxw-upload-image-btn[data-target="' + targetId + '"]').after('<button type="button" class="button fxw-remove-image-btn" data-target="' + targetId + '"><?php esc_html_e('Remove Logo', 'foodxpress'); ?></button>');
+				});
+				
+				frame.open();
+			});
+			
+			$(document).on('click', '.fxw-remove-image-btn', function(e) {
+				e.preventDefault();
+				var targetId = $(this).data('target');
+				$('#' + targetId).val('');
+				$('#' + targetId + '_preview').html('');
+				$(this).remove();
+			});
+		});
+		</script>
 		<?php
 	}
 
@@ -161,16 +344,91 @@ class FXW_Settings {
 	 * @param   array   $args   The arguments for the field.
 	 * @since   1.0.0
 	 */
-	public function render_number_field( $args ) {
-		$options = get_option( 'fxw_settings' );
-		$id      = $args['id'];
-		$default = isset( $args['default'] ) ? $args['default'] : '';
-		$step    = isset( $args['step'] ) ? $args['step'] : '1';
-		$value   = isset( $options[ $id ] ) ? $options[ $id ] : $default;
+	public function render_number_field($args)
+	{
+		$options = get_option('fxw_settings');
+		$id = $args['id'];
+		$default = isset($args['default']) ? $args['default'] : '';
+		$step = isset($args['step']) ? $args['step'] : '1';
+		$value = isset($options[$id]) ? $options[$id] : $default;
 		?>
-		<input type="number" step="<?php echo esc_attr( $step ); ?>" name="fxw_settings[<?php echo esc_attr( $id ); ?>]" value="<?php echo esc_attr( $value ); ?>" class="small-text">
+		<input type="number" step="<?php echo esc_attr($step); ?>" name="fxw_settings[<?php echo esc_attr($id); ?>]"
+			value="<?php echo esc_attr($value); ?>" class="small-text">
 		<?php
+	}
+
+	/**
+	 * Sanitize settings before saving.
+	 *
+	 * @param   array   $input    The input values to sanitize.
+	 * @return  array   The sanitized values.
+	 * @since   1.0.0
+	 */
+	public function sanitize_settings($input)
+	{
+		$sanitized = array();
+
+		// General settings
+		if (isset($input['fxw_google_maps_api_key'])) {
+			$sanitized['fxw_google_maps_api_key'] = sanitize_text_field($input['fxw_google_maps_api_key']);
+		}
+
+		if (isset($input['fxw_restaurant_address'])) {
+			$sanitized['fxw_restaurant_address'] = sanitize_text_field($input['fxw_restaurant_address']);
+		}
+
+		if (isset($input['fxw_preparation_time'])) {
+			$sanitized['fxw_preparation_time'] = absint($input['fxw_preparation_time']);
+		}
+
+		// Delivery fee settings
+		if (isset($input['fxw_delivery_fee_base'])) {
+			$sanitized['fxw_delivery_fee_base'] = floatval($input['fxw_delivery_fee_base']);
+		}
+
+		if (isset($input['fxw_delivery_fee_per_km'])) {
+			$sanitized['fxw_delivery_fee_per_km'] = floatval($input['fxw_delivery_fee_per_km']);
+		}
+
+		// Delivery zone settings
+		if (isset($input['fxw_delivery_zone_radius'])) {
+			$sanitized['fxw_delivery_zone_radius'] = absint($input['fxw_delivery_zone_radius']);
+		}
+
+		// Preserve fxw_is_open status
+		$existing = get_option('fxw_settings');
+		if (isset($existing['fxw_is_open'])) {
+			$sanitized['fxw_is_open'] = $existing['fxw_is_open'];
+		}
+
+		// Receipt branding settings
+		if (isset($input['fxw_receipt_logo'])) {
+			$sanitized['fxw_receipt_logo'] = esc_url_raw($input['fxw_receipt_logo']);
+		}
+
+		if (isset($input['fxw_receipt_restaurant_name'])) {
+			$sanitized['fxw_receipt_restaurant_name'] = sanitize_text_field($input['fxw_receipt_restaurant_name']);
+		}
+
+		if (isset($input['fxw_receipt_address'])) {
+			$sanitized['fxw_receipt_address'] = sanitize_textarea_field($input['fxw_receipt_address']);
+		}
+
+		if (isset($input['fxw_receipt_phone'])) {
+			$sanitized['fxw_receipt_phone'] = sanitize_text_field($input['fxw_receipt_phone']);
+		}
+
+		if (isset($input['fxw_receipt_tagline'])) {
+			$sanitized['fxw_receipt_tagline'] = sanitize_text_field($input['fxw_receipt_tagline']);
+		}
+
+		if (isset($input['fxw_receipt_footer_message'])) {
+			$sanitized['fxw_receipt_footer_message'] = sanitize_text_field($input['fxw_receipt_footer_message']);
+		}
+
+		return $sanitized;
 	}
 }
 
 new FXW_Settings();
+

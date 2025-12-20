@@ -3,7 +3,7 @@
  * Plugin Name:       FoodXpress for WooCommerce
  * Plugin URI:        https://github.com/codermillat/foodxpress-woocommerce
  * Description:       A complete delivery management system for single-restaurant WooCommerce stores.
- * Version:           1.0.1
+ * Version:           1.1.0
  * Author:            MD MILLAT HOSEN
  * Author URI:        https://github.com/codermillat
  * License:           Proprietary
@@ -22,7 +22,7 @@ if (!defined('WPINC')) {
     die;
 }
 
-define('FXW_VERSION', '1.0.1');
+define('FXW_VERSION', '1.1.0');
 define('FXW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('FXW_PLUGIN_URL', plugin_dir_url(__FILE__));
 

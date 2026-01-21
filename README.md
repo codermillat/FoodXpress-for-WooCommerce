@@ -93,7 +93,49 @@ foodxpress-for-woocommerce/
 │   ├── emails/              # Email templates
 │   └── *.php                # Frontend templates
 └── tests/
+    ├── FXWTestRunner.php    # Static code analysis tests
+    └── testsprite-config.json  # TestSprite MCP configuration
 ```
+
+## Testing
+
+### Static Code Analysis
+
+Run the built-in test suite for syntax, security, and code quality checks:
+
+```bash
+php tests/FXWTestRunner.php
+```
+
+This validates:
+- PHP syntax errors
+- Security patterns (ABSPATH checks, nonce verification)
+- File structure completeness
+- Code quality (unlimited queries, proper hooks)
+- Plugin headers
+- WordPress hooks and filters
+
+### Automated Testing with TestSprite MCP
+
+For comprehensive functional testing, use TestSprite MCP in Cursor:
+
+1. **Setup**: See [TESTSPRITE_SETUP.md](TESTSPRITE_SETUP.md) for installation
+2. **Configuration**: Edit `tests/testsprite-config.json` for your environment
+3. **Run Tests**: Use Cursor chat to execute tests:
+   ```
+   "Run TestSprite tests for FoodXpress plugin"
+   ```
+
+TestSprite MCP covers:
+- Plugin activation/deactivation
+- Order management workflows
+- Delivery dashboard functionality
+- Checkout and shipping integration
+- Shortcode functionality
+- Email notifications
+- Security and access control
+
+For detailed testing documentation, see [tests/README-TESTSPRITE.md](tests/README-TESTSPRITE.md).
 
 ## Changelog
 

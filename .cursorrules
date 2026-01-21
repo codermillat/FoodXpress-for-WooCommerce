@@ -1,0 +1,25 @@
+# Cursor Rules for FoodXpress Plugin Development
+
+## Testing with TestSprite MCP
+
+When working on this WordPress plugin, you can use TestSprite MCP for automated testing:
+
+1. **Before making changes**: Run static tests with `php tests/FXWTestRunner.php`
+2. **After making changes**: Use TestSprite MCP via Cursor chat to run functional tests
+3. **Test commands**:
+   - "Run all TestSprite tests for FoodXpress"
+   - "Test [specific feature] using TestSprite"
+   - "Generate test plan for [new feature]"
+
+## Code Standards
+
+- Follow WordPress Coding Standards
+- Include ABSPATH checks in all PHP files
+- Verify nonces for all AJAX requests
+- Sanitize input, escape output
+- Test with WooCommerce 7.0+ and WordPress 6.0+
+
+## Test Configuration
+
+TestSprite configuration is in `tests/testsprite-config.json`. Update the `test_url` and credentials for your environment before running tests.
+

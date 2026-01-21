@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "backend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8080",
+  "backendAuthType": "public",
+  "executionArgs": {
+    "projectName": "FoodXpress for WooCommerce",
+    "projectPath": "/Users/mdmillathosen/Desktop/FoodXpress for WooCommerce",
+    "testIds": [],
+    "additionalInstruction": "Test the FoodXpress WordPress plugin. WordPress is running on http://localhost:8080 with username 'millat' and password 'millat'. Both WooCommerce and FoodXpress plugins are activated. Google Maps API is optional - skip map-related tests if API key is not configured.",
+    "envs": {
+      "API_KEY": "sk-user-dpbvx6Ws5j1b...LsPTiAsm0k3E8JKOLoTI"
+    }
+  }
+}

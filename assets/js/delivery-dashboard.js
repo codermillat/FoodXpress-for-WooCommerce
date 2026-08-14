@@ -1,4 +1,23 @@
 jQuery(function ($) {
+    // Tab switching - delegated, no passive needed for click
+    $(document).on('click', '[data-fxw-tab]', function () {
+        var tabId = $(this).data('fxw-tab');
+        // Sanitise tabId to prevent DOM selector injection
+        if (!/^[a-zA-Z0-9_-]+$/.test(tabId)) {
+            return;
+        }
+
+        var $panel = document.getElementById(tabId);
+        if (!$panel) {
+            return;
+        }
+
+        $('.fxw-tab-link').removeClass('active').attr('aria-selected', 'false');
+        $(this).addClass('active').attr('aria-selected', 'true');
+        $('.fxw-tab-content').removeClass('active').hide();
+        $($panel).addClass('active').show();
+    });
+
     $(document).on('click', '.fxw-print-receipt', function (e) {
         e.preventDefault();
 
@@ -94,6 +113,12 @@ jQuery(function ($) {
 
         $button.prop('disabled', true).text('Updating...');
 
+        if (typeof fxw_checkout_params === 'undefined' || !fxw_checkout_params.ajax_url) {
+            alert('Session expired. Please reload the page.');
+            $button.prop('disabled', false).html(originalText);
+            return;
+        }
+
         $.ajax({
             url: fxw_checkout_params.ajax_url,
             type: 'POST',
@@ -108,20 +133,28 @@ jQuery(function ($) {
                     var $card = $button.closest('.fxw-order-card');
                     var $currentTab = $card.closest('.fxw-tab-content');
 
-                    // Fade out and remove the card
-                    $card.fadeOut(300, function () {
-                        $(this).remove();
-
-                        // Update tab counters
-                        updateTabCounters();
-
-                        // Show empty message if no cards left
-                        if ($currentTab.find('.fxw-order-card').length === 0) {
-                            $currentTab.append('<div class="fxw-no-orders"><p>No orders in this section.</p></div>');
+                    var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    var delay = reducedMotion ? 0 : 150;
+                    $card.addClass('fxw-card-removing');
+                    requestAnimationFrame(function () {
+                        if (!reducedMotion) {
+                            $card.css({ opacity: 0, transform: 'scale(0.98)' });
                         }
+                        setTimeout(function () {
+                            $card.remove();
+                            if (typeof requestIdleCallback === 'function') {
+                                requestIdleCallback(updateTabCounters, { timeout: 100 });
+                            } else {
+                                updateTabCounters();
+                            }
+                            if ($currentTab.find('.fxw-order-card').length === 0) {
+                                var noOrdersMsg = getI18n().no_orders || 'No orders in this section.';
+                                $currentTab.append($('<div class="fxw-no-orders"></div>').append($('<p></p>').text(noOrdersMsg)));
+                            }
+                        }, delay);
                     });
                 } else {
-                    alert(response.data.message || 'Failed to update status.');
+                    alert((response.data && response.data.message) ? response.data.message : 'Failed to update status.');
                     $button.prop('disabled', false).html(originalText);
                 }
             },
@@ -133,20 +166,16 @@ jQuery(function ($) {
         });
     });
 
-    // Helper function to update tab counters after AJAX actions
+    function getI18n() {
+        return (typeof fxw_checkout_params !== 'undefined' && fxw_checkout_params.i18n) ? fxw_checkout_params.i18n : {};
+    }
+
     function updateTabCounters() {
+        var i18n = getI18n();
         var newCount = $('#new-orders .fxw-order-card').length;
         var inProgressCount = $('#in-progress .fxw-order-card').length;
 
-        $('.fxw-tab-link').each(function () {
-            var $tab = $(this);
-            var tabText = $tab.text();
-
-            if (tabText.indexOf('New') !== -1) {
-                $tab.text('New (' + newCount + ')');
-            } else if (tabText.indexOf('In Progress') !== -1) {
-                $tab.text('In Progress (' + inProgressCount + ')');
-            }
-        });
+        $('[data-fxw-tab="new-orders"]').text((i18n.new_tab || 'New') + ' (' + newCount + ')');
+        $('[data-fxw-tab="in-progress"]').text((i18n.in_progress_tab || 'In Progress') + ' (' + inProgressCount + ')');
     }
 });

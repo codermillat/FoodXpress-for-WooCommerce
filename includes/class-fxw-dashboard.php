@@ -124,19 +124,20 @@ class FXW_Dashboard
 			<h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 			<?php do_action('fxw_dashboard_content'); ?>
 
-			<h2><?php _e('Unassigned Orders', 'foodxpress'); ?></h2>
+			<h2><?php esc_html_e('Unassigned Orders', 'foodxpress'); ?></h2>
 			<table class="widefat fixed" cellspacing="0">
 				<thead>
 					<tr>
-						<th class="manage-column"><?php _e('Order', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Customer', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Status', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Payment', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Actions', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Order', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Customer', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Status', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Payment', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Actions', 'foodxpress'); ?></th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php if (!empty($unassigned_orders)): ?>
+						<?php $delivery_boys = get_users(array('role' => 'delivery_boy')); ?>
 						<?php foreach ($unassigned_orders as $order): ?>
 							<tr>
 								<td><a
@@ -154,11 +155,10 @@ class FXW_Dashboard
 									<div class="fxw-action-buttons">
 										<button type="button" class="button button-small fxw-print-receipt"
 											data-order-id="<?php echo esc_attr($order->get_id()); ?>"
-											title="<?php _e('Print Receipt', 'foodxpress'); ?>">
+											title="<?php esc_attr_e('Print Receipt', 'foodxpress'); ?>">
 											<span class="dashicons dashicons-media-text"></span>
-											<span class="button-text"><?php _e('Print Receipt', 'foodxpress'); ?></span>
+											<span class="button-text"><?php esc_html_e('Print Receipt', 'foodxpress'); ?></span>
 										</button>
-										<?php $delivery_boys = get_users(array('role' => 'delivery_boy')); ?>
 										<?php if (!empty($delivery_boys)): ?>
 											<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
 												style="display:inline-block;">
@@ -167,7 +167,7 @@ class FXW_Dashboard
 												<input type="hidden" name="order_id" value="<?php echo esc_attr($order->get_id()); ?>" />
 												<select name="delivery_boy_id" style="width:140px; margin-right:5px;"
 													onchange="this.form.submit();">
-													<option value=""><?php _e('Select Delivery Boy...', 'foodxpress'); ?></option>
+													<option value=""><?php esc_html_e('Select Delivery Boy...', 'foodxpress'); ?></option>
 													<?php foreach ($delivery_boys as $boy): ?>
 														<option value="<?php echo esc_attr($boy->ID); ?>">
 															<?php echo esc_html($boy->display_name); ?> (ID:
@@ -177,33 +177,33 @@ class FXW_Dashboard
 												</select>
 												<noscript>
 													<button type="submit"
-														class="button button-small"><?php _e('Assign', 'foodxpress'); ?></button>
+														class="button button-small"><?php esc_html_e('Assign', 'foodxpress'); ?></button>
 												</noscript>
 											</form>
 										<?php else: ?>
-											<span style="color:#999;"><?php _e('No delivery boys available', 'foodxpress'); ?></span>
+											<span style="color:#999;"><?php esc_html_e('No delivery boys available', 'foodxpress'); ?></span>
 										<?php endif; ?>
 								</td>
 							</tr>
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>
-							<td colspan="5"><?php _e('No unassigned orders.', 'foodxpress'); ?></td>
+							<td colspan="5"><?php esc_html_e('No unassigned orders.', 'foodxpress'); ?></td>
 						</tr>
 					<?php endif; ?>
 				</tbody>
 			</table>
 
-			<h2 style="margin-top:24px;"><?php _e('Assigned Orders', 'foodxpress'); ?></h2>
+			<h2 style="margin-top:24px;"><?php esc_html_e('Assigned Orders', 'foodxpress'); ?></h2>
 			<table class="widefat fixed" cellspacing="0">
 				<thead>
 					<tr>
-						<th class="manage-column"><?php _e('Order', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Customer', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Delivery Boy', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Status', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Payment', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Actions', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Order', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Customer', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Delivery Boy', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Status', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Payment', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Actions', 'foodxpress'); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -230,9 +230,9 @@ class FXW_Dashboard
 									<div class="fxw-action-buttons">
 										<button type="button" class="button button-small fxw-print-receipt"
 											data-order-id="<?php echo esc_attr($order->get_id()); ?>"
-											title="<?php _e('Print Receipt', 'foodxpress'); ?>">
+											title="<?php esc_attr_e('Print Receipt', 'foodxpress'); ?>">
 											<span class="dashicons dashicons-media-text"></span>
-											<span class="button-text"><?php _e('Print Receipt', 'foodxpress'); ?></span>
+											<span class="button-text"><?php esc_html_e('Print Receipt', 'foodxpress'); ?></span>
 										</button>
 										<?php if ('fxw-assigned' === $order->get_status()): ?>
 											<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
@@ -242,7 +242,7 @@ class FXW_Dashboard
 												<input type="hidden" name="order_id" value="<?php echo esc_attr($order->get_id()); ?>" />
 												<input type="hidden" name="new_status" value="fxw-picked-up" />
 												<button type="submit"
-													class="button button-small"><?php _e('Picked Up', 'foodxpress'); ?></button>
+													class="button button-small"><?php esc_html_e('Picked Up', 'foodxpress'); ?></button>
 											</form>
 										<?php endif; ?>
 										<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
@@ -252,29 +252,29 @@ class FXW_Dashboard
 											<input type="hidden" name="order_id" value="<?php echo esc_attr($order->get_id()); ?>" />
 											<input type="hidden" name="delivery_boy_id" value="" />
 											<button type="submit"
-												class="button button-small button-link-delete"><?php _e('Reassign', 'foodxpress'); ?></button>
+												class="button button-small button-link-delete"><?php esc_html_e('Reassign', 'foodxpress'); ?></button>
 										</form>
 								</td>
 							</tr>
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>
-							<td colspan="6"><?php _e('No assigned orders.', 'foodxpress'); ?></td>
+							<td colspan="6"><?php esc_html_e('No assigned orders.', 'foodxpress'); ?></td>
 						</tr>
 					<?php endif; ?>
 				</tbody>
 			</table>
 
-			<h2 style="margin-top:24px;"><?php _e('Out for Delivery', 'foodxpress'); ?></h2>
+			<h2 style="margin-top:24px;"><?php esc_html_e('Out for Delivery', 'foodxpress'); ?></h2>
 			<table class="widefat fixed" cellspacing="0">
 				<thead>
 					<tr>
-						<th class="manage-column"><?php _e('Order', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Customer', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Delivery Boy', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Status', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Payment', 'foodxpress'); ?></th>
-						<th class="manage-column"><?php _e('Actions', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Order', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Customer', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Delivery Boy', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Status', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Payment', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Actions', 'foodxpress'); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -301,9 +301,9 @@ class FXW_Dashboard
 									<div class="fxw-action-buttons">
 										<button type="button" class="button button-small fxw-print-receipt"
 											data-order-id="<?php echo esc_attr($order->get_id()); ?>"
-											title="<?php _e('Print Receipt', 'foodxpress'); ?>">
+											title="<?php esc_attr_e('Print Receipt', 'foodxpress'); ?>">
 											<span class="dashicons dashicons-media-text"></span>
-											<span class="button-text"><?php _e('Print Receipt', 'foodxpress'); ?></span>
+											<span class="button-text"><?php esc_html_e('Print Receipt', 'foodxpress'); ?></span>
 										</button>
 										<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
 											style="display:inline-block;">
@@ -312,14 +312,14 @@ class FXW_Dashboard
 											<input type="hidden" name="order_id" value="<?php echo esc_attr($order->get_id()); ?>" />
 											<input type="hidden" name="new_status" value="completed" />
 											<button type="submit"
-												class="button button-small button-primary"><?php _e('Delivered', 'foodxpress'); ?></button>
+												class="button button-small button-primary"><?php esc_html_e('Delivered', 'foodxpress'); ?></button>
 										</form>
 								</td>
 							</tr>
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>
-							<td colspan="6"><?php _e('No orders out for delivery.', 'foodxpress'); ?></td>
+							<td colspan="6"><?php esc_html_e('No orders out for delivery.', 'foodxpress'); ?></td>
 						</tr>
 					<?php endif; ?>
 				</tbody>
@@ -361,38 +361,30 @@ class FXW_Dashboard
 			$delivery_boy = get_user_by('id', $delivery_boy_id);
 			$delivery_boy_name = $delivery_boy ? $delivery_boy->display_name : "ID: {$delivery_boy_id}";
 
-			// Use WooCommerce CRUD instead of update_post_meta
 			$order->update_meta_data('_fxw_delivery_boy_id', $delivery_boy_id);
 			$order->update_status('fxw-assigned', sprintf(__('Order assigned to delivery boy: %s', 'foodxpress'), $delivery_boy_name));
 			$order->save();
 
-			// Clear any WooCommerce caches for this order
-			if (function_exists('wc_delete_shop_order_transients')) {
-				wc_delete_shop_order_transients($order_id);
-			}
-
-			// Log after assignment
 			if (function_exists('wc_get_logger')) {
-				$saved_delivery_boy_id = $order->get_meta('_fxw_delivery_boy_id', true);
-				wc_get_logger()->debug(sprintf('assign_delivery: Order #%d saved, new_status=%s, saved_delivery_boy_id=%s', $order_id, $order->get_status(), $saved_delivery_boy_id), array('source' => 'foodxpress'));
+				wc_get_logger()->debug(sprintf('assign_delivery: Order #%d saved, new_status=%s, delivery_boy_id=%d', $order_id, $order->get_status(), $delivery_boy_id), array('source' => 'foodxpress'));
 			}
 
 			set_transient('fxw_admin_notice', sprintf(__('Order #%s successfully assigned to %s', 'foodxpress'), $order->get_order_number(), $delivery_boy_name), 30);
 		} else {
-			// Use WooCommerce CRUD for deletion too
 			$order->delete_meta_data('_fxw_delivery_boy_id');
 			$order->add_order_note(__('Delivery boy unassigned.', 'foodxpress'));
 			$order->save();
 
-			// Clear any WooCommerce caches for this order
-			if (function_exists('wc_delete_shop_order_transients')) {
-				wc_delete_shop_order_transients($order_id);
-			}
-
 			set_transient('fxw_admin_notice', sprintf(__('Order #%s unassigned from delivery boy', 'foodxpress'), $order->get_order_number()), 30);
 		}
 
-		wp_safe_redirect(wp_get_referer());
+		// Clear WooCommerce caches for this order
+		if (function_exists('wc_delete_shop_order_transients')) {
+			wc_delete_shop_order_transients($order_id);
+		}
+
+		$referer = wp_get_referer();
+		wp_safe_redirect($referer ? $referer : admin_url());
 		exit;
 	}
 
@@ -425,7 +417,8 @@ class FXW_Dashboard
 			$order->update_status($new_status, __('Status updated from dashboard.', 'foodxpress'));
 		}
 
-		wp_safe_redirect(wp_get_referer());
+		$referer = wp_get_referer();
+		wp_safe_redirect($referer ? $referer : admin_url());
 		exit;
 	}
 

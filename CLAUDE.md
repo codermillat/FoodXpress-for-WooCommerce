@@ -1,14 +1,12 @@
-# CLAUDE.md
+# CLAUDE.md - FoodXpress for WooCommerce
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project Summary
+FoodXpress is a WordPress/WooCommerce plugin that adds food delivery functionality: delivery zones with Google Maps, dynamic delivery fee calculation, delivery agent management, order tracking, and mobile-optimized dashboards.
 
-## Project Overview
-
-FoodXpress for WooCommerce is a WordPress plugin that provides a complete delivery management system for single-restaurant WooCommerce stores. It adds custom order statuses, delivery boy role, Google Maps integration for distance-based delivery fees, and custom email notifications.
-
-- **Type**: WordPress/WooCommerce Plugin
-- **Requirements**: WordPress 6.0+, WooCommerce 7.0+, PHP 7.4+
-- **Version**: 1.1.0
+## Quick Start
+- PHP 7.4+, WordPress 6.0+, WooCommerce 7.0+
+- Google Maps API key required (Places, Geocoding, Distance Matrix)
+- Entry point: `foodxpress-for-woocommerce.php`
 
 ## Common Commands
 
@@ -16,7 +14,6 @@ FoodXpress for WooCommerce is a WordPress plugin that provides a complete delive
 ```bash
 php tests/FXWTestRunner.php
 ```
-Validates PHP syntax, security patterns (ABSPATH checks, nonce verification), file structure, code quality, and plugin headers.
 
 ### Docker Development Environment
 ```bash
@@ -33,52 +30,70 @@ docker-compose down
 - WordPress Admin: http://localhost:8080/wp-admin
 - Site URL: http://localhost:8080
 
-### TestSprite MCP Testing
-In Cursor, use commands like:
-- "Run TestSprite tests for FoodXpress plugin"
-- "Test [specific feature] using TestSprite"
+## File Structure
+```
+├── foodxpress-for-woocommerce.php   # Main plugin file
+├── uninstall.php                     # Cleanup on delete
+├── includes/
+│   ├── class-fxw-core.php           # Bootstrap, hooks, scripts
+│   ├── class-fxw-checkout.php       # Maps, fees, zone validation
+│   ├── class-fxw-dashboard.php      # Admin order dashboard
+│   ├── class-fxw-shortcodes.php     # Tracking, receipts
+│   ├── class-fxw-order-admin.php    # Order meta boxes
+│   ├── class-fxw-delivery-boy-view.php # Agent dashboard
+│   ├── class-fxw-admin-bar.php      # Delivery toggle
+│   ├── class-fxw-roles.php          # delivery_boy role
+│   ├── class-fxw-order-statuses.php # Custom order statuses
+│   ├── class-fxw-notifications.php  # Email notifications
+│   ├── class-fxw-reporting.php      # Delivery analytics
+│   ├── class-fxw-config.php         # Plugin configuration
+│   ├── api/
+│   │   └── class-fxw-rest-checkout-controller.php # REST endpoints
+│   └── services/
+│       ├── class-fxw-mapping-service.php   # Google Maps wrapper
+│       └── class-fxw-rate-limiter.php      # API rate limiting
+├── templates/
+│   ├── delivery-dashboard-template.php
+│   ├── delivery-boy-view.php
+│   └── receipt-template.php
+├── assets/
+│   ├── css/ (frontend.css, delivery-dashboard.css, my-account.css)
+│   └── js/ (checkout.js, delivery-dashboard.js, admin.js, admin-dashboard.js)
+```
 
-Configuration: `tests/testsprite-config.json`
+## Coding Standards (MUST follow)
+1. WordPress Coding Standards for PHP/JS/CSS
+2. `defined('ABSPATH') || exit;` in every PHP file
+3. Nonce verification on ALL AJAX/forms
+4. Sanitize input, escape output - NO exceptions
+5. `wp_unslash()` before sanitizing superglobals
+6. Strict comparisons only (`===`/`!==`)
+7. Null-check `WC()->session` and `WC()->customer` before use
+8. HPOS compatible: use `wc_get_order()`, `$order->get_meta()`
 
-## Architecture
+## Key Patterns
+- **Distance data**: Always check `isset($distance_data['distance']) && is_object($distance_data['distance'])` before accessing `->value`
+- **Session access**: `WC()->session ? WC()->session->get('key') : null`
+- **Customer access**: Guard with `if (!WC()->customer) { return; }`
+- **Redirects**: Always provide fallback: `wp_safe_redirect($referer ? $referer : admin_url())`
+- **HPOS links**: Fallback when `get_edit_post_link()` returns null: `admin_url('admin.php?page=wc-orders&action=edit&id=' . $id)`
 
-### Core Classes (`includes/class-fxw-*.php`)
-- **class-fxw-core.php**: Main plugin initialization, hooks, and filters
-- **class-fxw-checkout.php**: Checkout process with delivery fee calculation
-- **class-fxw-dashboard.php**: Admin order management dashboard
-- **class-fxw-settings.php**: Plugin settings page
-- **class-fxw-roles.php**: Custom "Delivery Boy" user role
-- **class-fxw-order-statuses.php**: Custom statuses (In Kitchen, Assigned, Picked Up, Delivered)
-- **class-fxw-notifications.php**: Email notification triggers
-- **class-fxw-shipping-method.php**: WooCommerce shipping method integration
-- **class-fxw-shortcodes.php**: `[fxw_track_order]`, `[fxw_reorder]`
+## Custom Order Statuses
+- `fxw-assigned` - Order assigned to delivery agent
+- `fxw-picked-up` - Agent picked up the order
 
-### Email System (`includes/emails/`)
-Custom WooCommerce email classes extending `WC_Email`:
-- `class-fxw-email-in-kitchen.php`
-- `class-fxw-email-assigned.php`
-- `class-fxw-email-picked-up.php`
+## Order Meta Keys
+- `_fxw_delivery_boy_id` - Assigned delivery agent user ID
+- `_fxw_delivery_boy_name` - Agent display name
+- `_fxw_delivery_status` - Delivery status
 
-### Services (`includes/services/`)
-- **class-fxw-mapping-service.php**: Google Maps API integration for distance calculation
-- **class-fxw-rate-limiter.php**: API rate limiting
+## User Meta Keys
+- `_fxw_delivery_profile` - Saved delivery address profile
 
-### Templates (`templates/`)
-- Frontend templates for delivery dashboard, receipt printing, and email layouts
+## Plugin Options
+- `fxw_settings` - All plugin settings (single option array)
 
-## Code Standards
-
-- Follow WordPress Coding Standards
-- Include `if ( ! defined( 'ABSPATH' ) ) exit;` in all PHP files
-- Verify nonces for all AJAX requests
-- Sanitize input, escape output
-- Test with WooCommerce 7.0+ and WordPress 6.0+
-
-## Key Features
-
-- Custom order statuses: In Kitchen → Assigned → Picked Up → Delivered
-- Delivery Boy role with restricted dashboard access at `/delivery-dashboard/`
-- Google Maps integration for delivery location and distance-based fees
-- Custom WooCommerce email templates
-- Receipt printing templates
-- HPOS (High-Performance Order Storage) compatible
+## MCP Servers Available
+- **Context7** - Library documentation lookup
+- **Playwright** - Browser testing automation
+- **GitHub** - Repository management

@@ -31,9 +31,9 @@ class FXW_Reporting
 	{
 		?>
 		<div class="fxw-reports">
-			<h2><?php _e('Today\'s Report', 'foodxpress'); ?></h2>
+			<h2><?php esc_html_e('Today\'s Report', 'foodxpress'); ?></h2>
 			<?php
-			$today = date('Y-m-d');
+			$today = wp_date('Y-m-d');
 			$args = array(
 				'limit' => 200,
 				'status' => 'wc-completed',
@@ -49,11 +49,11 @@ class FXW_Reporting
 			}
 			?>
 			<p>
-				<strong><?php _e('Total Deliveries:', 'foodxpress'); ?></strong>
+				<strong><?php esc_html_e('Total Deliveries:', 'foodxpress'); ?></strong>
 				<?php echo esc_html($total_deliveries); ?>
 			</p>
 			<p>
-				<strong><?php _e('Total Delivery Fees:', 'foodxpress'); ?></strong>
+				<strong><?php esc_html_e('Total Delivery Fees:', 'foodxpress'); ?></strong>
 				<?php echo wp_kses_post(wc_price($total_fees)); ?>
 			</p>
 		</div>

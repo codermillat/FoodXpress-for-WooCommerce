@@ -1,16 +1,29 @@
-function fxw_toggle_delivery_status(element) {
-    // Add a simple loading indicator
-    element.innerHTML = 'Updating...';
+(function () {
+    'use strict';
 
-    // Security: Include nonce for CSRF protection
-    jQuery.post(ajaxurl, { 
-        action: 'fxw_toggle_delivery_status',
-        nonce: fxw_admin_params.nonce 
-    }, function(response) {
-        if (response.success) {
-            element.innerHTML = response.data.label;
-        } else {
-            element.innerHTML = 'Error!';
+    if (typeof window.fxw_toggle_delivery_status !== 'undefined') {
+        return;
+    }
+
+    window.fxw_toggle_delivery_status = function (element) {
+        if (typeof ajaxurl === 'undefined' || typeof fxw_admin_params === 'undefined') {
+            return;
         }
-    });
-}
+
+        var i18n = fxw_admin_params.i18n || {};
+        element.textContent = i18n.updating || 'Updating...';
+
+        jQuery.post(ajaxurl, {
+            action: 'fxw_toggle_delivery_status',
+            nonce: fxw_admin_params.nonce
+        }, function (response) {
+            if (response.success && response.data) {
+                element.textContent = response.data.label || '';
+            } else {
+                element.textContent = i18n.error || 'Error!';
+            }
+        }).fail(function () {
+            element.textContent = i18n.error || 'Error!';
+        });
+    };
+})();

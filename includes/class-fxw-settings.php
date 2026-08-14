@@ -132,6 +132,15 @@ class FXW_Settings
 			array('id' => 'fxw_delivery_fee_per_km', 'default' => 1.50, 'step' => 0.01)
 		);
 
+		add_settings_field(
+			'fxw_enable_extra_delivery_fee',
+			__('Enable Extra Delivery Fee (as Cart Fee)', 'foodxpress'),
+			array($this, 'render_checkbox_field'),
+			'foodxpress-settings',
+			'fxw_delivery_fee_settings_section',
+			array('id' => 'fxw_enable_extra_delivery_fee', 'label' => __('Add delivery fee as a separate cart fee when FoodXpress shipping is not selected', 'foodxpress'))
+		);
+
 		// Delivery Zone Settings Section
 		add_settings_section(
 			'fxw_delivery_zone_settings_section',
@@ -147,6 +156,15 @@ class FXW_Settings
 			'foodxpress-settings',
 			'fxw_delivery_zone_settings_section',
 			array('id' => 'fxw_delivery_zone_radius', 'default' => 10)
+		);
+
+		add_settings_field(
+			'fxw_auto_set_assigned_status',
+			__('Auto-Set Status on Assign', 'foodxpress'),
+			array($this, 'render_checkbox_field'),
+			'foodxpress-settings',
+			'fxw_delivery_zone_settings_section',
+			array('id' => 'fxw_auto_set_assigned_status', 'label' => __('Automatically set order status to "Assigned" when a delivery boy is assigned from the order edit page', 'foodxpress'))
 		);
 
 		// Receipt Branding Settings Section
@@ -339,6 +357,28 @@ class FXW_Settings
 	}
 
 	/**
+	 * Render a checkbox field.
+	 *
+	 * @param   array   $args   The arguments for the field.
+	 * @since   1.1.0
+	 */
+	public function render_checkbox_field($args)
+	{
+		$options = get_option('fxw_settings');
+		$id = $args['id'];
+		$label = isset($args['label']) ? $args['label'] : '';
+		$value = isset($options[$id]) ? $options[$id] : '';
+		$checked = in_array($value, array('yes', 'true', 1, '1'), true);
+		?>
+		<label>
+			<input type="checkbox" name="fxw_settings[<?php echo esc_attr($id); ?>]" value="yes"
+				<?php checked($checked); ?>>
+			<?php echo esc_html($label); ?>
+		</label>
+		<?php
+	}
+
+	/**
 	 * Render a generic number field.
 	 *
 	 * @param   array   $args   The arguments for the field.
@@ -366,6 +406,10 @@ class FXW_Settings
 	 */
 	public function sanitize_settings($input)
 	{
+		$existing = get_option('fxw_settings', array());
+		if (!is_array($existing)) {
+			$existing = array();
+		}
 		$sanitized = array();
 
 		// General settings
@@ -395,10 +439,16 @@ class FXW_Settings
 			$sanitized['fxw_delivery_zone_radius'] = absint($input['fxw_delivery_zone_radius']);
 		}
 
-		// Preserve fxw_is_open status
-		$existing = get_option('fxw_settings');
-		if (isset($existing['fxw_is_open'])) {
-			$sanitized['fxw_is_open'] = $existing['fxw_is_open'];
+		if (isset($input['fxw_auto_set_assigned_status'])) {
+			$sanitized['fxw_auto_set_assigned_status'] = 'yes';
+		} else {
+			$sanitized['fxw_auto_set_assigned_status'] = 'no';
+		}
+
+		if (isset($input['fxw_enable_extra_delivery_fee'])) {
+			$sanitized['fxw_enable_extra_delivery_fee'] = 'yes';
+		} else {
+			$sanitized['fxw_enable_extra_delivery_fee'] = 'no';
 		}
 
 		// Receipt branding settings
@@ -424,6 +474,14 @@ class FXW_Settings
 
 		if (isset($input['fxw_receipt_footer_message'])) {
 			$sanitized['fxw_receipt_footer_message'] = sanitize_text_field($input['fxw_receipt_footer_message']);
+		}
+
+		// Preserve settings not in this form (fxw_is_open, fxw_enable_extra_delivery_fee, fxw_auto_set_assigned_status, etc.)
+		$preserve_keys = array('fxw_is_open', 'fxw_enable_extra_delivery_fee', 'fxw_auto_set_assigned_status');
+		foreach ($preserve_keys as $key) {
+			if (isset($existing[$key]) && !isset($sanitized[$key])) {
+				$sanitized[$key] = $existing[$key];
+			}
 		}
 
 		return $sanitized;

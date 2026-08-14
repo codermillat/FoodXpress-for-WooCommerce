@@ -66,6 +66,7 @@ class FXW_Core
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-config.php';
 		require_once FXW_PLUGIN_DIR . 'includes/services/class-fxw-mapping-service.php';
 		require_once FXW_PLUGIN_DIR . 'includes/services/class-fxw-rate-limiter.php';
+		require_once FXW_PLUGIN_DIR . 'includes/api/class-fxw-rest-checkout-controller.php';
 
 		// Core files - loaded on both admin and frontend
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-roles.php';
@@ -111,6 +112,10 @@ class FXW_Core
 		// Localize script with nonce for security
 		wp_localize_script($this->plugin_name, 'fxw_admin_params', array(
 			'nonce' => wp_create_nonce('fxw-admin-nonce'),
+			'i18n'  => array(
+				'updating' => __('Updating...', 'foodxpress'),
+				'error'    => __('Error!', 'foodxpress'),
+			),
 		));
 	}
 
@@ -121,16 +126,21 @@ class FXW_Core
 	 */
 	public function enqueue_delivery_dashboard_scripts()
 	{
-		// Check if we're on the delivery dashboard page
-		if (get_query_var('is_delivery_dashboard') || is_page_template('templates/delivery-dashboard-template.php')) {
-			wp_enqueue_script('fxw-delivery-dashboard', plugin_dir_url(__FILE__) . '../assets/js/delivery-dashboard.js', array('jquery'), $this->version, true);
-
-			// Localize script with AJAX parameters for delivery dashboard
-			wp_localize_script('fxw-delivery-dashboard', 'fxw_checkout_params', array(
-				'ajax_url' => admin_url('admin-ajax.php'),
-				'nonce' => wp_create_nonce('fxw_print_receipt'),
-			));
+		if (!get_query_var('is_delivery_dashboard')) {
+			return;
 		}
+
+		wp_enqueue_style('fxw-delivery-dashboard', plugin_dir_url(__FILE__) . '../assets/css/delivery-dashboard.css', array(), $this->version);
+		wp_enqueue_script('fxw-delivery-dashboard', plugin_dir_url(__FILE__) . '../assets/js/delivery-dashboard.js', array('jquery'), $this->version, true);
+		wp_localize_script('fxw-delivery-dashboard', 'fxw_checkout_params', array(
+			'ajax_url' => admin_url('admin-ajax.php'),
+			'nonce' => wp_create_nonce('fxw_print_receipt'),
+			'i18n' => array(
+				'new_tab' => __('New', 'foodxpress'),
+				'in_progress_tab' => __('In Progress', 'foodxpress'),
+				'no_orders' => __('No orders in this section.', 'foodxpress'),
+			),
+		));
 	}
 
 	/**
@@ -153,6 +163,9 @@ class FXW_Core
 
 		// Register custom emails with WooCommerce
 		add_filter('woocommerce_email_classes', array($this, 'register_email_classes'));
+
+		// Register REST API routes
+		add_action('rest_api_init', array($this, 'register_rest_routes'));
 	}
 
 	/**
@@ -294,5 +307,16 @@ class FXW_Core
 		$email_classes['FXW_Email_Picked_Up'] = new FXW_Email_Picked_Up();
 
 		return $email_classes;
+	}
+
+	/**
+	 * Register REST API routes.
+	 *
+	 * @since    1.1.0
+	 */
+	public function register_rest_routes()
+	{
+		$controller = new FXW_REST_Checkout_Controller();
+		$controller->register_routes();
 	}
 }

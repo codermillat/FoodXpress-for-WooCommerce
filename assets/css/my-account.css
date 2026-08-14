@@ -1,0 +1,334 @@
+/**
+ * FoodXpress My Account - Food Delivery App Style
+ * Warm, mobile-first UI for customer account dashboard.
+ *
+ * Design: Food delivery app aesthetic (Uber Eats / DoorDash inspired)
+ * - Warm orange primary, clean neutrals
+ * - Card-based layout, rounded corners, soft shadows
+ * - Touch-friendly, mobile-first
+ */
+
+/* Design tokens */
+:root {
+	--fxw-account-primary: #E85D04;
+	--fxw-account-primary-dark: #D44D00;
+	--fxw-account-primary-light: #FFF4ED;
+	--fxw-account-bg: #F8F6F3;
+	--fxw-account-card: #FFFFFF;
+	--fxw-account-text: #1A1A1A;
+	--fxw-account-text-muted: #6B6B6B;
+	--fxw-account-border: #E8E4DE;
+	--fxw-account-radius: 14px;
+	--fxw-account-radius-sm: 10px;
+	--fxw-account-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+	--fxw-account-shadow-hover: 0 4px 20px rgba(232, 93, 4, 0.12);
+}
+
+/* Page background */
+.woocommerce-account.fxw-my-account-styled {
+	background: var(--fxw-account-bg);
+	min-height: 100vh;
+}
+
+.woocommerce-account.fxw-my-account-styled .entry-content,
+.woocommerce-account.fxw-my-account-styled .site-main {
+	background: transparent;
+}
+
+/* Scope: WooCommerce My Account only */
+.woocommerce-account.fxw-my-account-styled .woocommerce {
+	max-width: 100%;
+}
+
+/* Page wrapper */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content,
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Main layout: dashboard, orders, etc. */
+.woocommerce-account.fxw-my-account-styled .woocommerce {
+	background: var(--fxw-account-bg);
+	padding: 1.25em;
+	border-radius: var(--fxw-account-radius);
+}
+
+/* Page title */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content .woocommerce-EditAccountForm .form-row,
+.woocommerce-account.fxw-my-account-styled .entry-title,
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content > h2 {
+	font-size: 1.35em;
+	font-weight: 700;
+	color: var(--fxw-account-text);
+	margin-bottom: 1em;
+}
+
+/* Navigation - horizontal card-style on mobile, sidebar on desktop */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation {
+	float: none;
+	width: 100%;
+	margin-bottom: 1.5em;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em;
+	-webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 768px) {
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul {
+		flex-direction: column;
+	}
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li {
+	margin: 0;
+	padding: 0;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a {
+	display: flex;
+	align-items: center;
+	padding: 14px 18px;
+	min-height: 48px;
+	background: var(--fxw-account-card);
+	border: 1px solid var(--fxw-account-border);
+	border-radius: var(--fxw-account-radius-sm);
+	font-weight: 600;
+	font-size: 0.95em;
+	color: var(--fxw-account-text);
+	text-decoration: none;
+	transition: all 0.2s ease;
+	box-shadow: var(--fxw-account-shadow);
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a:hover {
+	border-color: var(--fxw-account-primary);
+	background: var(--fxw-account-primary-light);
+	color: var(--fxw-account-primary);
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.is-active a {
+	background: var(--fxw-account-primary);
+	border-color: var(--fxw-account-primary);
+	color: #fff;
+}
+
+/* Content area */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content {
+	float: none;
+	width: 100%;
+	padding: 1.5em;
+	background: var(--fxw-account-card);
+	border-radius: var(--fxw-account-radius);
+	border: 1px solid var(--fxw-account-border);
+	box-shadow: var(--fxw-account-shadow);
+}
+
+@media (min-width: 768px) {
+	.woocommerce-account.fxw-my-account-styled .woocommerce::after {
+		content: "";
+		display: table;
+		clear: both;
+	}
+
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation {
+		float: left;
+		width: 260px;
+		margin-right: 2em;
+		margin-bottom: 0;
+	}
+
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content {
+		float: left;
+		width: calc(100% - 280px);
+		min-width: 0;
+	}
+}
+
+/* Dashboard welcome */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content p {
+	color: var(--fxw-account-text-muted);
+	line-height: 1.6;
+}
+
+/* Orders table - card style */
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table,
+.woocommerce-account.fxw-my-account-styled .woocommerce-order-details {
+	background: transparent;
+	border: none;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table thead th,
+.woocommerce-account.fxw-my-account-styled .shop_table thead th {
+	background: var(--fxw-account-primary-light);
+	color: var(--fxw-account-text);
+	font-weight: 600;
+	padding: 14px 18px;
+	border: none;
+	border-bottom: 2px solid var(--fxw-account-primary);
+	border-radius: var(--fxw-account-radius-sm) var(--fxw-account-radius-sm) 0 0;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table td,
+.woocommerce-account.fxw-my-account-styled .shop_table td {
+	padding: 14px 18px;
+	border-color: var(--fxw-account-border);
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table tbody tr:hover,
+.woocommerce-account.fxw-my-account-styled .shop_table tbody tr:hover {
+	background: var(--fxw-account-primary-light);
+}
+
+/* Order view - order number header */
+.woocommerce-account.fxw-my-account-styled .order-number {
+	font-weight: 700;
+	color: var(--fxw-account-primary);
+}
+
+/* Buttons */
+.woocommerce-account.fxw-my-account-styled .button,
+.woocommerce-account.fxw-my-account-styled .woocommerce-Button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: 12px 24px;
+	background: var(--fxw-account-primary) !important;
+	border: none !important;
+	border-radius: var(--fxw-account-radius-sm);
+	color: #fff !important;
+	font-weight: 600;
+	text-decoration: none;
+	transition: all 0.2s ease;
+	cursor: pointer;
+}
+
+.woocommerce-account.fxw-my-account-styled .button:hover,
+.woocommerce-account.fxw-my-account-styled .woocommerce-Button:hover {
+	background: var(--fxw-account-primary-dark) !important;
+	color: #fff !important;
+}
+
+/* Re-order and View buttons on orders list */
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell .button {
+	min-height: 40px;
+	padding: 8px 16px;
+	font-size: 0.9em;
+}
+
+/* Form inputs */
+.woocommerce-account.fxw-my-account-styled input[type="text"],
+.woocommerce-account.fxw-my-account-styled input[type="email"],
+.woocommerce-account.fxw-my-account-styled input[type="password"],
+.woocommerce-account.fxw-my-account-styled input[type="tel"],
+.woocommerce-account.fxw-my-account-styled textarea {
+	padding: 14px 18px;
+	border: 2px solid var(--fxw-account-border);
+	border-radius: var(--fxw-account-radius-sm);
+	font-size: 1em;
+	min-height: 48px;
+	transition: border-color 0.2s;
+}
+
+.woocommerce-account.fxw-my-account-styled input:focus,
+.woocommerce-account.fxw-my-account-styled textarea:focus {
+	border-color: var(--fxw-account-primary);
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(232, 93, 4, 0.25);
+}
+
+/* Addresses */
+.woocommerce-account.fxw-my-account-styled .u-columns {
+	display: grid;
+	gap: 1.5em;
+}
+
+.woocommerce-account.fxw-my-account-styled .u-column1,
+.woocommerce-account.fxw-my-account-styled .u-column2 {
+	padding: 1.5em;
+	background: var(--fxw-account-bg);
+	border-radius: var(--fxw-account-radius-sm);
+	border: 1px solid var(--fxw-account-border);
+}
+
+/* Order tracking block - integrate with food app style */
+.woocommerce-account.fxw-my-account-styled .fxw-order-tracking {
+	--fxw-account-primary: #E85D04;
+}
+
+.woocommerce-account.fxw-my-account-styled .fxw-order-tracking__status-badge {
+	background: var(--fxw-account-primary);
+}
+
+.woocommerce-account.fxw-my-account-styled .fxw-delivery-contact__call {
+	background: linear-gradient(135deg, var(--fxw-account-primary) 0%, var(--fxw-account-primary-dark) 100%) !important;
+}
+
+/* Mobile: horizontal scroll nav */
+@media (max-width: 600px) {
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul {
+		overflow-x: auto;
+		flex-wrap: nowrap;
+		padding-bottom: 8px;
+		scrollbar-width: thin;
+	}
+
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li {
+		flex: 0 0 auto;
+	}
+
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a {
+		white-space: nowrap;
+	}
+
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content {
+		padding: 1.25em;
+	}
+
+	/* Responsive order table */
+	.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell,
+	.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table .order-actions {
+		padding: 10px 12px;
+	}
+}
+
+/* Logout link style */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--customer-logout a {
+	background: transparent;
+	border-color: #dc3545;
+	color: #dc3545;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--customer-logout a:hover {
+	background: #fef2f2;
+	border-color: #b91c1c;
+	color: #b91c1c;
+}
+
+/* Focus visible states */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a:focus-visible {
+	outline: 2px solid var(--fxw-account-primary);
+	outline-offset: 2px;
+}
+
+.woocommerce-account.fxw-my-account-styled .button:focus-visible,
+.woocommerce-account.fxw-my-account-styled .woocommerce-Button:focus-visible {
+	outline: 2px solid var(--fxw-account-primary);
+	outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	.woocommerce-account.fxw-my-account-styled *,
+	.woocommerce-account.fxw-my-account-styled *::before,
+	.woocommerce-account.fxw-my-account-styled *::after {
+		transition-duration: 0.01ms !important;
+	}
+}

@@ -31,8 +31,12 @@ class FXW_Admin_Bar
 	 */
 	public function add_delivery_status_toggle($wp_admin_bar)
 	{
+		if (!current_user_can('manage_options') && !current_user_can('manage_woocommerce')) {
+			return;
+		}
+
 		$options = get_option('fxw_settings');
-		$is_open = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : true;
+		$is_open = isset($options['fxw_is_open']) ? filter_var($options['fxw_is_open'], FILTER_VALIDATE_BOOLEAN) : true;
 
 		$title = $is_open ? __('Deliveries: Open', 'foodxpress') : __('Deliveries: Closed', 'foodxpress');
 		$href = '#';
@@ -66,9 +70,11 @@ class FXW_Admin_Bar
 			wp_send_json_error(array('message' => __('Security verification failed.', 'foodxpress')), 403);
 		}
 
-		$options = get_option('fxw_settings');
-		$is_open = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : true;
-
+		$options = get_option('fxw_settings', array());
+		if (!is_array($options)) {
+			$options = array();
+		}
+		$is_open = isset($options['fxw_is_open']) ? filter_var($options['fxw_is_open'], FILTER_VALIDATE_BOOLEAN) : true;
 		$options['fxw_is_open'] = !$is_open;
 		update_option('fxw_settings', $options);
 

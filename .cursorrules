@@ -16,8 +16,28 @@ When working on this WordPress plugin, you can use TestSprite MCP for automated 
 - Follow WordPress Coding Standards
 - Include ABSPATH checks in all PHP files
 - Verify nonces for all AJAX requests
-- Sanitize input, escape output
+- Sanitize input (`sanitize_text_field(wp_unslash(...))`) , escape output (`esc_html()`, `esc_attr()`, `esc_url()`)
+- Use strict comparisons (`===`/`!==`), never loose for auth checks
+- Null-check `WC()->session` and `WC()->customer` before use
 - Test with WooCommerce 7.0+ and WordPress 6.0+
+
+## Available Skills & Rules
+
+- **Code Simplifier** (`.cursor/rules/code-simplifier.mdc`) - Refactor for clarity and consistency. Say "simplify this code" or "clean up" to activate.
+- **Code Review** (`.cursor/rules/code-review.mdc`) - Multi-perspective PR review with confidence scoring. Say "review this PR" or "code review" to activate.
+- **CLAUDE.md Management** (`.cursor/rules/claude-md-management.mdc`) - Audit and update project memory files. Say "audit CLAUDE.md" or "revise CLAUDE.md" to activate.
+- **PHP Security** (`.cursor/rules/php-security.mdc`) - Auto-applied sanitization/escaping rules for all PHP files.
+- **JavaScript** (`.cursor/rules/javascript.mdc`) - Auto-applied XSS prevention and defensive coding rules for JS.
+
+## MCP Servers
+
+- **Context7** - Up-to-date docs for WooCommerce, WordPress, Google Maps. Say "use context7" to activate.
+- **Playwright** - Browser testing. Say "test the checkout page" to use.
+- **GitHub** - PR/issue management (requires PAT in `.cursor/mcp.json`).
+
+## Project Memory
+
+See `CLAUDE.md` for full file structure, coding patterns, and conventions.
 
 ## Test Configuration
 

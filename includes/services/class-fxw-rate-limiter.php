@@ -141,7 +141,7 @@ class FXW_Rate_Limiter
     {
         // Only use REMOTE_ADDR to prevent IP spoofing.
         // Headers like HTTP_X_FORWARDED_FOR can be easily forged by attackers.
-        $ip_address = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
+        $ip_address = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : '';
 
         if (!filter_var($ip_address, FILTER_VALIDATE_IP)) {
             return null;

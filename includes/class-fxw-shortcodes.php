@@ -21,10 +21,11 @@ class FXW_Shortcodes
 	{
 		add_shortcode('fxw_track_order', array($this, 'render_track_order_shortcode'));
 		add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
+		add_filter('body_class', array($this, 'add_my_account_body_class'));
 		add_filter('woocommerce_my_account_my_orders_actions', array($this, 'add_reorder_button'), 10, 2);
 		add_action('template_redirect', array($this, 'handle_reorder'));
 		add_action('wp_ajax_fxw_print_receipt', array($this, 'print_receipt'));
-		add_action('wp_ajax_nopriv_fxw_print_receipt', array($this, 'print_receipt'));
+		add_action('woocommerce_order_details_after_order_table', array($this, 'render_order_tracking_block'), 10, 1);
 	}
 
 	/**
@@ -69,13 +70,12 @@ class FXW_Shortcodes
 		if (
 			!current_user_can('manage_options') &&
 			!current_user_can('edit_shop_orders') &&
-			$current_user_id != $assigned_delivery_boy
+			(int) $current_user_id !== (int) $assigned_delivery_boy
 		) {
 			wp_die(__('You are not authorized to view this receipt.', 'foodxpress'));
 		}
 
-		// Set the global order variable for the template
-		global $order;
+		// Set the global order variable for the template.
 		$GLOBALS['order'] = $order;
 
 		include_once FXW_PLUGIN_DIR . 'templates/receipt-template.php';
@@ -140,6 +140,21 @@ class FXW_Shortcodes
 	}
 
 	/**
+	 * Add body class for My Account food-delivery styling.
+	 *
+	 * @param array $classes Existing body classes.
+	 * @return array Modified classes.
+	 * @since 1.1.0
+	 */
+	public function add_my_account_body_class($classes)
+	{
+		if (is_account_page()) {
+			$classes[] = 'fxw-my-account-styled';
+		}
+		return $classes;
+	}
+
+	/**
 	 * Enqueue scripts for the frontend.
 	 *
 	 * @since    1.0.0
@@ -147,6 +162,118 @@ class FXW_Shortcodes
 	public function enqueue_scripts()
 	{
 		wp_enqueue_style('fxw-frontend', plugin_dir_url(__FILE__) . '../assets/css/frontend.css', array(), FXW_VERSION);
+
+		if (is_account_page()) {
+			wp_enqueue_style('fxw-my-account', plugin_dir_url(__FILE__) . '../assets/css/my-account.css', array('fxw-frontend'), FXW_VERSION);
+		}
+	}
+
+	/**
+	 * Render order tracking block on My Account order view page.
+	 * Shows status stepper and delivery boy name/contact on every order.
+	 *
+	 * @param WC_Order $order Order object.
+	 * @since 1.1.0
+	 */
+	public function render_order_tracking_block($order)
+	{
+		if (!is_a($order, 'WC_Order')) {
+			return;
+		}
+		$this->output_tracking_ui($order);
+	}
+
+	/**
+	 * Output the tracking UI (status stepper + delivery boy info).
+	 * Reusable for both My Account order view and track-order shortcode.
+	 *
+	 * @param WC_Order $order Order object.
+	 * @since 1.1.0
+	 */
+	private function output_tracking_ui($order)
+	{
+		$statuses = array(
+			'wc-fxw-in-kitchen' => __('In the Kitchen', 'foodxpress'),
+			'wc-fxw-assigned' => __('Assigned', 'foodxpress'),
+			'wc-fxw-picked-up' => __('Picked Up', 'foodxpress'),
+			'wc-completed' => __('Delivered', 'foodxpress'),
+		);
+
+		$current_status = $order->get_status();
+		$status_keys = array_keys($statuses);
+
+		// Map standard WC statuses to steps for orders not yet in FXW flow
+		$status_to_step = array(
+			'pending' => 0,
+			'on-hold' => 0,
+			'processing' => 0,
+			'fxw-in-kitchen' => 0,
+			'fxw-assigned' => 1,
+			'fxw-picked-up' => 2,
+			'completed' => 3,
+			'cancelled' => -1,
+			'refunded' => 3,
+			'failed' => -1,
+		);
+		$current_status_index = isset($status_to_step[$current_status]) ? $status_to_step[$current_status] : 0;
+		if ($current_status_index < 0) {
+			return; // Don't show tracker for cancelled/failed
+		}
+
+		$delivery_boy_id = (int) $order->get_meta('_fxw_delivery_boy_id', true);
+		$delivery_boy = $delivery_boy_id ? get_user_by('id', $delivery_boy_id) : null;
+		$delivery_phone = $delivery_boy ? get_user_meta($delivery_boy_id, 'billing_phone', true) : '';
+		$delivery_phone = is_string($delivery_phone) ? trim($delivery_phone) : '';
+		?>
+		<section class="fxw-order-tracking fxw-order-tracking--myaccount">
+			<h2 class="fxw-order-tracking__title"><?php esc_html_e('Delivery Status', 'foodxpress'); ?></h2>
+			<div class="fxw-order-tracking__status">
+				<span class="fxw-order-tracking__status-badge"><?php echo esc_html(wc_get_order_status_name($current_status)); ?></span>
+			</div>
+			<div class="fxw-status-stepper">
+				<?php foreach ($statuses as $status_key => $status_name): ?>
+					<?php
+					$status_index = array_search($status_key, $status_keys);
+					$is_completed = $current_status_index > $status_index;
+					$is_current = $current_status_index === $status_index;
+					$is_delivered = ('wc-completed' === $status_key && 'completed' === $current_status);
+					$class = 'fxw-status-step';
+					if ($is_completed || $is_delivered) {
+						$class .= ' fxw-status-step--completed';
+					}
+					if ($is_current) {
+						$class .= ' fxw-status-step--current';
+					}
+					if ($is_delivered) {
+						$class .= ' fxw-status-step--delivered';
+					}
+					?>
+					<div class="<?php echo esc_attr($class); ?>">
+						<div class="fxw-status-step__dot">
+							<span class="fxw-status-step__icon" aria-hidden="true"><?php echo ($is_completed || $is_current || $is_delivered) ? '&#10003;' : ''; ?></span>
+						</div>
+						<span class="fxw-status-step__label"><?php echo esc_html($status_name); ?></span>
+					</div>
+				<?php endforeach; ?>
+			</div>
+			<?php if ($delivery_boy && $current_status_index >= 1): ?>
+				<div class="fxw-delivery-contact">
+					<h3 class="fxw-delivery-contact__title"><?php esc_html_e('Your Delivery Rider', 'foodxpress'); ?></h3>
+					<div class="fxw-delivery-contact__content">
+						<span class="fxw-delivery-contact__name"><?php echo esc_html($delivery_boy->display_name); ?></span>
+						<?php if ($delivery_phone): ?>
+							<a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $delivery_phone)); ?>" class="fxw-delivery-contact__call">
+								<span class="fxw-delivery-contact__phone"><?php echo esc_html($delivery_phone); ?></span>
+								<span class="fxw-delivery-contact__call-label"><?php esc_html_e('Call', 'foodxpress'); ?></span>
+							</a>
+						<?php else: ?>
+							<span class="fxw-delivery-contact__no-phone"><?php esc_html_e('Contact via store', 'foodxpress'); ?></span>
+						<?php endif; ?>
+					</div>
+				</div>
+			<?php endif; ?>
+		</section>
+		<?php
 	}
 
 	/**
@@ -161,7 +288,7 @@ class FXW_Shortcodes
 		ob_start();
 		echo '<div class="fxw-container fxw-track-order-page">';
 		$this->track_order_form();
-		if (isset($_POST['fxw_track_order_nonce']) && wp_verify_nonce($_POST['fxw_track_order_nonce'], 'fxw_track_order')) {
+		if (isset($_POST['fxw_track_order_nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['fxw_track_order_nonce'])), 'fxw_track_order')) {
 			$this->track_order_status();
 		}
 		echo '</div>';
@@ -177,23 +304,23 @@ class FXW_Shortcodes
 	{
 		?>
 		<div class="fxw-track-order-form-container">
-			<h2><?php _e('Track Your Order', 'foodxpress'); ?></h2>
-			<p><?php _e('Enter your order details below to see its current status.', 'foodxpress'); ?></p>
+			<h2><?php esc_html_e('Track Your Order', 'foodxpress'); ?></h2>
+			<p><?php esc_html_e('Enter your order details below to see its current status.', 'foodxpress'); ?></p>
 			<form action="" method="post" class="fxw-track-order-form">
 				<?php wp_nonce_field('fxw_track_order', 'fxw_track_order_nonce'); ?>
 				<div class="form-row">
-					<label for="fxw_order_id"><?php _e('Order ID', 'foodxpress'); ?></label>
+					<label for="fxw_order_id"><?php esc_html_e('Order ID', 'foodxpress'); ?></label>
 					<input type="text" name="fxw_order_id" id="fxw_order_id"
 						placeholder="<?php esc_attr_e('e.g. 123', 'foodxpress'); ?>" required>
 				</div>
 				<div class="form-row">
-					<label for="fxw_billing_email"><?php _e('Billing Email', 'foodxpress'); ?></label>
+					<label for="fxw_billing_email"><?php esc_html_e('Billing Email', 'foodxpress'); ?></label>
 					<input type="email" name="fxw_billing_email" id="fxw_billing_email"
 						placeholder="<?php esc_attr_e('e.g. you@example.com', 'foodxpress'); ?>" required>
 				</div>
 				<div class="form-row">
 					<button type="submit"
-						class="fxw-button fxw-button-track"><?php _e('Track Order', 'foodxpress'); ?></button>
+						class="fxw-button fxw-button-track"><?php esc_html_e('Track Order', 'foodxpress'); ?></button>
 				</div>
 			</form>
 		</div>
@@ -213,70 +340,14 @@ class FXW_Shortcodes
 		$order = wc_get_order($order_id);
 
 		if (!$order || $order->get_billing_email() !== $billing_email) {
-			echo '<p>' . __('Invalid order details.', 'foodxpress') . '</p>';
+			echo '<p class="fxw-track-error">' . esc_html__('Invalid order details.', 'foodxpress') . '</p>';
 			return;
 		}
 
-		$statuses = array(
-			'wc-fxw-in-kitchen' => __('In the Kitchen', 'foodxpress'),
-			'wc-fxw-assigned' => __('Assigned', 'foodxpress'),
-			'wc-fxw-picked-up' => __('Picked Up', 'foodxpress'),
-			'wc-completed' => __('Delivered', 'foodxpress'),
-		);
-
-		$current_status = $order->get_status();
-		$status_keys = array_keys($statuses);
-		$current_status_index = array_search('wc-' . $current_status, $status_keys);
-		$delivery_boy_id = $order->get_meta('_fxw_delivery_boy_id', true);
-		?>
-		<div class="fxw-order-status-wrapper fxw-mobile-friendly">
-			<div class="fxw-order-status-header">
-				<h3 style="font-size:1.2em;margin-bottom:0.5em;">
-					<?php printf(__('Order #%s', 'foodxpress'), $order->get_order_number()); ?></h3>
-				<p class="fxw-current-status-text" style="font-size:1em;">
-					<?php echo esc_html(wc_get_order_status_name($current_status)); ?></p>
-			</div>
-			<div class="fxw-status-tracker">
-				<?php foreach ($statuses as $status_key => $status_name): ?>
-					<?php
-					$status_index = array_search($status_key, $status_keys);
-					$is_completed = ($current_status_index !== false && $status_index < $current_status_index);
-					$is_current = ($current_status_index !== false && $status_index === $current_status_index);
-					$is_delivered = ($status_key === 'wc-completed' && $current_status === 'completed');
-					$class = $is_completed ? 'completed' : '';
-					$class .= $is_current ? ' current' : '';
-					$class .= $is_delivered ? ' delivered' : '';
-					?>
-					<div class="status-step <?php echo esc_attr($class); ?>">
-						<div class="dot">
-							<span class="fxw-icon">
-								<?php
-								if ($is_completed || $is_current || $is_delivered) {
-									echo '&#10003;'; // Checkmark
-								}
-								?>
-							</span>
-						</div>
-						<div class="label"><?php echo esc_html($status_name); ?></div>
-					</div>
-				<?php endforeach; ?>
-			</div>
-			<?php if ($delivery_boy_id && $current_status_index >= 1): ?>
-				<?php $delivery_boy = get_user_by('id', $delivery_boy_id); ?>
-				<div class="fxw-delivery-boy-info"
-					style="margin-top:1em;padding:0.75em;background:#fafafa;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
-					<h4 style="font-size:1em;margin-bottom:0.25em;"><?php _e('Your Delivery Rider', 'foodxpress'); ?></h4>
-					<p style="display:flex;align-items:center;gap:8px;">
-						<span class="fxw-icon" style="font-size:1.3em;">&#128100;</span>
-						<strong style="font-size:1em;"><?php echo esc_html($delivery_boy->display_name); ?></strong>
-						<a href="tel:<?php echo esc_attr(get_user_meta($delivery_boy_id, 'billing_phone', true)); ?>"
-							class="fxw-button-call"
-							style="padding:0.5em 1em;font-size:0.95em;border-radius:6px;background:#007cba;color:#fff;text-decoration:none;"><?php _e('Call', 'foodxpress'); ?></a>
-					</p>
-				</div>
-			<?php endif; ?>
-		</div>
-		<?php
+		echo '<div class="fxw-order-status-wrapper fxw-track-order-page">';
+		echo '<div class="fxw-order-status-header"><h3>' . sprintf(esc_html__('Order #%s', 'foodxpress'), esc_html($order->get_order_number())) . '</h3></div>';
+		$this->output_tracking_ui($order);
+		echo '</div>';
 	}
 }
 

@@ -10,17 +10,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get order data - this should be set by the calling function
+// Get order data - must be set by print_receipt_template() after nonce/capability check.
+// Do not fall back to $_GET; this template is only included after verification.
 global $order;
-
-// If no order is set globally, try to get it from the request
-if (!$order && isset($_GET['fxw_print_receipt'])) {
-    $order_id = absint($_GET['fxw_print_receipt']);
-    $order = wc_get_order($order_id);
-} elseif (!$order && isset($_GET['order_id'])) {
-    $order_id = absint($_GET['order_id']);
-    $order = wc_get_order($order_id);
-}
 
 // If still no order, exit with error
 if (!$order || !is_a($order, 'WC_Order')) {
@@ -82,7 +74,7 @@ $receipt_footer = isset($fxw_options['fxw_receipt_footer_message']) && !empty($f
 $unit = $order->get_meta('_fxw_address_unit');
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html <?php language_attributes(); ?>>
 
 <head>
     <meta charset="UTF-8">
@@ -324,7 +316,7 @@ $unit = $order->get_meta('_fxw_address_unit');
             </div>
             <div class="bill-row">
                 <span><?php esc_html_e('Date:', 'foodxpress'); ?></span>
-                <span><?php echo esc_html($order_date->format('j M Y g:i A')); ?></span>
+                <span><?php echo $order_date ? esc_html($order_date->format('j M Y g:i A')) : esc_html__('N/A', 'foodxpress'); ?></span>
             </div>
             <div class="bill-row">
                 <span><?php esc_html_e('Status:', 'foodxpress'); ?></span>
@@ -348,7 +340,7 @@ $unit = $order->get_meta('_fxw_address_unit');
                 <?php endif; ?>
                 <br>
                 <div><strong><?php esc_html_e('Delivery Address:', 'foodxpress'); ?></strong></div>
-                <div><?php echo wp_kses_post(str_replace('<br/>', ', ', $shipping_address)); ?></div>
+                <div><?php echo esc_html(str_replace(array('<br>', '<br/>', '<br />'), ', ', wp_strip_all_tags($shipping_address))); ?></div>
                 <?php if ($unit): ?>
                     <div><?php printf(esc_html__('Unit/Flat: %s', 'foodxpress'), esc_html($unit)); ?></div>
                 <?php endif; ?>
@@ -365,7 +357,7 @@ $unit = $order->get_meta('_fxw_address_unit');
                 $product = $item->get_product();
                 $item_total = $order->get_formatted_line_total($item);
                 $quantity = $item->get_quantity();
-                $unit_price = $item->get_total() / $quantity;
+                $unit_price = $quantity > 0 ? $item->get_total() / $quantity : 0;
                 ?>
                 <div class="item-row">
                     <div style="flex: 1;">
@@ -379,7 +371,7 @@ $unit = $order->get_meta('_fxw_address_unit');
                             'echo' => false,
                         ));
                         if ($item_meta) {
-                            echo '<div class="item-meta">' . wp_kses_post(strip_tags($item_meta)) . '</div>';
+                            echo '<div class="item-meta">' . esc_html(wp_strip_all_tags($item_meta)) . '</div>';
                         }
                         ?>
                         <div class="item-qty-price">

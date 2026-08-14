@@ -1,0 +1,29 @@
+---
+description: Security rules for PHP files in FoodXpress plugin
+globs: ["**/*.php"]
+alwaysApply: true
+---
+
+# PHP Security Rules
+
+## Input Handling
+- Always `wp_unslash()` before sanitizing: `sanitize_text_field(wp_unslash($_POST['key']))`
+- Use `absint()` for IDs, `sanitize_email()` for emails, `sanitize_textarea_field()` for text areas
+- Validate with `wp_verify_nonce()` on every AJAX handler and form submission
+
+## Output Escaping
+- `esc_html()` for text content
+- `esc_attr()` for HTML attributes
+- `esc_url()` for URLs
+- `wp_kses_post()` for trusted HTML (e.g., formatted addresses)
+- `esc_html_e()` / `esc_html__()` for translatable strings
+
+## Null Safety
+- `WC()->session ? WC()->session->get('key') : null`
+- `if (WC()->customer) { ... }` before `->set_*()` calls
+- Check `isset($data['key']) && is_object($data['key'])` before `->value`
+
+## Authorization
+- Use strict `(int) $a !== (int) $b` for user ID comparisons
+- Check `current_user_can()` before sensitive operations
+- Provide `admin_url()` fallback for `wp_get_referer()` and `get_edit_post_link()`

@@ -29,7 +29,6 @@ class FXW_Checkout
         add_action('wp_ajax_fxw_update_customer_location', array($this, 'update_customer_location'));
         add_action('wp_ajax_nopriv_fxw_update_customer_location', array($this, 'update_customer_location'));
         add_action('wp_ajax_fxw_debug_status', array($this, 'debug_status'));
-        add_action('wp_ajax_nopriv_fxw_debug_status', array($this, 'debug_status'));
         add_action('woocommerce_checkout_update_user_meta', array($this, 'save_customer_address'), 10, 2);
         add_action('woocommerce_cart_calculate_fees', array($this, 'add_delivery_fee'));
         add_filter('woocommerce_cart_shipping_method_full_label', array($this, 'append_eta_to_label'), 10, 2);
@@ -161,11 +160,25 @@ class FXW_Checkout
         wp_localize_script('fxw-checkout', 'fxw_checkout_params', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('fxw-checkout-nonce'),
+            'rest_url' => esc_url_raw(rest_url('foodxpress/v1/checkout')),
+            'rest_nonce' => wp_create_nonce('wp_rest'),
+            'currency_symbol' => function_exists('get_woocommerce_currency_symbol') ? get_woocommerce_currency_symbol() : '৳',
             'debug' => defined('WP_DEBUG') && WP_DEBUG,
             'prep_time' => isset($options['fxw_preparation_time']) ? (int) $options['fxw_preparation_time'] : FXW_Config::DEFAULT_PREP_TIME,
             'saved_address' => $saved_address,
             'max_retries' => FXW_Config::MAX_RETRIES,
             'retry_delay' => FXW_Config::RETRY_DELAY,
+            'translations' => array(
+                'calculating' => __('Calculating delivery fee...', 'foodxpress'),
+                'out_of_zone' => __('Sorry, we do not deliver to this location.', 'foodxpress'),
+                'store_closed' => __('Sorry, we are currently closed for deliveries.', 'foodxpress'),
+                'error_generic' => __('An error occurred. Please try again.', 'foodxpress'),
+                'geolocation_unsupported' => __('Geolocation is not supported by your browser.', 'foodxpress'),
+                'locating' => __('Locating…', 'foodxpress'),
+                'location_denied' => __('Location permission denied. Please allow access in your browser settings.', 'foodxpress'),
+                'location_unavailable' => __('Location unavailable. Please try again.', 'foodxpress'),
+                'location_timeout' => __('Location request timed out. Please try again.', 'foodxpress'),
+            )
         ));
     }
 
@@ -192,7 +205,7 @@ class FXW_Checkout
      */
     public function debug_status()
     {
-        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : (isset($_POST['security']) ? sanitize_text_field(wp_unslash($_POST['security'])) : '');
+        $nonce = sanitize_text_field(wp_unslash($_POST['nonce'] ?? $_POST['security'] ?? ''));
         if (!wp_verify_nonce($nonce, 'fxw-checkout-nonce')) {
             if (function_exists('wc_get_logger')) {
                 wc_get_logger()->warning('ajax invalid_nonce: debug_status', array('source' => 'foodxpress'));
@@ -346,15 +359,18 @@ class FXW_Checkout
             }
         }
 
-        $distance_data = WC()->session->get('fxw_distance_data');
+        $distance_data = WC()->session ? WC()->session->get('fxw_distance_data') : null;
 
         if (!$distance_data) {
             return;
         }
 
-        $options = get_option('fxw_settings');
         $base_fee = isset($options['fxw_delivery_fee_base']) ? (float) $options['fxw_delivery_fee_base'] : 5;
         $fee_per_km = isset($options['fxw_delivery_fee_per_km']) ? (float) $options['fxw_delivery_fee_per_km'] : 1.5;
+
+        if (!isset($distance_data['distance']) || !is_object($distance_data['distance']) || !isset($distance_data['distance']->value)) {
+            return;
+        }
 
         $distance_in_km = $distance_data['distance']->value / 1000;
         $delivery_fee = $base_fee + ($distance_in_km * $fee_per_km);
@@ -385,14 +401,7 @@ class FXW_Checkout
         $lng = isset($_POST['lng']) ? floatval($_POST['lng']) : 0;
 
         // Parse and sanitize address array with defaults to prevent notices
-        $raw_address = isset($_POST['address']) ? wp_parse_args((array) wc_clean(wp_unslash($_POST['address'])), array(
-            'country' => '',
-            'state' => '',
-            'postcode' => '',
-            'city' => '',
-            'address_1' => '',
-            'address_2' => '',
-        )) : array(
+        $address_defaults = array(
             'country' => '',
             'state' => '',
             'postcode' => '',
@@ -400,9 +409,17 @@ class FXW_Checkout
             'address_1' => '',
             'address_2' => '',
         );
+        $raw_address = isset($_POST['address'])
+            ? wp_parse_args((array) wc_clean(wp_unslash($_POST['address'])), $address_defaults)
+            : $address_defaults;
 
         if (!$lat || !$lng) {
             wp_send_json_error('Invalid location data.');
+        }
+
+        if (!WC()->customer) {
+            wp_send_json_error(array('message' => __('Customer session not available.', 'foodxpress')));
+            return;
         }
 
         WC()->customer->set_shipping_location($raw_address['country'], $raw_address['state'], $raw_address['postcode'], $raw_address['city']);
@@ -456,8 +473,8 @@ class FXW_Checkout
      */
     public function save_customer_address($customer_id, $data)
     {
-        if (!empty($_POST['fxw_location-search-input']) || !empty($_POST['fxw_delivery_address'])) {
-            $distance_data = WC()->session->get('fxw_distance_data');
+        if (!empty(sanitize_text_field(wp_unslash($_POST['fxw_location-search-input'] ?? ''))) || !empty($_POST['fxw_delivery_address'])) {
+            $distance_data = WC()->session ? WC()->session->get('fxw_distance_data') : null;
             $delivery_address = isset($_POST['fxw_delivery_address']) ? sanitize_textarea_field(wp_unslash($_POST['fxw_delivery_address'])) : '';
 
             $profile = array(
@@ -467,8 +484,8 @@ class FXW_Checkout
                 'state' => $data['shipping_state'],
                 'postcode' => $data['shipping_postcode'],
                 'country' => $data['shipping_country'],
-                'lat' => WC()->session->get('customer_lat'),
-                'lng' => WC()->session->get('customer_lng'),
+                'lat' => WC()->session ? WC()->session->get('customer_lat') : null,
+                'lng' => WC()->session ? WC()->session->get('customer_lng') : null,
                 'delivery_address' => $delivery_address,
                 'distance_data' => $distance_data,
             );
@@ -490,60 +507,71 @@ class FXW_Checkout
         }
 
         // Get the structured delivery details from POST data
-        $house_flat_no = isset($_POST['fxw_house_flat_no']) ? sanitize_text_field(wp_unslash($_POST['fxw_house_flat_no'])) : '';
-        $floor_no = isset($_POST['fxw_floor_no']) ? sanitize_text_field(wp_unslash($_POST['fxw_floor_no'])) : '';
-        $society_building = isset($_POST['fxw_society_building']) ? sanitize_text_field(wp_unslash($_POST['fxw_society_building'])) : '';
-        $block_tower_area = isset($_POST['fxw_block_tower_area']) ? sanitize_text_field(wp_unslash($_POST['fxw_block_tower_area'])) : '';
-        $landmark = isset($_POST['fxw_landmark']) ? sanitize_text_field(wp_unslash($_POST['fxw_landmark'])) : '';
-        $delivery_instructions = isset($_POST['fxw_delivery_instructions']) ? sanitize_textarea_field(wp_unslash($_POST['fxw_delivery_instructions'])) : '';
+        $detail_fields = array(
+            'fxw_house_flat_no'       => '_fxw_house_flat_no',
+            'fxw_floor_no'            => '_fxw_floor_no',
+            'fxw_society_building'    => '_fxw_society_building',
+            'fxw_block_tower_area'    => '_fxw_block_tower_area',
+            'fxw_landmark'            => '_fxw_landmark',
+        );
 
-        // Get coordinates from session
-        $lat = WC()->session->get('customer_lat');
-        $lng = WC()->session->get('customer_lng');
+        $detail_values = array();
+        foreach ($detail_fields as $post_key => $meta_key) {
+            $value = isset($_POST[$post_key]) ? sanitize_text_field(wp_unslash($_POST[$post_key])) : '';
+            if (!empty($value)) {
+                $order->update_meta_data($meta_key, $value);
+                $detail_values[] = $value;
+            }
+        }
+
+        $delivery_instructions = isset($_POST['fxw_delivery_instructions']) ? sanitize_textarea_field(wp_unslash($_POST['fxw_delivery_instructions'])) : '';
+        if (!empty($delivery_instructions)) {
+            $order->update_meta_data('_fxw_delivery_instructions', $delivery_instructions);
+        }
+
+        // Shorthand references for logging
+        $house_flat_no = isset($_POST['fxw_house_flat_no']) ? sanitize_text_field(wp_unslash($_POST['fxw_house_flat_no'])) : '';
+        $society_building = isset($_POST['fxw_society_building']) ? sanitize_text_field(wp_unslash($_POST['fxw_society_building'])) : '';
+
+        // Get coordinates from session (guard against null session in REST/CLI contexts)
+        $lat = WC()->session ? WC()->session->get('customer_lat') : null;
+        $lng = WC()->session ? WC()->session->get('customer_lng') : null;
 
         // Get distance data from session
-        $distance_data = WC()->session->get('fxw_distance_data');
+        $distance_data = WC()->session ? WC()->session->get('fxw_distance_data') : null;
         $distance_km = 0;
         if ($distance_data && isset($distance_data['distance']) && is_object($distance_data['distance']) && isset($distance_data['distance']->value)) {
             $distance_km = round($distance_data['distance']->value / 1000, 2);
         }
 
-        // Save all structured delivery details to order meta
-        if (!empty($house_flat_no)) {
-            $order->update_meta_data('_fxw_house_flat_no', $house_flat_no);
-        }
-        if (!empty($floor_no)) {
-            $order->update_meta_data('_fxw_floor_no', $floor_no);
-        }
-        if (!empty($society_building)) {
-            $order->update_meta_data('_fxw_society_building', $society_building);
-        }
-        if (!empty($block_tower_area)) {
-            $order->update_meta_data('_fxw_block_tower_area', $block_tower_area);
-        }
-        if (!empty($landmark)) {
-            $order->update_meta_data('_fxw_landmark', $landmark);
-        }
-        if (!empty($delivery_instructions)) {
-            $order->update_meta_data('_fxw_delivery_instructions', $delivery_instructions);
-        }
-
         // Build full delivery address for display purposes
-        $full_address_parts = array_filter(array($house_flat_no, $floor_no, $society_building, $block_tower_area, $landmark));
-        $full_delivery_address = implode(', ', $full_address_parts);
+        $full_delivery_address = implode(', ', $detail_values);
         if (!empty($full_delivery_address)) {
             $order->update_meta_data('_fxw_delivery_address', $full_delivery_address);
         }
 
-        // CRITICAL FIX: Fallback to POST data if session is empty to prevent data loss
+        // Fallback to POST data if session is empty to prevent data loss.
+        // Validate as numeric coordinates to prevent manipulation (WPCS: sanitize input).
         if (!$lat && isset($_POST['fxw_lat'])) {
-            $lat = sanitize_text_field(wp_unslash($_POST['fxw_lat']));
+            $raw_lat = is_scalar($_POST['fxw_lat']) ? sanitize_text_field(wp_unslash($_POST['fxw_lat'])) : '';
+            if (is_numeric($raw_lat)) {
+                $post_lat = (float) $raw_lat;
+                if (abs($post_lat) <= 90) {
+                    $lat = $post_lat;
+                }
+            }
         }
         if (!$lng && isset($_POST['fxw_lng'])) {
-            $lng = sanitize_text_field(wp_unslash($_POST['fxw_lng']));
+            $raw_lng = is_scalar($_POST['fxw_lng']) ? sanitize_text_field(wp_unslash($_POST['fxw_lng'])) : '';
+            if (is_numeric($raw_lng)) {
+                $post_lng = (float) $raw_lng;
+                if (abs($post_lng) <= 180) {
+                    $lng = $post_lng;
+                }
+            }
         }
 
-        if ($lat && $lng) {
+        if ($lat && $lng && abs((float) $lat) <= 90 && abs((float) $lng) <= 180) {
             $order->update_meta_data('_fxw_delivery_lat', (float) $lat);
             $order->update_meta_data('_fxw_delivery_lng', (float) $lng);
         }
@@ -604,6 +632,10 @@ class FXW_Checkout
                 <strong><?php esc_html_e('Selected Location:', 'foodxpress'); ?></strong>
                 <span id="fxw-selected-address"></span>
             </div>
+
+            <!-- Hidden fields for POST fallback when session is empty (populated by checkout.js) -->
+            <input type="hidden" name="fxw_lat" id="fxw_lat" value="" />
+            <input type="hidden" name="fxw_lng" id="fxw_lng" value="" />
         </div>
 
         <div id="fxw-delivery-details-container" style="margin-top: 20px;">
@@ -711,9 +743,9 @@ class FXW_Checkout
             return;
         }
 
-        // Enhanced coordinate validation
-        $customer_lat = WC()->session->get('customer_lat');
-        $customer_lng = WC()->session->get('customer_lng');
+        // Enhanced coordinate validation (guard against null session)
+        $customer_lat = WC()->session ? WC()->session->get('customer_lat') : null;
+        $customer_lng = WC()->session ? WC()->session->get('customer_lng') : null;
 
         // Ensure coordinates are present and valid
         if (!$customer_lat || !$customer_lng || !is_numeric($customer_lat) || !is_numeric($customer_lng)) {
@@ -744,9 +776,7 @@ class FXW_Checkout
             return;
         }
 
-        $customer_lat = WC()->session->get('customer_lat');
-        $customer_lng = WC()->session->get('customer_lng');
-
+        // Re-read from session in case early validation updated them
         if (function_exists('wc_get_logger')) {
             wc_get_logger()->debug(sprintf('validate_delivery_zone session lat=%s lng=%s', $customer_lat, $customer_lng), array('source' => 'foodxpress'));
         }
@@ -830,6 +860,11 @@ class FXW_Checkout
                 wc_get_logger()->error('validate_delivery_zone distance error: ' . $distance_data->get_error_message(), array('source' => 'foodxpress'));
             }
             $errors->add('delivery_zone', $distance_data->get_error_message());
+            return;
+        }
+
+        if (!isset($distance_data['distance']) || !is_object($distance_data['distance']) || !isset($distance_data['distance']->value)) {
+            $errors->add('delivery_zone', __('Could not calculate delivery distance. Please try again.', 'foodxpress'));
             return;
         }
 
@@ -963,20 +998,16 @@ class FXW_Checkout
 
     public function customize_checkout_fields($fields)
     {
-        // Hide the default address fields
-        $fields['billing']['billing_address_1']['class'][] = 'fxw-hidden-field';
-        $fields['billing']['billing_address_2']['class'][] = 'fxw-hidden-field';
-        $fields['billing']['billing_city']['class'][] = 'fxw-hidden-field';
-        $fields['billing']['billing_state']['class'][] = 'fxw-hidden-field';
-        $fields['billing']['billing_postcode']['class'][] = 'fxw-hidden-field';
-        $fields['billing']['billing_country']['class'][] = 'fxw-hidden-field';
-
-        $fields['shipping']['shipping_address_1']['class'][] = 'fxw-hidden-field';
-        $fields['shipping']['shipping_address_2']['class'][] = 'fxw-hidden-field';
-        $fields['shipping']['shipping_city']['class'][] = 'fxw-hidden-field';
-        $fields['shipping']['shipping_state']['class'][] = 'fxw-hidden-field';
-        $fields['shipping']['shipping_postcode']['class'][] = 'fxw-hidden-field';
-        $fields['shipping']['shipping_country']['class'][] = 'fxw-hidden-field';
+        // Hide the default address fields - map + delivery detail fields replace them
+        $hidden_suffixes = array('address_1', 'address_2', 'city', 'state', 'postcode', 'country');
+        foreach (array('billing', 'shipping') as $group) {
+            foreach ($hidden_suffixes as $suffix) {
+                $key = $group . '_' . $suffix;
+                if (isset($fields[$group][$key])) {
+                    $fields[$group][$key]['class'][] = 'fxw-hidden-field';
+                }
+            }
+        }
 
         return $fields;
     }
@@ -985,7 +1016,7 @@ class FXW_Checkout
     {
         if (is_user_logged_in() && is_checkout()) {
             $profile = get_user_meta(get_current_user_id(), '_fxw_delivery_profile', true);
-            if (!empty($profile) && !empty($profile['lat']) && !empty($profile['lng'])) {
+            if (!empty($profile) && !empty($profile['lat']) && !empty($profile['lng']) && WC()->customer) {
                 WC()->customer->set_shipping_address_1($profile['address_1']);
                 WC()->customer->set_shipping_address_2($profile['address_2']);
                 WC()->customer->set_shipping_city($profile['city']);
@@ -1000,10 +1031,12 @@ class FXW_Checkout
                 WC()->customer->set_billing_postcode($profile['postcode']);
                 WC()->customer->set_billing_country($profile['country']);
 
-                WC()->session->set('customer_lat', $profile['lat']);
-                WC()->session->set('customer_lng', $profile['lng']);
-                if (!empty($profile['distance_data'])) {
-                    WC()->session->set('fxw_distance_data', $profile['distance_data']);
+                if (WC()->session) {
+                    WC()->session->set('customer_lat', $profile['lat']);
+                    WC()->session->set('customer_lng', $profile['lng']);
+                    if (!empty($profile['distance_data'])) {
+                        WC()->session->set('fxw_distance_data', $profile['distance_data']);
+                    }
                 }
             }
         }

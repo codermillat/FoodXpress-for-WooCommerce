@@ -1,0 +1,78 @@
+---
+description: Audit and update CLAUDE.md project memory files. Use when asked to "audit CLAUDE.md", "update project memory", "revise CLAUDE.md", or "capture session learnings".
+globs: ["**/CLAUDE.md", "**/AGENTS.md", "**/.cursorrules"]
+alwaysApply: false
+---
+
+# CLAUDE.md Management
+
+Audit, evaluate, and improve project memory files (CLAUDE.md, AGENTS.md, .cursorrules) to ensure AI assistants have optimal project context.
+
+## Two Modes
+
+### Mode 1: Audit & Improve
+Trigger: "audit CLAUDE.md", "check project memory", "is CLAUDE.md up to date"
+
+1. **Discover** all project memory files:
+   - `CLAUDE.md` (project root - shared with team)
+   - `AGENTS.md` (agent instructions)
+   - `.cursorrules` (Cursor-specific rules)
+   - `.github/copilot-instructions.md` (Copilot context)
+   - Any nested CLAUDE.md files in subdirectories
+
+2. **Assess quality** against these criteria:
+
+   | Criterion | Weight | Check |
+   |-----------|--------|-------|
+   | Commands/workflows | High | Are build/test/deploy commands present? |
+   | Architecture clarity | High | Can AI understand the codebase structure? |
+   | Non-obvious patterns | Medium | Are gotchas and quirks documented? |
+   | Conciseness | Medium | No verbose explanations or obvious info? |
+   | Currency | High | Does it reflect current codebase state? |
+   | Actionability | High | Are instructions executable, not vague? |
+
+3. **Output quality report** with scores per file (A/B/C/D/F)
+
+4. **Propose targeted updates** as diffs - only genuinely useful additions
+
+5. **Apply after approval** - never modify without asking
+
+### Mode 2: Capture Session Learnings
+Trigger: "revise CLAUDE.md", "capture learnings", "update from this session"
+
+1. **Reflect** on what context was missing that would have helped:
+   - Commands discovered or used
+   - Code style patterns followed
+   - Testing approaches that worked
+   - Environment/config quirks
+   - Warnings or gotchas encountered
+
+2. **Draft additions** - one line per concept, concise:
+   ```
+   Format: `- <brief description>`
+   ```
+   Avoid: verbose explanations, obvious info, one-off fixes
+
+3. **Show proposed changes** as diffs with brief "why" explanation
+
+4. **Apply with approval** - only edit files user approves
+
+## What Makes Great Project Memory
+
+- **Concise** - dense is better than verbose
+- **Actionable** - commands should be copy-paste ready
+- **Project-specific** - not generic advice
+- **Non-obvious** - gotchas and warnings that aren't apparent from code
+- **Current** - reflects the actual state of the codebase
+
+## FoodXpress-Specific Checks
+
+When auditing this project, verify these are documented:
+- [ ] WC()->session / WC()->customer null-check patterns
+- [ ] Distance data guard pattern (`isset + is_object`)
+- [ ] HPOS fallback for `get_edit_post_link()`
+- [ ] Nonce verification pattern for AJAX handlers
+- [ ] Custom order statuses (fxw-assigned, fxw-picked-up)
+- [ ] Order meta keys (_fxw_delivery_boy_id, etc.)
+- [ ] Google Maps API requirements
+- [ ] Plugin activation flush_rewrite_rules pattern

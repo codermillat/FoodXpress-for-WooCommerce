@@ -51,8 +51,8 @@
                     delivery_boy_id: deliveryBoyId
                 },
                 success: function (response) {
-                    if (response.success) {
-                        showNotification(response.data.message, 'success');
+                    if (response.success && response.data) {
+                        showNotification(response.data.message || 'Order assigned', 'success');
 
                         // Update the row status if applicable
                         if (response.data.new_status) {
@@ -69,7 +69,7 @@
                             }, 1000);
                         }
                     } else {
-                        showNotification(response.data.message || 'Error assigning order', 'error');
+                        showNotification((response.data && response.data.message) ? response.data.message : 'Error assigning order', 'error');
                         $select.val(''); // Reset on error
                     }
                 },
@@ -121,8 +121,8 @@
                     new_status: newStatus
                 },
                 success: function (response) {
-                    if (response.success) {
-                        showNotification(response.data.message, 'success');
+                    if (response.success && response.data) {
+                        showNotification(response.data.message || 'Status updated', 'success');
                         updateRowStatus($row, response.data.status_label);
 
                         // Handle row movement based on new status
@@ -138,7 +138,7 @@
                             }, 1000);
                         }
                     } else {
-                        showNotification(response.data.message || 'Error updating status', 'error');
+                        showNotification((response.data && response.data.message) ? response.data.message : 'Error updating status', 'error');
                     }
                 },
                 error: function (xhr, status, error) {
@@ -206,20 +206,22 @@
 
         var bgColor = type === 'success' ? '#46b450' : (type === 'error' ? '#dc3232' : '#0073aa');
 
-        var $notification = $('<div class="fxw-notification" style="' +
-            'position: fixed;' +
-            'top: 40px;' +
-            'right: 20px;' +
-            'padding: 12px 20px;' +
-            'background: ' + bgColor + ';' +
-            'color: #fff;' +
-            'border-radius: 4px;' +
-            'box-shadow: 0 2px 8px rgba(0,0,0,0.2);' +
-            'z-index: 99999;' +
-            'font-size: 14px;' +
-            'max-width: 350px;' +
-            'animation: fxwSlideIn 0.3s ease;' +
-            '">' + message + '</div>');
+        var $notification = $('<div class="fxw-notification"></div>')
+            .text(message)
+            .css({
+                position: 'fixed',
+                top: '40px',
+                right: '20px',
+                padding: '12px 20px',
+                background: bgColor,
+                color: '#fff',
+                borderRadius: '4px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                zIndex: 99999,
+                fontSize: '14px',
+                maxWidth: '350px',
+                animation: 'fxwSlideIn 0.3s ease'
+            });
 
         $('body').append($notification);
 

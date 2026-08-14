@@ -1,12 +1,8 @@
-/* General App-like Styles */
-html, body {
+/* General App-like Styles - scoped to delivery dashboard */
+.fxw-app-dashboard {
     margin: 0;
     padding: 0;
-    background-color: #f0f2f5;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-.fxw-app-dashboard {
     background-color: #f0f2f5;
     min-height: 100vh;
 }
@@ -15,7 +11,7 @@ html, body {
     background-color: #ffffff;
     padding: 15px;
     text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -30,9 +26,10 @@ html, body {
 .fxw-tabs {
     display: flex;
     background-color: #ffffff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: sticky;
-    top: 60px; /* Adjust based on header height */
+    top: 60px;
+    /* Adjust based on header height */
     z-index: 999;
 }
 
@@ -71,7 +68,7 @@ html, body {
     background: #fff;
     border: 1px solid #e5e5e5;
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     margin-bottom: 15px;
     overflow: hidden;
 }
@@ -101,6 +98,7 @@ html, body {
 
 .status-fxw-assigned {
     background-color: #ffb900;
+    color: #1a1a1a;
 }
 
 .status-fxw-picked-up {
@@ -152,7 +150,8 @@ html, body {
     gap: 0;
 }
 
-.fxw-action-form, .fxw-button {
+.fxw-action-form,
+.fxw-button {
     flex: 1;
     margin: 0;
 }
@@ -203,8 +202,8 @@ html, body {
 }
 
 .fxw-button-map-fallback {
-    background-color: #ffc107;
-    color: #212529;
+    background-color: #e6a800;
+    color: #1a1a1a;
 }
 
 .fxw-button-map-fallback:hover {
@@ -213,7 +212,7 @@ html, body {
 }
 
 .fxw-button-pickup {
-    background-color: #ffb900;
+    background-color: #E85D04;
     color: #fff;
     border-bottom-right-radius: 12px;
 }
@@ -260,21 +259,25 @@ html, body {
         margin: 10px;
         padding: 0;
     }
+
     .fxw-track-order-form-container,
     .fxw-order-status-wrapper {
         padding: 18px;
         border-radius: 8px;
         margin-bottom: 18px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
+
     .fxw-track-order-form-container h2,
     .fxw-order-status-header h3 {
         font-size: 1.2em;
         margin-bottom: 0.5em;
     }
+
     .fxw-order-status-header {
         margin-bottom: 18px;
     }
+
     .fxw-status-tracker {
         flex-direction: row;
         gap: 8px;
@@ -285,17 +288,21 @@ html, body {
         scrollbar-color: #007cba #f0f2f5;
         position: static !important;
     }
+
     .fxw-status-tracker::-webkit-scrollbar {
         height: 6px;
         background: #f0f2f5;
     }
+
     .fxw-status-tracker::-webkit-scrollbar-thumb {
         background: #007cba;
         border-radius: 3px;
     }
+
     .fxw-status-line {
         display: none !important;
     }
+
     .status-step {
         min-width: 100px;
         width: 100px;
@@ -303,22 +310,26 @@ html, body {
         flex: 0 0 auto;
         text-align: center;
     }
+
     .status-step .dot {
         width: 32px;
         height: 32px;
         font-size: 1.3em;
     }
+
     .status-step .label {
         font-size: 0.95em;
         margin-top: 6px;
         word-break: break-word;
     }
+
     .fxw-delivery-boy-info {
         margin-top: 18px;
         padding: 12px;
         border-radius: 6px;
         font-size: 0.95em;
     }
+
     .fxw-button-call {
         padding: 8px 14px;
         font-size: 1em;
@@ -330,7 +341,7 @@ html, body {
     background: #fff;
     padding: 40px;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     margin-bottom: 30px;
 }
 
@@ -387,7 +398,7 @@ html, body {
     background: #fff;
     padding: 40px;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .fxw-order-status-header {
@@ -463,14 +474,6 @@ html, body {
     color: #ffb900;
 }
 
-.status-step .label {
-    display: block;
-    margin-top: 15px;
-    font-size: 0.9em;
-    color: #777;
-    font-weight: 500;
-}
-
 .status-step.completed .dot {
     background-color: #28a745;
     border-color: #28a745;
@@ -484,9 +487,17 @@ html, body {
 }
 
 @keyframes fxw-pop {
-    0% { transform: scale(1); }
-    60% { transform: scale(1.3); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+
+    60% {
+        transform: scale(1.3);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 .status-step.current .dot {
@@ -500,15 +511,12 @@ html, body {
 }
 
 .status-step .label {
+    display: block;
+    margin-top: 15px;
+    font-size: 0.9em;
     font-weight: 600;
     color: #333;
     letter-spacing: 0.5px;
-}
-
-.fxw-status-tracker {
-    gap: 18px;
-    margin: 40px 0;
-    justify-content: space-between;
 }
 
 .fxw-order-status-header h3 {
@@ -527,30 +535,10 @@ html, body {
 
 .fxw-order-status-wrapper {
     border: 2px solid #e0e0e0;
-    box-shadow: 0 6px 24px rgba(0,124,186,0.07);
+    box-shadow: 0 6px 24px rgba(0, 124, 186, 0.07);
     padding: 32px;
     border-radius: 16px;
-    background: linear-gradient(135deg,#fff 80%,#f0f2f5 100%);
-}
-
-.fxw-delivery-boy-info {
-    margin-top: 32px;
-    padding: 18px;
-    background: #e6f7ff;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,124,186,0.08);
-    font-size: 1em;
-}
-
-.fxw-button-call {
-    background: linear-gradient(90deg,#007cba 60%,#28a745 100%);
-    color: #fff;
-    font-weight: 700;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px #007cba22;
-    padding: 12px 24px;
-    font-size: 1.1em;
-    transition: background 0.3s;
+    background: linear-gradient(135deg, #fff 80%, #f0f2f5 100%);
 }
 
 .fxw-delivery-boy-info {
@@ -575,11 +563,14 @@ html, body {
 
 .fxw-button-call {
     text-decoration: none;
-    padding: 10px 20px;
+    padding: 12px 24px;
     border-radius: 8px;
-    background-color: #007cba;
+    background: linear-gradient(90deg, #007cba 60%, #28a745 100%);
     color: #fff;
-    font-weight: 600;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0, 124, 186, 0.13);
+    font-size: 1.1em;
+    transition: background 0.3s;
 }
 
 /* Admin Dashboard Print Receipt Button Styles */
@@ -631,14 +622,14 @@ html, body {
         align-items: flex-start;
         gap: 6px;
     }
-    
+
     .fxw-action-buttons .fxw-print-receipt {
         width: 100%;
         justify-content: center;
         padding: 8px 12px;
         font-size: 14px;
     }
-    
+
     .fxw-action-buttons .fxw-print-receipt .button-text {
         display: inline;
     }
@@ -648,14 +639,14 @@ html, body {
     .fxw-action-buttons .fxw-print-receipt .button-text {
         display: none;
     }
-    
+
     .fxw-action-buttons .fxw-print-receipt {
         width: auto;
         min-width: 36px;
         padding: 8px;
         justify-content: center;
     }
-    
+
     .fxw-action-buttons .fxw-print-receipt .dashicons {
         margin: 0;
     }
@@ -678,7 +669,7 @@ html, body {
     border-radius: 8px;
     padding: 20px;
     margin: 20px 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 #fxw-location-picker-container h3 {
@@ -706,7 +697,8 @@ html, body {
 
 #fxw-location-search-input:focus {
     border-color: #007cba;
-    outline: none;
+    outline: 2px solid #007cba;
+    outline-offset: -2px;
 }
 
 #fxw-get-location {
@@ -834,17 +826,17 @@ html, body {
         flex-direction: column;
         gap: 8px;
     }
-    
+
     #fxw-get-location {
         width: 100%;
         text-align: center;
     }
-    
+
     #fxw-location-picker-container {
         padding: 15px;
         margin: 15px 0;
     }
-    
+
     #fxw-map {
         height: 250px;
     }
@@ -873,6 +865,7 @@ html, body {
         opacity: 0;
         transform: translateY(-8px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -984,6 +977,7 @@ html, body {
         opacity: 0;
         max-height: 0;
     }
+
     to {
         opacity: 1;
         max-height: 200px;
@@ -1059,4 +1053,355 @@ html, body {
 
 .fxw-suggestions-toggle.expanded::after {
     transform: rotate(180deg);
+}
+
+/* Skeleton Loading Animation */
+.fxw-skeleton-loading {
+    position: relative;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+.fxw-skeleton-loading::after {
+    display: block;
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: fxw-skeleton-loading 1.5s infinite;
+}
+
+@keyframes fxw-skeleton-loading {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* PlaceAutocompleteElement (Google Maps web component) */
+gmp-place-autocomplete {
+    display: block;
+    width: 100% !important;
+    margin-bottom: 10px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+gmp-place-autocomplete::part(input) {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+gmp-place-autocomplete::part(input):focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.15);
+    outline: none;
+}
+
+/* Map Notification Toast */
+#fxw-map-notification {
+    display: none;
+    margin-top: 10px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 0.95em;
+    text-align: center;
+    line-height: 1.4;
+    transition: opacity 0.3s;
+}
+
+#fxw-map-notification.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+#fxw-map-notification.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+#fxw-map-notification.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Locate Me button loading state */
+#fxw-get-location.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Order Tracking - My Account & Shortcode */
+.fxw-order-tracking {
+    margin: 2em 0;
+    padding: 1.5em;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.fxw-order-tracking__title {
+    margin: 0 0 0.5em;
+    font-size: 1.25em;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.fxw-order-tracking__status {
+    margin-bottom: 1.5em;
+}
+
+.fxw-order-tracking__status-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #fff;
+    background: #007cba;
+    text-transform: capitalize;
+}
+
+.fxw-status-stepper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5em;
+    margin: 1.5em 0;
+}
+
+.fxw-status-step {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.fxw-status-step__dot {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.fxw-status-step__icon {
+    font-size: 1.1em;
+    line-height: 1;
+    color: #fff;
+}
+
+.fxw-status-step--completed .fxw-status-step__dot,
+.fxw-status-step--delivered .fxw-status-step__dot {
+    background: #28a745;
+    border-color: #28a745;
+}
+
+.fxw-status-step--current .fxw-status-step__dot {
+    background: #ffb900;
+    border-color: #ffb900;
+    transform: scale(1.15);
+}
+
+.fxw-status-step--completed .fxw-status-step__icon,
+.fxw-status-step--delivered .fxw-status-step__icon,
+.fxw-status-step--current .fxw-status-step__icon {
+    color: #fff;
+}
+
+.fxw-status-step__label {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.85em;
+    font-weight: 500;
+    color: #666;
+}
+
+.fxw-status-step--completed .fxw-status-step__label,
+.fxw-status-step--delivered .fxw-status-step__label,
+.fxw-status-step--current .fxw-status-step__label {
+    color: #333;
+}
+
+.fxw-delivery-contact {
+    margin-top: 1.5em;
+    padding: 1em 1.25em;
+    background: linear-gradient(135deg, #e8f4fd 0%, #f0f9ff 100%);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 124, 186, 0.15);
+}
+
+.fxw-delivery-contact__title {
+    margin: 0 0 0.5em;
+    font-size: 1em;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.fxw-delivery-contact__content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    row-gap: 8px;
+}
+
+.fxw-delivery-contact__name {
+    font-weight: 600;
+    font-size: 1.05em;
+    color: #1d2327;
+}
+
+.fxw-delivery-contact__call {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, #007cba 0%, #005a87 100%);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95em;
+    transition: background 0.2s, transform 0.15s;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+.fxw-delivery-contact__call:hover {
+    background: linear-gradient(135deg, #005a87 0%, #004060 100%);
+    color: #fff;
+}
+
+.fxw-delivery-contact__call:focus {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
+}
+
+.fxw-delivery-contact__phone {
+    font-variant-numeric: tabular-nums;
+}
+
+.fxw-delivery-contact__call-label {
+    opacity: 0.9;
+}
+
+.fxw-delivery-contact__no-phone {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.fxw-track-error {
+    padding: 1em;
+    background: #f8d7da;
+    color: #721c24;
+    border-radius: 8px;
+}
+
+/* Mobile-friendly order tracking */
+@media (max-width: 600px) {
+    .fxw-order-tracking {
+        margin: 1.5em 0;
+        padding: 1.25em;
+    }
+
+    .fxw-order-tracking__title {
+        font-size: 1.15em;
+    }
+
+    .fxw-status-stepper {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        padding-bottom: 8px;
+        margin: 1.25em 0;
+        gap: 6px;
+    }
+
+    .fxw-status-stepper::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .fxw-status-stepper::-webkit-scrollbar-thumb {
+        background: #007cba40;
+        border-radius: 3px;
+    }
+
+    .fxw-status-step {
+        flex: 0 0 auto;
+        min-width: 88px;
+    }
+
+    .fxw-status-step__dot {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+    }
+
+    .fxw-status-step__label {
+        font-size: 0.8em;
+        margin-top: 8px;
+    }
+
+    .fxw-delivery-contact {
+        padding: 1em;
+        margin-top: 1.25em;
+    }
+
+    .fxw-delivery-contact__content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .fxw-delivery-contact__call {
+        width: 100%;
+        justify-content: center;
+        min-height: 48px;
+    }
+}
+
+/* WooCommerce My Account order view context */
+.woocommerce-order .fxw-order-tracking--myaccount {
+    margin-top: 2em;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Focus indicator fixes */
+.fxw-button:focus-visible,
+.fxw-tab-link:focus-visible,
+.fxw-button-track:focus-visible {
+    outline: 2px solid #007cba;
+    outline-offset: 2px;
 }

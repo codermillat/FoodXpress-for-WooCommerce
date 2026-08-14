@@ -1,0 +1,22 @@
+---
+description: JavaScript rules for FoodXpress plugin
+globs: ["assets/js/**/*.js"]
+alwaysApply: true
+---
+
+# JavaScript Rules
+
+## XSS Prevention
+- Use `.textContent` or jQuery `.text()` for untrusted data, NEVER `.innerHTML` or `.html()`
+- Use jQuery `.css()` for dynamic styling instead of string-concatenated style attributes
+
+## Defensive Checks
+- Guard globals: `typeof fxw_checkout_params !== 'undefined'` before access
+- Guard response data: `response.success && response.data` before accessing `.message`
+- Validate DOM selectors: regex-check dynamic IDs before `$('#' + id)`
+- Use `document.getElementById(id)` instead of `$('#' + userInput)` to prevent selector injection
+
+## AJAX Patterns
+- Always include nonce in AJAX data
+- Handle both `.success` and `.fail`/`error` callbacks
+- Provide user-friendly fallback messages

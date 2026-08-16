@@ -109,7 +109,7 @@ foodxpress-for-woocommerce/
 │   ├── css/
 │   └── js/
 ├── tests/
-│   └── FXWTestRunner.php           # Static analysis + security checks (101 tests)
+│   └── FXWTestRunner.php           # Static analysis + security checks (103 tests)
 └── skills/                         # Developer reference (Claude skills content)
 ```
 
@@ -125,7 +125,7 @@ Run the built-in test suite for syntax, security, and code quality checks:
 php tests/FXWTestRunner.php
 ```
 
-Expected output: `Passed: 101, Failed: 0`.
+Expected output: `Passed: 103, Failed: 0`.
 
 The runner validates:
 - PHP syntax errors
@@ -136,7 +136,7 @@ The runner validates:
 - HPOS compatibility declaration
 - Custom order statuses registered with WC
 
-**Run this after every change. It must report 101/101 before any commit.**
+**Run this after every change. It must report 103/103 before any commit.**
 
 ## Changelog
 
@@ -144,7 +144,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Run `php tests/FXWTestRunner.php` and make sure it reports 101/101 before opening a pull request.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Run `php tests/FXWTestRunner.php` and make sure it reports 103/103 before opening a pull request.
 
 ## License
 

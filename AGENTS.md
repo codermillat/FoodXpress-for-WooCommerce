@@ -13,7 +13,7 @@
 - **User profile:** Freelance web developer, building this plugin for **SIAC** (an education consultancy). The plugin is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
 - **Remote:** `https://github.com/codermillat/FoodXpress-for-WooCommerce` (public since v1.2.1, GPL-3.0-or-later)
-- **Test runner:** `php tests/FXWTestRunner.php` → must report **101/101 pass** before any commit
+- **Test runner:** `php tests/FXWTestRunner.php` → must report **103/103 pass** before any commit
 
 ---
 
@@ -219,7 +219,7 @@ Expected: `Passed: 101, Failed: 0`. The runner checks:
 - Hooks & filters (registered correctly, custom statuses registered)
 - Security patterns (ABSPATH check, nonce verification)
 
-**Run the test runner after every change. It must report 101/101 before commit.**
+**Run the test runner after every change. It must report 103/103 before commit.**
 
 ---
 
@@ -280,7 +280,7 @@ These came up in the original RR/RDM backport analysis and were explicitly **rej
 - Removed 9 AI-tool config folders + 5 AI dev docs (all recoverable in `mavis-trash`); GitHub language tag will re-rank from Python to PHP on next index
 - Created this `AGENTS.md`
 
-**All 101 tests pass.** No runtime behaviour change — all hooks, AJAX endpoints, and class names preserved. `class-fxw-checkout.php` keeps its filename and call site, so external code referencing it continues to work.
+**All 103 tests pass.** No runtime behaviour change — all hooks, AJAX endpoints, and class names preserved. `class-fxw-checkout.php` keeps its filename and call site, so external code referencing it continues to work.
 
 ---
 

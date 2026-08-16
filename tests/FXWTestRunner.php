@@ -124,7 +124,11 @@ class FXWTestRunner
         $required_files = [
             'foodxpress-for-woocommerce.php' => 'Main plugin file',
             'includes/class-fxw-core.php' => 'Core class',
-            'includes/class-fxw-checkout.php' => 'Checkout class',
+            'includes/class-fxw-checkout.php' => 'Checkout orchestrator',
+            'includes/class-fxw-checkout-maps.php' => 'Checkout maps / frontend assets',
+            'includes/class-fxw-checkout-handler.php' => 'Checkout server handler',
+            'includes/services/class-fxw-delivery-fee.php' => 'Delivery fee service',
+            'includes/services/class-fxw-address-validator.php' => 'Address validator service',
             'includes/class-fxw-dashboard.php' => 'Dashboard class',
             'includes/class-fxw-settings.php' => 'Settings class',
             'includes/class-fxw-roles.php' => 'Roles class',
@@ -179,10 +183,15 @@ class FXWTestRunner
             }
         }
 
-        // Check for proper nonce verification in AJAX handlers
+        // Check for proper nonce verification in AJAX handlers.
+        // NOTE: class-fxw-checkout.php is the orchestrator (form rendering,
+        // address pre-fill) and has no AJAX endpoints — its nonce verification
+        // lives in the sibling files class-fxw-checkout-maps.php and
+        // class-fxw-checkout-handler.php.
         $ajax_files = [
             'includes/class-fxw-admin-bar.php',
-            'includes/class-fxw-checkout.php',
+            'includes/class-fxw-checkout-maps.php',
+            'includes/class-fxw-checkout-handler.php',
             'includes/class-fxw-shortcodes.php',
             'includes/class-fxw-dashboard.php',
         ];

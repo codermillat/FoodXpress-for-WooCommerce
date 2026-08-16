@@ -1,0 +1,294 @@
+# AGENTS.md — FoodXpress for WooCommerce
+
+> Context for AI coding agents (OpenCode, Codex, Cursor, Aider, Devin, Gemini CLI, Claude Code, etc.).
+> Read this before touching the codebase. The repo is private; the user (MD Millat Hosen) is the sole maintainer.
+
+---
+
+## 0. TL;DR
+
+- **Project:** FoodXpress for WooCommerce — a delivery-management plugin for single-restaurant WooCommerce stores
+- **Current version:** **v1.2.0** (released 2026-08-17, commit `140b19f`)
+- **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
+- **User profile:** Freelance web developer, building this plugin for **SIAC** (an education consultancy). The plugin is the **primary project**; everything else on the machine is secondary.
+- **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
+- **Remote:** `https://github.com/codermillat/FoodXpress-for-WooCommerce` (private)
+- **Test runner:** `php tests/FXWTestRunner.php` → must report **101/101 pass** before any commit
+
+---
+
+## 1. What the plugin does
+
+A complete delivery-management layer for single-restaurant WooCommerce stores:
+
+- **Map-based checkout** — Google Maps location picker on the WooCommerce checkout, distance-based delivery validation, dynamic fee calculation, ETA-aware shipping label
+- **Custom order statuses** — `fxw-in-kitchen` → `fxw-assigned` → `fxw-picked-up` → completed
+- **Delivery agent role** — `delivery_boy` user role with its own mobile dashboard
+- **Order tracking + reorder** — shortcodes for customers
+- **Receipt printing** — thermal-printer-friendly templates
+- **WooCommerce email integration** — 3 custom email classes (In Kitchen, Driver Assigned, Picked Up)
+
+**Roadmap (8 phases, ~8 weeks):** see [`docs/ROADMAP.md`](./docs/ROADMAP.md).
+
+| # | Phase | Status | Release |
+|---|---|---|---|
+| 0 | Refactor & hygiene (checkout split, gitignore, license, AI-bloat cleanup) | ✅ Done | **v1.2.0** |
+| 1 | Data layer + migration (8 `fxw_*` tables, models, RR/RDM import) | 📋 Next | v1.3.0 |
+| 2 | Mobile agent PWA (manifest, service worker, offline) | 📋 | v1.4.0 |
+| 3 | GPS tracking engine (REST, battery-aware 45s/135s) | 📋 | v1.5.0 |
+| 4 | COD payments + cash reconciliation | 📋 | v1.6.0 |
+| 5 | Multi-channel notifications — **email + browser push only at launch** (NO SMS) | 📋 | v1.7.0 |
+| 6 | Analytics & BI — Chart.js, CSV export, cron reports | 📋 | v1.8.0 |
+| 7 | Owner-controlled outlet model — Google Maps primary, **Leaflet fallback** when no API key | 📋 | v1.9.0 |
+| 8 | Polish, tests, docs, CI matrix | 📋 | v2.0.0 |
+
+---
+
+## 2. Tech stack
+
+| Layer | Version | Notes |
+|---|---|---|
+| PHP | 7.4 minimum (8.0 target in v2.0) | `Requires PHP: 7.4` |
+| WordPress | 6.0+ | `Requires at least: 6.0` |
+| WooCommerce | 7.0+ (tested 9.4) | `WC requires at least: 7.0` |
+| HPOS | Custom order tables **compatible** + **opt-out of cart-checkout-blocks** | Declared via `FeaturesUtil::declare_compatibility` in main file |
+| JavaScript | jQuery + vanilla ES6 | No build step — plain `.js` files in `assets/js/` |
+| Maps | Google Maps API primary, Leaflet fallback (Phase 7) | `fxw_google_maps_api_key` setting |
+| Database | MySQL via `$wpdb` | No PDO wrapper. **Always use `$wpdb->prepare()`** |
+| DI | None. Plain `new` + static factories. No container. | |
+| AJAX security | Per-handler `wp_create_nonce()` + `current_user_can()`. **No central wrapper.** | |
+| Cron | WordPress `wp_schedule_event` only. **No external schedulers.** | |
+| Tests | `FXWTestRunner.php` static checks. PHPUnit+WP test suite planned for Phase 8. | |
+
+---
+
+## 3. File structure (post-v1.2.0)
+
+```
+FoodXpress-for-WooCommerce/
+├── foodxpress-for-woocommerce.php   ← slim bootstrap, defines FXW_VERSION + FXW_PLUGIN_DIR/URL
+├── uninstall.php                   ← cleanup hook
+├── LICENSE.md                      ← proprietary, with WP/WC carve-out (added in v1.2.0)
+├── CHANGELOG.md                    ← Keep a Changelog format
+├── README.md                       ← user-facing (this is for AI, README is for humans)
+├── AGENTS.md                       ← you are here
+├── docs/
+│   ├── ANALYSIS.md                 ← 3-repo comparison + status updates
+│   ├── ROADMAP.md                  ← 8-phase backport plan (current source of truth)
+│   └── archive/                    ← Nov 2025 docs from the old Local Sites install
+├── includes/
+│   ├── class-fxw-core.php          ← bootstrap: requires, hook wiring, admin/frontend dispatch
+│   ├── class-fxw-checkout.php      ← ORCHESTRATOR: form render, field customisation, address pre-fill
+│   ├── class-fxw-checkout-maps.php ← frontend map assets + get_restaurant_location AJAX + debug_status AJAX
+│   ├── class-fxw-checkout-handler.php ← server: update_customer_location, validate_delivery_zone, save_*
+│   ├── class-fxw-dashboard.php     ← admin order dashboard (593 LOC — largest, queued for split)
+│   ├── class-fxw-settings.php      ← WooCommerce → Settings → FoodXpress page
+│   ├── class-fxw-shortcodes.php    ← [fxw_track_order], [fxw_reorder]
+│   ├── class-fxw-order-admin.php   ← WC order meta boxes
+│   ├── class-fxw-shipping-method.php ← FX shipping method registration
+│   ├── class-fxw-delivery-boy-view.php ← mobile agent dashboard
+│   ├── class-fxw-roles.php         ← delivery_boy role
+│   ├── class-fxw-order-statuses.php ← registers fxw-* statuses with WC
+│   ├── class-fxw-admin-bar.php     ← admin bar delivery toggle
+│   ├── class-fxw-reporting.php     ← delivery analytics (will grow in Phase 6)
+│   ├── class-fxw-notifications.php ← email dispatch (will grow into multi-channel in Phase 5)
+│   ├── class-fxw-config.php        ← constants (FXW_Config::DEFAULT_DELIVERY_RADIUS, etc.)
+│   ├── api/
+│   │   └── class-fxw-rest-checkout-controller.php  ← REST pattern reference
+│   ├── services/                              ← STATELESS services, one per file
+│   │   ├── class-fxw-mapping-service.php       ← Google Maps wrapper
+│   │   ├── class-fxw-rate-limiter.php          ← rate limiting
+│   │   ├── class-fxw-delivery-fee.php          ← cart fee + ETA label (NEW in v1.2.0)
+│   │   └── class-fxw-address-validator.php     ← address completeness heuristic (NEW in v1.2.0)
+│   └── emails/
+│       ├── class-fxw-email-in-kitchen.php
+│       ├── class-fxw-email-assigned.php
+│       └── class-fxw-email-picked-up.php
+├── templates/                      ← frontend templates (delivery dashboard, delivery-boy view, receipt)
+├── assets/
+│   ├── css/                        ← frontend.css, delivery-dashboard.css, my-account.css
+│   └── js/                         ← checkout.js, delivery-dashboard.js, admin.js, admin-dashboard.js
+├── tests/
+│   └── FXWTestRunner.php           ← static analysis + security checks
+└── skills/                         ← Claude skill content (developer reference, not plugin runtime)
+```
+
+---
+
+## 4. Class map (what each class does)
+
+| Class | Responsibility | Self-registers? |
+|---|---|---|
+| `FXW_Core` | Bootstrap. `require`s all classes, wires admin/frontend dispatches, adds rewrite rules, enqueues admin assets. | ✓ |
+| `FXW_Checkout` | **Orchestrator.** Renders location picker + delivery fields on the WC checkout. Hides default billing/shipping fields. Pre-fills saved address for returning customers. | ✓ |
+| `FXW_Checkout_Maps` | **Frontend map assets.** `enqueue_scripts` (Google Maps with API-key guard), `add_async_defer_to_maps_script`, AJAX `get_restaurant_location`, AJAX `debug_status` (admin-only). | ✓ |
+| `FXW_Checkout_Handler` | **Server-side logic.** AJAX `update_customer_location`, `validate_delivery_zone` (with fallback geocoding), `save_customer_address`, `save_delivery_details_to_order` (HPOS-aware). | ✓ |
+| `FXW_Dashboard` | Admin order dashboard. Largest class at 593 LOC — **flagged for the same split treatment as the checkout split.** | ✓ |
+| `FXW_Settings` | WC Settings → FoodXpress page. | ✓ |
+| `FXW_Shortcodes` | `[fxw_track_order]`, `[fxw_reorder]`, plus tracking page rewrite. | ✓ |
+| `FXW_Order_Admin` | Order meta boxes (delivery details, assignment, etc.). | ✓ |
+| `FXW_Shipping_Method` | Registers `foodxpress_delivery` shipping method with WC. | ✓ |
+| `FXW_Delivery_Boy_View` | Mobile agent dashboard page + template loader. | ✓ |
+| `FXW_Roles` | Adds `delivery_boy` role on activation. | ✓ |
+| `FXW_Order_Statuses` | Registers `fxw-in-kitchen`, `fxw-assigned`, `fxw-picked-up` with WC. | ✓ |
+| `FXW_Admin_Bar` | Admin bar "Delivery" toggle. | ✓ |
+| `FXW_Reporting` | Delivery analytics queries (will grow into Phase 6 BI). | ✓ |
+| `FXW_Notifications` | Email dispatch facade (will grow into Phase 5 multi-channel). | ✓ |
+| `FXW_Config` | Constants only. No instance. | n/a |
+| `FXW_REST_Checkout_Controller` | Reference REST controller — follow this pattern for Phase 1+ REST endpoints. | n/a (registered by FXW_Core) |
+| `FXW_Mapping_Service` | Google Maps wrapper (geocode, distance matrix). Static + instance methods. | n/a |
+| `FXW_Rate_Limiter` | Rate limiting by action key. Static. | n/a |
+| `FXW_Delivery_Fee` | `woocommerce_cart_calculate_fees` + `woocommerce_cart_shipping_method_full_label` hooks. | ✓ |
+| `FXW_Address_Validator` | Stateless `validate_address_completeness` (heuristic). | n/a (static only) |
+
+**Self-registration pattern:** each class with hooks has `new ClassName();` at the bottom of its file. No central wiring beyond `FXW_Core::require_once`'ing them.
+
+---
+
+## 5. Coding standards (MUST follow)
+
+### PHP
+
+1. **WordPress Coding Standards** for PHP, JS, CSS. Run `phpcs` if you have it.
+2. **Every PHP file:** `if (!defined('ABSPATH')) { exit; }` as the first non-comment line.
+3. **Every AJAX handler:** verify nonce with `wp_verify_nonce()` AND check capabilities with `current_user_can()`. **No central wrapper.** Per-handler explicit.
+4. **Sanitize ALL input** with the right primitive: `sanitize_text_field()`, `absint()`, `sanitize_email()`, `sanitize_textarea_field()`, etc. **`wp_unslash()` before `sanitize_*()`** on `$_POST`/`$_GET`/`$_REQUEST`.
+5. **Escape ALL output** with the right primitive: `esc_html()`, `esc_attr()`, `esc_url()`, `wp_kses_post()`. Match the context.
+6. **Strict comparisons only** (`===` / `!==`) — never `==` / `!=`. Critical for auth checks.
+7. **Null-check `WC()->session` and `WC()->customer`** before any method call: `WC()->session ? WC()->session->get('key') : null`.
+8. **All queries use `$wpdb->prepare()`** with `%s`, `%d`, `%f` placeholders. **No PDO wrapper.**
+9. **HPOS-aware order access:** use `wc_get_order($id)` (never `get_post($id)` for orders) and `$order->get_meta()` / `$order->update_meta_data()` (never `get_post_meta()` / `update_post_meta()` for order meta).
+10. **`wp_safe_redirect()` always has a fallback URL:** `wp_safe_redirect($referer ? $referer : admin_url())`.
+11. **`get_edit_post_link()` returns null under HPOS.** Fallback: `admin_url('admin.php?page=wc-orders&action=edit&id=' . $id)`.
+12. **All translatable strings via `__()` / `_e()`** with `'foodxpress'` text domain.
+13. **No class over 500 LOC.** Use the same split pattern as the v1.2.0 checkout split: orchestrator keeps the public API, sibling files `require_once`'d at the top, services extracted to `includes/services/`.
+
+### JavaScript
+
+1. `.textContent` not `.innerHTML` for untrusted data.
+2. Guard global params with `typeof varName !== 'undefined'` checks before use.
+3. Null-check `response.data` before accessing `.message` / `.label`.
+4. The checkout script (`assets/js/checkout.js`) reads `fxw_checkout_params` localised by PHP — never hard-code URLs or nonces.
+
+### CSS
+
+1. **Scope styles to plugin classes** — never style `html, body` or other global selectors.
+2. Mobile-first responsive design.
+
+### Distance Matrix data shape (Google Maps)
+
+```php
+$distance_data['distance']  // object with ->value (metres) and ->text
+$distance_data['duration']  // object with ->value (seconds) and ->text
+```
+
+**Always check** `isset($distance_data['distance']) && is_object($distance_data['distance']) && isset($distance_data['distance']->value)` before accessing `->value`. Same shape for `duration`.
+
+---
+
+## 6. Security checklist (verify on every PR)
+
+- [ ] Nonce verification on every form + AJAX endpoint
+- [ ] Capability check (`current_user_can()`) before any state change
+- [ ] Input sanitisation before processing (right primitive for the type)
+- [ ] Output escaping before rendering (right primitive for the context)
+- [ ] `WC()->session` null-checked before any method call
+- [ ] `WC()->customer` null-checked before any method call
+- [ ] Strict comparisons for all auth checks
+- [ ] No `get_post()` / `get_post_meta()` for order data (use HPOS APIs)
+- [ ] `wp_safe_redirect()` always has a fallback URL
+- [ ] `get_edit_post_link()` fallback for HPOS contexts
+
+---
+
+## 7. Running tests
+
+```bash
+cd ~/Desktop/FoodXpress-for-WooCommerce   # or wherever the project lives
+php tests/FXWTestRunner.php
+```
+
+Expected: `Passed: 101, Failed: 0`. The runner checks:
+
+- File structure (all required files exist, including the 3 checkout split files)
+- Code quality (no unlimited queries, nonce verification on all AJAX files)
+- Plugin headers (WordPress + WooCommerce)
+- Hooks & filters (registered correctly, custom statuses registered)
+- Security patterns (ABSPATH check, nonce verification)
+
+**Run the test runner after every change. It must report 101/101 before commit.**
+
+---
+
+## 8. MCP / external tools available
+
+| Tool | Purpose | How to call from a CLI agent |
+|---|---|---|
+| **Context7** | Up-to-date library documentation (WooCommerce, WordPress, PHP) — replaces stale web search | `mcporter call context7.resolve-library-id query=... libraryName=...` and `mcporter call context7.query-docs context7CompatibleLibraryID=/owner/repo query=...` |
+| **GitHub CLI** | Repo ops, releases, issue management | `gh ...` (authenticated as `codermillat`) |
+| **WordPress skills** | `wordpress-pro` and `wordpress-advanced-architecture` reference content lives in `skills/` | Read files directly |
+| **mcporter** | Manages all MCP server configs. `mcporter list`, `mcporter call`, `mcporter config add/remove` | Binary at `/Users/mdmillathosen/.local/bin/mcporter` |
+
+**Context7 note for the next agent:** Context7 is currently configured but **API-key auth is unreliable** (first call works, subsequent calls return `Invalid API key`). Workaround: Context7 works without auth at lower rate limits (only `query-docs`, not `resolve-library-id` is needed for the second step usually). Do not block on auth retries — if the call fails, fall back to the WooCommerce/WordPress source code in `wp-content/plugins/woocommerce/` if available, or to the bundled `wordpress-pro` / `wordpress-advanced-architecture` skills in `skills/`.
+
+---
+
+## 9. Open questions (from ROADMAP §6)
+
+These are non-blocking for the next coding tool — pick the default in brackets unless told otherwise.
+
+| Phase | Question | Default |
+|---|---|---|
+| 5 | VAPID keys for Web Push — auto-generate on activation? | **Yes, with admin warning** |
+| 5 | ~~SMS at launch~~ | ✅ No — email + browser only |
+| 6 | Chart library | **Chart.js v4** (lightest, sufficient for the use cases) |
+| 7 | ~~Single restaurant vs multi-location default~~ | ✅ Owner-controlled dashboard toggle; schema always outlet-model |
+| 7 | ~~Map library~~ | ✅ Google Maps primary, Leaflet fallback (no API key) |
+| 8 | Test framework — PHPUnit+WP test suite or Pest? | **PHPUnit+WP** (matches the existing `FXWTestRunner` static style) |
+| 8 | Bump min PHP to 8.0? | **Yes** in v2.0 |
+
+---
+
+## 10. Things to NOT do (intentional non-features)
+
+These came up in the original RR/RDM backport analysis and were explicitly **rejected** as over-engineering for FX's scale:
+
+- ❌ **No DI container.** Use plain `new` and static factories.
+- ❌ **No PDO query wrapper.** `$wpdb->prepare()` is the right abstraction in WordPress.
+- ❌ **No central AJAX-security wrapper.** Per-handler nonces are clearer at this scale.
+- ❌ **No auto-GitHub-issue error reporter.** Privacy footgun. Use a `wp_die()`-to-log pattern instead.
+- ❌ **No ML delivery-time predictions** in v1–v2. Add in v3.x post-launch.
+- ❌ **No Site Health integration tests** — overlap with WP core 6.2+ Site Health.
+- ❌ **No `index.php` "intentional content" files** in every directory (RDM's security-by-obscurity anti-pattern).
+- ❌ **No SMS channel at launch.** Channel interface is designed so SMS can be added later without a refactor.
+- ❌ **No `vendor/` directory.** Composer is allowed for new dependencies but each dep must be justified.
+
+---
+
+## 11. Recent changes (Phase 0 / v1.2.0 — 2026-08-17)
+
+**Commit:** `140b19f` · **Tag:** `v1.2.0` · **Release:** [GitHub](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.0)
+
+- Split `class-fxw-checkout.php` (1,046 LOC) into 3 single-purpose files + 2 new services, all under 500 LOC
+- Replaced 4-line `.gitignore` with comprehensive 65-line version
+- Added `LICENSE.md` (proprietary, with WP/WC carve-out)
+- Bumped version 1.1.0 → 1.2.0
+- Updated `tests/FXWTestRunner.php` to recognize the new files
+- Removed 9 AI-tool config folders + 5 AI dev docs (all recoverable in `mavis-trash`); GitHub language tag will re-rank from Python to PHP on next index
+- Created this `AGENTS.md`
+
+**All 101 tests pass.** No runtime behaviour change — all hooks, AJAX endpoints, and class names preserved. `class-fxw-checkout.php` keeps its filename and call site, so external code referencing it continues to work.
+
+---
+
+## 12. Coordination with Mavis (this assistant)
+
+- Mavis (Mavis) is the primary coding agent the user has been working with
+- Mavis led the 3-repo consolidation (Aug 2026) and Phase 0 (v1.2.0)
+- Mavis's working notes live in `docs/ANALYSIS.md`, `docs/ROADMAP.md`, and `CHANGELOG.md`
+- When the user says "I will use another coding for the nexts", they mean a different agent/tool will take the next phase (likely Phase 1: data layer + 8 new `fxw_*` tables)
+- The user prefers **decisive recommendations** over hedging. If a decision has a clear default in §9, use it. If a question isn't in §9, ask before building.
+
+---
+
+*End of AGENTS.md. Last updated 2026-08-17 for v1.2.0.*

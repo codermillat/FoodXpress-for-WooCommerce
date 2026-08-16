@@ -100,47 +100,22 @@ class FXW_Checkout
             </p>
 
             <?php
-            // House/Flat Number - Required
-            woocommerce_form_field('fxw_house_flat_no', array(
+            // Exact delivery address — single line, Zomato/Swiggy-style:
+            // everything the agent needs to find the door (flat, house,
+            // building, block) in one required field next to the map pin.
+            woocommerce_form_field('fxw_address_details', array(
                 'type' => 'text',
-                'class' => array('form-row-first'),
-                'label' => __('House / Flat No.', 'foodxpress'),
-                'placeholder' => __('e.g., Flat 4B, House 25', 'foodxpress'),
+                'class' => array('form-row-wide'),
+                'label' => __('House / Flat / Building No.', 'foodxpress'),
+                'placeholder' => __('e.g., Flat 4B, House 25, Tower A, Block 2', 'foodxpress'),
                 'required' => true,
-            ), isset($saved_profile['house_flat_no']) ? $saved_profile['house_flat_no'] : WC()->checkout->get_value('fxw_house_flat_no'));
-
-            // Floor Number - Optional but helpful
-            woocommerce_form_field('fxw_floor_no', array(
-                'type' => 'text',
-                'class' => array('form-row-last'),
-                'label' => __('Floor No.', 'foodxpress'),
-                'placeholder' => __('e.g., Ground Floor, 3rd Floor', 'foodxpress'),
-                'required' => false,
-            ), isset($saved_profile['floor_no']) ? $saved_profile['floor_no'] : WC()->checkout->get_value('fxw_floor_no'));
-
-            // Society/Building Name - Required
-            woocommerce_form_field('fxw_society_building', array(
-                'type' => 'text',
-                'class' => array('form-row-first'),
-                'label' => __('Society / Building Name', 'foodxpress'),
-                'placeholder' => __('e.g., Green Valley Apartments, Rose Garden Society', 'foodxpress'),
-                'required' => true,
-            ), isset($saved_profile['society_building']) ? $saved_profile['society_building'] : WC()->checkout->get_value('fxw_society_building'));
-
-            // Block/Tower/Area/Section - Optional
-            woocommerce_form_field('fxw_block_tower_area', array(
-                'type' => 'text',
-                'class' => array('form-row-last'),
-                'label' => __('Block / Tower / Area / Section', 'foodxpress'),
-                'placeholder' => __('e.g., Tower A, Block 2, Sector 5', 'foodxpress'),
-                'required' => false,
-            ), isset($saved_profile['block_tower_area']) ? $saved_profile['block_tower_area'] : WC()->checkout->get_value('fxw_block_tower_area'));
+            ), isset($saved_profile['address_details']) ? $saved_profile['address_details'] : WC()->checkout->get_value('fxw_address_details'));
 
             // Landmark - Optional but helpful
             woocommerce_form_field('fxw_landmark', array(
                 'type' => 'text',
                 'class' => array('form-row-wide'),
-                'label' => __('Nearby Landmark', 'foodxpress'),
+                'label' => __('Nearby Landmark (optional)', 'foodxpress'),
                 'placeholder' => __('e.g., Near City Mall, Opposite Park', 'foodxpress'),
                 'required' => false,
             ), isset($saved_profile['landmark']) ? $saved_profile['landmark'] : WC()->checkout->get_value('fxw_landmark'));
@@ -155,7 +130,7 @@ class FXW_Checkout
                 'custom_attributes' => array(
                     'rows' => 2,
                 ),
-            ), isset($saved_profile['delivery_instructions']) ? $saved_profile['delivery_instructions'] : WC()->checkout->get_value('fxw_delivery_instructions'));
+            ), WC()->checkout->get_value('fxw_delivery_instructions'));
             ?>
 
             <?php if (is_user_logged_in()): ?>

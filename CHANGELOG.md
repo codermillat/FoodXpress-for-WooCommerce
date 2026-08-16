@@ -4,6 +4,21 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.2] - 2026-08-17
+
+### Changed (Zomato/Swiggy-style checkout address)
+- **Step 2 collapsed from five structured fields to a single required "House / Flat / Building No." field** (`fxw_address_details`) + optional landmark + the existing optional delivery-instructions textarea — mirroring Swiggy's "Complete address*" + "Landmark (optional)" model next to the map pin. The fee engine is unchanged (it runs on the pin's coordinates only); `checkout.js` needed zero changes
+- Order meta now stores `_fxw_address_details` + `_fxw_landmark`; `_fxw_delivery_address` is composed as `details (Landmark: …)` so the admin meta box and delivery dashboard keep working unmodified
+- The exact-address line is also written to billing/shipping `address_2`, so receipts and emails using `get_formatted_shipping_address()` now show the flat/house info (previously checkout-entered details never reached the receipt)
+- Validation: one required check on `fxw_address_details` (min 5 chars) replaces the two old required-field checks
+
+### Fixed
+- **"Save this address for future orders" now actually works.** The old save gate required POST keys that no form ever submitted (`fxw_location-search-input` had no `name` attribute; `fxw_delivery_address` was never rendered), so `_fxw_delivery_profile` was never written and the returning-customer pre-fill (map pin + fields) was dead. The profile is now saved whenever the checkbox is ticked, including `address_details` + `landmark` for pre-fill
+
+### Removed
+- ~290 lines of dead v1 CSS (`.fxw-address-*` feedback/suggestion/score styles, `#fxw_delivery_address` rules) with no remaining PHP/JS references; live map/hidden-field/geolocation-error/mobile styles preserved
+- Checkout no longer writes the obsolete `_fxw_house_flat_no` / `_fxw_floor_no` / `_fxw_society_building` / `_fxw_block_tower_area` metas to new orders (existing orders keep theirs)
+
 ## [1.2.1] - 2026-08-17
 
 ### License

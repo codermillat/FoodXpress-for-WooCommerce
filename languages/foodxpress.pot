@@ -1,0 +1,1181 @@
+# FoodXpress for WooCommerce translation template.
+# Copyright (C) 2026 MD Millat Hosen
+# This file is distributed under GPL-3.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: FoodXpress for WooCommerce 1.2.6\n"
+"Report-Msgid-Bugs-To: https://github.com/codermillat/FoodXpress-for-WooCommerce/issues\n"
+"POT-Creation-Date: 2026-08-16 23:43+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: fxw-pot-generator\n"
+
+#: includes/class-fxw-core.php:370
+msgid " and "
+msgstr ""
+
+#: templates/receipt-template.php:379
+msgid "%d × %s"
+msgstr ""
+
+#: includes/emails/class-fxw-email-assigned.php:106
+#: includes/emails/class-fxw-email-assigned.php:129
+msgid "A delivery driver is on their way to pick up your order."
+msgstr ""
+
+#: includes/emails/class-fxw-email-assigned.php:27
+msgid "A driver has been assigned!"
+msgstr ""
+
+#: includes/emails/class-fxw-email-assigned.php:62
+msgid "A driver is on the way! 🚗"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:135
+#: includes/class-fxw-dashboard.php:206
+#: includes/class-fxw-dashboard.php:277
+msgid "Actions"
+msgstr ""
+
+#: includes/class-fxw-settings.php:141
+msgid "Add delivery fee as a separate cart fee when FoodXpress shipping is not selected"
+msgstr ""
+
+#: templates/delivery-boy-view.php:57
+#: templates/delivery-dashboard-template.php:129
+msgid "Address:"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:225
+msgid "Amount to Collect:"
+msgstr ""
+
+#: includes/class-fxw-checkout-maps.php:139
+msgid "An error occurred. Please try again."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:180
+msgid "Assign"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:230
+msgid "Assign Delivery Boy"
+msgstr ""
+
+#: includes/class-fxw-order-statuses.php:43
+#: includes/class-fxw-order-statuses.php:79
+#: includes/class-fxw-order-statuses.php:88
+#: includes/class-fxw-shortcodes.php:197
+msgid "Assigned"
+msgstr ""
+
+#: includes/class-fxw-order-statuses.php:48
+msgid "Assigned <span class=\"count\">(%s)</span>"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:197
+msgid "Assigned Orders"
+msgstr ""
+
+#: includes/class-fxw-settings.php:163
+msgid "Auto-Set Status on Assign"
+msgstr ""
+
+#: includes/class-fxw-settings.php:167
+msgid "Automatically set order status to \"Assigned\" when a delivery boy is assigned from the order edit page"
+msgstr ""
+
+#: includes/class-fxw-settings.php:119
+msgid "Base Fee"
+msgstr ""
+
+#: templates/receipt-template.php:82
+msgid "Bill - Order #%s"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:317
+msgid "Billing Email"
+msgstr ""
+
+#: templates/receipt-template.php:417
+msgid "COLLECT: %s"
+msgstr ""
+
+#: includes/class-fxw-checkout-maps.php:137
+msgid "Calculating delivery fee..."
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:267
+msgid "Call"
+msgstr ""
+
+#: templates/receipt-template.php:415
+msgid "Cash on Delivery"
+msgstr ""
+
+#: templates/delivery-boy-view.php:72
+#: templates/delivery-dashboard-template.php:143
+msgid "Collect:"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:270
+msgid "Contact via store"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:214
+msgid "Coordinates:"
+msgstr ""
+
+#: includes/api/class-fxw-rest-checkout-controller.php:126
+msgid "Could not calculate delivery distance."
+msgstr ""
+
+#: includes/class-fxw-checkout-handler.php:269
+msgid "Could not calculate delivery distance. Please try again."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:143
+#: includes/services/class-fxw-mapping-service.php:152
+msgid "Could not calculate distance."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:132
+#: includes/class-fxw-dashboard.php:202
+#: includes/class-fxw-dashboard.php:273
+msgid "Customer"
+msgstr ""
+
+#: templates/delivery-boy-view.php:54
+#: templates/receipt-template.php:335
+msgid "Customer Details"
+msgstr ""
+
+#: templates/delivery-dashboard-template.php:111
+msgid "Customer:"
+msgstr ""
+
+#: includes/class-fxw-settings.php:241
+msgid "Customize your delivery receipts with your restaurant branding. These settings are used only for printed receipts."
+msgstr ""
+
+#: templates/receipt-template.php:318
+msgid "Date:"
+msgstr ""
+
+#: includes/class-fxw-settings.php:102
+msgid "Default Preparation Time (minutes)"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:315
+#: includes/class-fxw-shortcodes.php:199
+msgid "Delivered"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:42
+msgid "Deliveries"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:41
+msgid "Deliveries Dashboard"
+msgstr ""
+
+#: includes/class-fxw-admin-bar.php:41
+#: includes/class-fxw-admin-bar.php:83
+msgid "Deliveries: Closed"
+msgstr ""
+
+#: includes/class-fxw-admin-bar.php:41
+#: includes/class-fxw-admin-bar.php:83
+msgid "Deliveries: Open"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:205
+#: templates/delivery-dashboard-template.php:120
+#: templates/receipt-template.php:342
+msgid "Delivery Address:"
+msgstr ""
+
+#: templates/receipt-template.php:308
+msgid "Delivery Bill"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:203
+#: includes/class-fxw-dashboard.php:274
+#: includes/class-fxw-roles.php:46
+msgid "Delivery Boy"
+msgstr ""
+
+#: templates/receipt-template.php:327
+msgid "Delivery By:"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:209
+msgid "Delivery Distance:"
+msgstr ""
+
+#: includes/services/class-fxw-delivery-fee.php:94
+msgid "Delivery Fee"
+msgstr ""
+
+#: includes/class-fxw-settings.php:112
+msgid "Delivery Fee Settings"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:125
+msgid "Delivery Instructions"
+msgstr ""
+
+#: includes/class-fxw-settings.php:154
+msgid "Delivery Radius (km)"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:229
+msgid "Delivery Status"
+msgstr ""
+
+#: includes/class-fxw-settings.php:147
+msgid "Delivery Zone Settings"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:331
+msgid "Delivery boy assigned (status unchanged)."
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:60
+msgid "Delivery boy has been unassigned."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:375
+#: includes/class-fxw-dashboard.php:536
+msgid "Delivery boy unassigned."
+msgstr ""
+
+#: includes/class-fxw-checkout-handler.php:249
+msgid "Delivery service is not properly configured. Please contact support."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:121
+msgid "Delivery service temporarily unavailable. Please try again later."
+msgstr ""
+
+#: templates/delivery-dashboard-template.php:50
+msgid "Delivery status filters"
+msgstr ""
+
+#: templates/delivery-dashboard-template.php:124
+msgid "Distance:"
+msgstr ""
+
+#: includes/emails/class-fxw-email-assigned.php:25
+msgid "Driver Assigned"
+msgstr ""
+
+#: includes/class-fxw-shipping-method.php:30
+msgid "Dynamic distance-based shipping for FoodXpress."
+msgstr ""
+
+#: includes/services/class-fxw-delivery-fee.php:131
+msgid "ETA ~ %d mins"
+msgstr ""
+
+#: includes/class-fxw-core.php:316
+msgid "Edit the checkout page"
+msgstr ""
+
+#: includes/class-fxw-settings.php:137
+msgid "Enable Extra Delivery Fee (as Cart Fee)"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:308
+msgid "Enter your order details below to see its current status."
+msgstr ""
+
+#: includes/class-fxw-core.php:118
+msgid "Error!"
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:72
+msgid "Failed to update order status."
+msgstr ""
+
+#: includes/class-fxw-settings.php:128
+msgid "Fee Per Kilometer"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:219
+msgid "Flat/House/Unit:"
+msgstr ""
+
+#: includes/class-fxw-settings.php:27
+msgid "FoodXpress"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:158
+#: includes/class-fxw-shipping-method.php:29
+#: includes/class-fxw-shipping-method.php:67
+msgid "FoodXpress Delivery"
+msgstr ""
+
+#: includes/class-fxw-privacy.php:100
+#: includes/class-fxw-privacy.php:134
+#: includes/class-fxw-privacy.php:84
+msgid "FoodXpress Delivery Profile"
+msgstr ""
+
+#: includes/class-fxw-settings.php:26
+msgid "FoodXpress Settings"
+msgstr ""
+
+#: foodxpress-for-woocommerce.php:71
+msgid "FoodXpress for WooCommerce requires PHP 7.4 or higher."
+msgstr ""
+
+#: foodxpress-for-woocommerce.php:98
+msgid "FoodXpress for WooCommerce requires WooCommerce 7.0 or higher."
+msgstr ""
+
+#: foodxpress-for-woocommerce.php:44
+msgid "FoodXpress for WooCommerce requires WooCommerce to be installed and active."
+msgstr ""
+
+#: foodxpress-for-woocommerce.php:82
+msgid "FoodXpress for WooCommerce requires WordPress 6.0 or higher."
+msgstr ""
+
+#: includes/class-fxw-core.php:311
+#: includes/class-fxw-core.php:365
+msgid "FoodXpress:"
+msgstr ""
+
+#: includes/class-fxw-settings.php:202
+msgid "Full address as it appears on receipts"
+msgstr ""
+
+#: includes/class-fxw-settings.php:65
+msgid "General Settings"
+msgstr ""
+
+#: includes/class-fxw-checkout-maps.php:140
+msgid "Geolocation is not supported by your browser."
+msgstr ""
+
+#: includes/emails/class-fxw-email-picked-up.php:146
+msgid "Get ready to receive your delicious order!"
+msgstr ""
+
+#: includes/class-fxw-settings.php:72
+msgid "Google Maps API Key"
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:268
+#: includes/services/class-fxw-mapping-service.php:70
+msgid "Google Maps API key is missing."
+msgstr ""
+
+#: includes/class-fxw-checkout.php:107
+msgid "House / Flat / Building No."
+msgstr ""
+
+#: includes/class-fxw-core.php:141
+#: templates/delivery-dashboard-template.php:55
+msgid "In Progress"
+msgstr ""
+
+#: includes/class-fxw-order-statuses.php:34
+#: includes/class-fxw-order-statuses.php:78
+#: includes/class-fxw-order-statuses.php:87
+#: includes/class-fxw-shortcodes.php:196
+msgid "In the Kitchen"
+msgstr ""
+
+#: includes/class-fxw-order-statuses.php:39
+msgid "In the Kitchen <span class=\"count\">(%s)</span>"
+msgstr ""
+
+#: includes/api/class-fxw-rest-checkout-controller.php:100
+msgid "Invalid coordinates provided."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:247
+msgid "Invalid location array. Expected lat,lng."
+msgstr ""
+
+#: includes/class-fxw-checkout-handler.php:228
+msgid "Invalid location coordinates detected. Please select your location again using the map."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:262
+msgid "Invalid location type."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:344
+#: includes/class-fxw-dashboard.php:404
+#: includes/class-fxw-delivery-boy-view.php:138
+#: includes/class-fxw-order-admin.php:43
+#: includes/class-fxw-shortcodes.php:113
+msgid "Invalid nonce."
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:53
+msgid "Invalid order ID."
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:343
+msgid "Invalid order details."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:352
+#: includes/class-fxw-dashboard.php:412
+#: includes/class-fxw-dashboard.php:511
+#: includes/class-fxw-dashboard.php:574
+#: includes/class-fxw-delivery-boy-view.php:145
+#: includes/class-fxw-delivery-boy-view.php:57
+msgid "Invalid order."
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:51
+msgid "Invalid status transition."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:579
+msgid "Invalid status."
+msgstr ""
+
+#: templates/receipt-template.php:352
+msgid "Items Ordered"
+msgstr ""
+
+#: includes/class-fxw-checkout-handler.php:127
+msgid "Landmark"
+msgstr ""
+
+#: includes/api/class-fxw-rest-checkout-controller.php:170
+msgid "Latitude coordinate (-90 to 90)."
+msgstr ""
+
+#: includes/class-fxw-settings.php:193
+msgid "Leave empty to use site name"
+msgstr ""
+
+#: includes/class-fxw-checkout-maps.php:141
+msgid "Locating…"
+msgstr ""
+
+#: includes/class-fxw-checkout-maps.php:142
+msgid "Location permission denied. Please allow access in your browser settings."
+msgstr ""
+
+#: includes/class-fxw-checkout-maps.php:144
+msgid "Location request timed out. Please try again."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:304
+msgid "Location service temporarily unavailable. Please try again later."
+msgstr ""
+
+#: includes/class-fxw-checkout-maps.php:143
+msgid "Location unavailable. Please try again."
+msgstr ""
+
+#: includes/api/class-fxw-rest-checkout-controller.php:179
+msgid "Longitude coordinate (-180 to 180)."
+msgstr ""
+
+#: templates/delivery-boy-view.php:96
+#: templates/delivery-dashboard-template.php:184
+msgid "Mark Delivered"
+msgstr ""
+
+#: templates/delivery-boy-view.php:87
+#: templates/delivery-dashboard-template.php:176
+msgid "Mark Picked Up"
+msgstr ""
+
+#: templates/delivery-boy-view.php:69
+msgid "Method:"
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:45
+msgid "Missing order ID or status."
+msgstr ""
+
+#: templates/delivery-boy-view.php:22
+msgid "My Assigned Deliveries"
+msgstr ""
+
+#: templates/delivery-dashboard-template.php:47
+msgid "My Deliveries"
+msgstr ""
+
+#: templates/receipt-template.php:319
+msgid "N/A"
+msgstr ""
+
+#: templates/delivery-boy-view.php:55
+msgid "Name:"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:116
+msgid "Nearby Landmark (optional)"
+msgstr ""
+
+#: includes/class-fxw-core.php:140
+#: templates/delivery-dashboard-template.php:52
+msgid "New"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:262
+msgid "No assigned orders."
+msgstr ""
+
+#: templates/delivery-dashboard-template.php:79
+msgid "No deliveries in progress."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:184
+msgid "No delivery boys available"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:241
+msgid "No delivery boys found. Please create a user with the \"Delivery Boy\" role."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:326
+msgid "No location found for the specified address."
+msgstr ""
+
+#: templates/delivery-dashboard-template.php:67
+msgid "No new deliveries assigned."
+msgstr ""
+
+#: includes/class-fxw-core.php:142
+msgid "No orders in this section."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:322
+msgid "No orders out for delivery."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:191
+msgid "No unassigned orders."
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:249
+#: templates/delivery-dashboard-template.php:154
+msgid "Open Exact Location"
+msgstr ""
+
+#: includes/class-fxw-core.php:371
+msgid "Open FoodXpress settings"
+msgstr ""
+
+#: templates/delivery-boy-view.php:80
+msgid "Open in Map"
+msgstr ""
+
+#: includes/class-fxw-settings.php:220
+msgid "Optional tagline shown below logo (e.g., \"Delicious Food, Delivered Fast!\")"
+msgstr ""
+
+#: includes/class-fxw-settings.php:96
+msgid "Optional. Exact \"lat, lng\" used for fee & zone checks, e.g. 23.8103, 90.4125. Overrides the address above."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:131
+#: includes/class-fxw-dashboard.php:201
+#: includes/class-fxw-dashboard.php:272
+msgid "Order"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:348
+#: templates/delivery-boy-view.php:48
+#: templates/delivery-dashboard-template.php:104
+#: templates/emails/fxw-order-status.php:27
+#: templates/emails/plain/fxw-order-status.php:24
+msgid "Order #%s"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:527
+msgid "Order #%s assigned to %s"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:372
+msgid "Order #%s successfully assigned to %s"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:544
+msgid "Order #%s unassigned"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:378
+msgid "Order #%s unassigned from delivery boy"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:585
+msgid "Order #%s updated to %s"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:312
+msgid "Order ID"
+msgstr ""
+
+#: includes/emails/class-fxw-email-in-kitchen.php:25
+msgid "Order In Kitchen"
+msgstr ""
+
+#: templates/receipt-template.php:314
+msgid "Order No:"
+msgstr ""
+
+#: includes/emails/class-fxw-email-picked-up.php:25
+msgid "Order Picked Up"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:329
+msgid "Order assigned to delivery boy."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:365
+#: includes/class-fxw-dashboard.php:519
+msgid "Order assigned to delivery boy: %s"
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:68
+msgid "Order delivered by delivery agent (AJAX)."
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:118
+msgid "Order delivered by delivery agent."
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:59
+msgid "Order not found."
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:68
+msgid "Order picked up by delivery agent (AJAX)."
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:104
+msgid "Order picked up by delivery agent."
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:55
+msgid "Order rejected by admin."
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:75
+msgid "Order update not callable."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:268
+msgid "Out for Delivery"
+msgstr ""
+
+#: templates/receipt-template.php:423
+msgid "PAYMENT COMPLETED"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:134
+#: includes/class-fxw-dashboard.php:205
+#: includes/class-fxw-dashboard.php:276
+msgid "Payment"
+msgstr ""
+
+#: templates/delivery-boy-view.php:68
+msgid "Payment Information"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:222
+msgid "Payment Method:"
+msgstr ""
+
+#: templates/delivery-dashboard-template.php:139
+msgid "Payment:"
+msgstr ""
+
+#: templates/delivery-boy-view.php:63
+#: templates/delivery-dashboard-template.php:113
+msgid "Phone:"
+msgstr ""
+
+#: templates/receipt-template.php:306
+msgid "Phone: %s"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:245
+#: includes/class-fxw-order-statuses.php:52
+#: includes/class-fxw-order-statuses.php:80
+#: includes/class-fxw-order-statuses.php:89
+#: includes/class-fxw-shortcodes.php:198
+msgid "Picked Up"
+msgstr ""
+
+#: includes/class-fxw-order-statuses.php:57
+msgid "Picked Up <span class=\"count\">(%s)</span>"
+msgstr ""
+
+#: includes/class-fxw-checkout-handler.php:212
+msgid "Please enter your exact address (house / flat / building no.) so our delivery agent can find you."
+msgstr ""
+
+#: includes/class-fxw-checkout.php:97
+msgid "Please provide complete details to help our delivery agent find you easily."
+msgstr ""
+
+#: includes/class-fxw-checkout-handler.php:222
+msgid "Please select your exact location on the map. This ensures accurate delivery and helps our delivery agent find you."
+msgstr ""
+
+#: templates/emails/fxw-order-status.php:40
+msgid "Price"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:158
+#: includes/class-fxw-dashboard.php:160
+#: includes/class-fxw-dashboard.php:233
+#: includes/class-fxw-dashboard.php:235
+#: includes/class-fxw-dashboard.php:304
+#: includes/class-fxw-dashboard.php:306
+msgid "Print Receipt"
+msgstr ""
+
+#: templates/receipt-template.php:442
+msgid "Printed: %s"
+msgstr ""
+
+#: templates/emails/fxw-order-status.php:38
+msgid "Product"
+msgstr ""
+
+#: templates/emails/fxw-order-status.php:39
+msgid "Quantity"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:270
+msgid "Re-assign"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:98
+msgid "Re-order"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:255
+msgid "Reassign"
+msgstr ""
+
+#: includes/class-fxw-settings.php:173
+msgid "Receipt Branding"
+msgstr ""
+
+#: includes/class-fxw-settings.php:225
+msgid "Receipt Footer Message"
+msgstr ""
+
+#: includes/class-fxw-settings.php:180
+msgid "Receipt Logo"
+msgstr ""
+
+#: includes/class-fxw-settings.php:216
+msgid "Receipt Tagline"
+msgstr ""
+
+#: includes/class-fxw-settings.php:184
+msgid "Recommended: 200x80px, PNG or JPG"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:268
+msgid "Reject Order"
+msgstr ""
+
+#: includes/class-fxw-settings.php:316
+#: includes/class-fxw-settings.php:341
+msgid "Remove Logo"
+msgstr ""
+
+#: includes/class-fxw-settings.php:81
+msgid "Restaurant Address"
+msgstr ""
+
+#: includes/class-fxw-settings.php:198
+msgid "Restaurant Address (for Receipt)"
+msgstr ""
+
+#: includes/class-fxw-settings.php:90
+msgid "Restaurant Coordinates (lat, lng)"
+msgstr ""
+
+#: includes/class-fxw-settings.php:189
+msgid "Restaurant Name (for Receipt)"
+msgstr ""
+
+#: includes/class-fxw-settings.php:207
+msgid "Restaurant Phone (for Receipt)"
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:202
+msgid "Restaurant address or coordinates are not configured."
+msgstr ""
+
+#: templates/delivery-dashboard-template.php:159
+msgid "Search Delivery Address"
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:253
+#: templates/delivery-dashboard-template.php:164
+msgid "Search Location"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:76
+msgid "Search for your area or landmark..."
+msgstr ""
+
+#: includes/class-fxw-checkout.php:71
+msgid "Search for your area, use current location, or drag the marker to set your exact delivery point."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:503
+#: includes/class-fxw-dashboard.php:566
+msgid "Security check failed."
+msgstr ""
+
+#: includes/class-fxw-admin-bar.php:70
+msgid "Security verification failed."
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:121
+#: includes/class-fxw-shortcodes.php:41
+msgid "Security verification failed. Please try again."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:170
+msgid "Select Delivery Boy..."
+msgstr ""
+
+#: includes/class-fxw-order-admin.php:233
+msgid "Select a Delivery Boy"
+msgstr ""
+
+#: includes/class-fxw-settings.php:331
+msgid "Select or Upload Logo"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:86
+msgid "Selected Location:"
+msgstr ""
+
+#: includes/api/class-fxw-rest-checkout-controller.php:108
+#: includes/api/class-fxw-rest-checkout-controller.php:71
+msgid "Sorry, we are currently closed for deliveries."
+msgstr ""
+
+#: includes/api/class-fxw-rest-checkout-controller.php:70
+#: includes/class-fxw-checkout-maps.php:138
+msgid "Sorry, we do not deliver to this location."
+msgstr ""
+
+#: includes/api/class-fxw-rest-checkout-controller.php:133
+#: includes/class-fxw-checkout-handler.php:283
+msgid "Sorry, we do not deliver to your location."
+msgstr ""
+
+#: templates/receipt-template.php:433
+msgid "Special Instructions"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:133
+#: includes/class-fxw-dashboard.php:204
+#: includes/class-fxw-dashboard.php:275
+msgid "Status"
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:417
+#: includes/class-fxw-dashboard.php:582
+msgid "Status updated from dashboard."
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:70
+msgid "Status updated successfully."
+msgstr ""
+
+#: templates/receipt-template.php:322
+msgid "Status:"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:70
+msgid "Step 1: Select Your Location on Map"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:96
+msgid "Step 2: Enter Your Delivery Details"
+msgstr ""
+
+#: templates/receipt-template.php:393
+msgid "Subtotal:"
+msgstr ""
+
+#: templates/receipt-template.php:407
+msgid "TOTAL AMOUNT:"
+msgstr ""
+
+#: templates/receipt-template.php:71
+msgid "Thank You! Have a great day!"
+msgstr ""
+
+#: includes/emails/class-fxw-email-in-kitchen.php:146
+msgid "Thank you for your order!"
+msgstr ""
+
+#: includes/class-fxw-shipping-method.php:66
+msgid "This controls the title which the user sees during checkout."
+msgstr ""
+
+#: includes/emails/class-fxw-email-assigned.php:26
+msgid "This email is sent when a delivery driver is assigned to the order."
+msgstr ""
+
+#: includes/emails/class-fxw-email-in-kitchen.php:26
+msgid "This email is sent when an order is being prepared in the kitchen."
+msgstr ""
+
+#: includes/emails/class-fxw-email-picked-up.php:26
+msgid "This email is sent when the order is picked up and out for delivery."
+msgstr ""
+
+#: includes/class-fxw-shipping-method.php:64
+msgid "Title"
+msgstr ""
+
+#: includes/class-fxw-reporting.php:34
+msgid "Today\\"
+msgstr ""
+
+#: includes/class-fxw-reporting.php:52
+msgid "Total Deliveries:"
+msgstr ""
+
+#: includes/class-fxw-reporting.php:56
+msgid "Total Delivery Fees:"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:323
+msgid "Track Order"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:307
+msgid "Track Your Order"
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:139
+msgid "Unable to calculate delivery distance for your location."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:113
+msgid "Unable to calculate delivery distance. Please try again or contact support."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:131
+msgid "Unable to calculate delivery distance. Please try again."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:296
+msgid "Unable to find location. Please try a different address."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:314
+msgid "Unable to find location. Please try again."
+msgstr ""
+
+#: includes/services/class-fxw-mapping-service.php:322
+msgid "Unable to find the specified address. Please check and try again."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:127
+msgid "Unassigned Orders"
+msgstr ""
+
+#: includes/class-fxw-admin-bar.php:64
+#: includes/class-fxw-delivery-boy-view.php:38
+msgid "Unauthorized access."
+msgstr ""
+
+#: includes/class-fxw-dashboard.php:339
+#: includes/class-fxw-dashboard.php:399
+#: includes/class-fxw-dashboard.php:498
+#: includes/class-fxw-dashboard.php:561
+#: includes/class-fxw-delivery-boy-view.php:133
+#: includes/class-fxw-order-admin.php:125
+msgid "Unauthorized."
+msgstr ""
+
+#: templates/receipt-template.php:345
+msgid "Unit/Flat: %s"
+msgstr ""
+
+#: templates/delivery-boy-view.php:60
+#: templates/delivery-dashboard-template.php:132
+msgid "Unit:"
+msgstr ""
+
+#: includes/class-fxw-core.php:117
+msgid "Updating..."
+msgstr ""
+
+#: includes/class-fxw-settings.php:311
+msgid "Upload Logo"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:78
+msgid "Use My Location"
+msgstr ""
+
+#: includes/class-fxw-settings.php:332
+msgid "Use this logo"
+msgstr ""
+
+#: includes/class-fxw-checkout-handler.php:236
+msgid "We are currently closed for deliveries. Please try again later."
+msgstr ""
+
+#: includes/class-fxw-shipping-method.php:131
+msgid "We could not calculate delivery distance. Please verify your location and try again."
+msgstr ""
+
+#: includes/services/class-fxw-rate-limiter.php:60
+msgid "You are making too many requests. Please wait a moment and try again."
+msgstr ""
+
+#: includes/class-fxw-delivery-boy-view.php:150
+#: includes/class-fxw-delivery-boy-view.php:63
+msgid "You are not assigned to this order."
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:130
+msgid "You are not authorized to reorder this order."
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:75
+msgid "You are not authorized to view this receipt."
+msgstr ""
+
+#: templates/delivery-boy-view.php:105
+msgid "You have no assigned deliveries at the moment."
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:118
+msgid "You must be logged in to reorder."
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:261
+msgid "Your Delivery Rider"
+msgstr ""
+
+#: includes/emails/class-fxw-email-picked-up.php:106
+#: includes/emails/class-fxw-email-picked-up.php:129
+msgid "Your order has been picked up and is on its way to you!"
+msgstr ""
+
+#: includes/emails/class-fxw-email-in-kitchen.php:106
+#: includes/emails/class-fxw-email-in-kitchen.php:129
+msgid "Your order is being prepared and will be out for delivery soon."
+msgstr ""
+
+#: includes/emails/class-fxw-email-in-kitchen.php:27
+msgid "Your order is being prepared!"
+msgstr ""
+
+#: includes/emails/class-fxw-email-in-kitchen.php:62
+msgid "Your order is being prepared! 🍳"
+msgstr ""
+
+#: includes/emails/class-fxw-email-picked-up.php:27
+msgid "Your order is on its way!"
+msgstr ""
+
+#: includes/emails/class-fxw-email-picked-up.php:62
+msgid "Your order is on its way! 🎉"
+msgstr ""
+
+#: includes/emails/class-fxw-email-assigned.php:146
+msgid "Your order will arrive soon!"
+msgstr ""
+
+#: includes/emails/class-fxw-email-assigned.php:28
+#: includes/emails/class-fxw-email-assigned.php:52
+msgid "[{site_title}]: Driver assigned to your order #{order_number}"
+msgstr ""
+
+#: includes/emails/class-fxw-email-in-kitchen.php:28
+#: includes/emails/class-fxw-email-in-kitchen.php:52
+msgid "[{site_title}]: Your order #{order_number} is in the kitchen"
+msgstr ""
+
+#: includes/emails/class-fxw-email-picked-up.php:28
+#: includes/emails/class-fxw-email-picked-up.php:52
+msgid "[{site_title}]: Your order #{order_number} is out for delivery"
+msgstr ""
+
+#: includes/services/class-fxw-address-validator.php:43
+msgid "address field is empty"
+msgstr ""
+
+#: includes/services/class-fxw-address-validator.php:119
+msgid "address is acceptable but could use more detail"
+msgstr ""
+
+#: includes/services/class-fxw-address-validator.php:50
+msgid "address is too short - please provide more details"
+msgstr ""
+
+#: includes/services/class-fxw-address-validator.php:111
+msgid "address looks complete"
+msgstr ""
+
+#: includes/class-fxw-core.php:369
+msgid "delivery is not configured — %1$s. Customers cannot place delivery orders until this is fixed. %2$s"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:314
+msgid "e.g. 123"
+msgstr ""
+
+#: includes/class-fxw-shortcodes.php:319
+msgid "e.g. you@example.com"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:108
+msgid "e.g., Flat 4B, House 25, Tower A, Block 2"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:117
+msgid "e.g., Near City Mall, Opposite Park"
+msgstr ""
+
+#: includes/class-fxw-checkout.php:126
+msgid "e.g., Ring the bell twice, Leave at the door, Call before arriving..."
+msgstr ""
+
+#: includes/services/class-fxw-address-validator.php:92
+msgid "please add building name, street name, or nearby landmark"
+msgstr ""
+
+#: includes/services/class-fxw-address-validator.php:126
+msgid "please add more specific delivery details like floor, gate number, or landmarks"
+msgstr ""
+
+#: includes/services/class-fxw-address-validator.php:85
+msgid "please include building/house/flat number"
+msgstr ""
+
+#: includes/class-fxw-core.php:348
+msgid "the Google Maps API key is missing"
+msgstr ""
+
+#: includes/class-fxw-core.php:315
+msgid "the block-based checkout is active, so the FoodXpress map picker, delivery-zone validation and distance fee will not appear. Edit the checkout page and replace the Checkout block with the [woocommerce_checkout] shortcode. %s"
+msgstr ""
+
+#: includes/class-fxw-core.php:354
+msgid "the restaurant location (coordinates or address) is missing"
+msgstr ""

@@ -72,6 +72,7 @@ class FXW_Core
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-roles.php';
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-order-statuses.php';
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-notifications.php';
+		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-privacy.php';
 
 		/**
 		 * Frontend and AJAX (admin-ajax.php) files
@@ -154,6 +155,7 @@ class FXW_Core
 		add_action('after_setup_theme', array($this, 'disable_admin_bar'));
 		add_action('wp_enqueue_scripts', array($this, 'enqueue_delivery_dashboard_scripts'));
 		add_action('admin_notices', array($this, 'warn_blocks_checkout'));
+		add_action('admin_notices', array($this, 'warn_delivery_not_configured'));
 		add_action('init', array($this, 'add_rewrite_rules'));
 		add_filter('query_vars', array($this, 'add_query_vars'));
 		add_action('template_redirect', array($this, 'handle_delivery_dashboard_access'));
@@ -312,6 +314,61 @@ class FXW_Core
 					/* translators: %s: link to edit the checkout page */
 					esc_html__('the block-based checkout is active, so the FoodXpress map picker, delivery-zone validation and distance fee will not appear. Edit the checkout page and replace the Checkout block with the [woocommerce_checkout] shortcode. %s', 'foodxpress'),
 					'<a href="' . esc_url($edit_url) . '">' . esc_html__('Edit the checkout page', 'foodxpress') . '</a>'
+				);
+				?>
+			</p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Warn when delivery cannot be configured to work at all: the Google
+	 * Maps API key is missing, or the restaurant has neither coordinates
+	 * nor an address to derive them from. Without both, checkout offers
+	 * no delivery rate and customers simply cannot order.
+	 *
+	 * Cheap checks only — no API calls on admin page renders.
+	 *
+	 * @since 1.2.6
+	 */
+	public function warn_delivery_not_configured()
+	{
+		if (!current_user_can('manage_woocommerce')) {
+			return;
+		}
+
+		$options = get_option('fxw_settings');
+		if (!is_array($options)) {
+			$options = array();
+		}
+
+		$problems = array();
+		$api_key = isset($options['fxw_google_maps_api_key']) ? trim((string) $options['fxw_google_maps_api_key']) : '';
+		if ('' === $api_key) {
+			$problems[] = __('the Google Maps API key is missing', 'foodxpress');
+		}
+
+		$latlng = isset($options['fxw_restaurant_latlng']) ? trim((string) $options['fxw_restaurant_latlng']) : '';
+		$address = isset($options['fxw_restaurant_address']) ? trim((string) $options['fxw_restaurant_address']) : '';
+		if ('' === $latlng && '' === $address) {
+			$problems[] = __('the restaurant location (coordinates or address) is missing', 'foodxpress');
+		}
+
+		if (empty($problems)) {
+			return;
+		}
+
+		$settings_url = admin_url('admin.php?page=foodxpress-settings');
+		?>
+		<div class="notice notice-error">
+			<p>
+				<strong><?php esc_html_e('FoodXpress:', 'foodxpress'); ?></strong>
+				<?php
+				printf(
+					/* translators: 1: list of missing configuration, 2: link to settings */
+					esc_html__('delivery is not configured — %1$s. Customers cannot place delivery orders until this is fixed. %2$s', 'foodxpress'),
+					esc_html(implode(__(' and ', 'foodxpress'), $problems)),
+					'<a href="' . esc_url($settings_url) . '">' . esc_html__('Open FoodXpress settings', 'foodxpress') . '</a>'
 				);
 				?>
 			</p>

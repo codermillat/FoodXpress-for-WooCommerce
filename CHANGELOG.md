@@ -4,6 +4,13 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.6] - 2026-08-17
+
+### Added (production-readiness)
+- **Privacy integration (`FXW_Privacy`)** — FoodXpress personal data now flows through the official WordPress/WooCommerce privacy frameworks, using only documented hooks: the saved delivery profile (pin coordinates, exact address, landmark, instructions) is included in **Tools → Export/Erase Personal Data** via `wp_privacy_personal_data_exporters`/`_erasers`, and order meta (current + pre-1.2.2 legacy address fields, coordinates) joins WooCommerce's own order export via `woocommerce_privacy_export_order_personal_data` and is removed on order anonymization via `woocommerce_privacy_before_remove_order_personal_data`
+- **"Delivery not configured" admin warning** — persistent notice for shop managers when the Google Maps API key or the restaurant location (coordinates or address) is missing, with a direct settings link; cheap checks only, no API calls on admin renders
+- **Translation template** — `languages/foodxpress.pot` with all 271 translatable strings (verified against the WooCommerce privacy-framework documentation before implementation)
+
 ## [1.2.5] - 2026-08-17
 
 ### Removed (dead code — full-project audit, every item verified caller-free)

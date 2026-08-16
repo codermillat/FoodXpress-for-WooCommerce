@@ -2,15 +2,15 @@
 
 A complete delivery management system for single-restaurant WooCommerce stores.
 
-![Version](https://img.shields.io/badge/Version-1.2.3-blue)
+![Version](https://img.shields.io/badge/Version-1.2.6-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-7.0%2B-purple)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![HPOS](https://img.shields.io/badge/HPOS-Compatible-green)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-green)
 
-> **Latest release:** [v1.2.3 — Coordinates-only delivery engine](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.3) (2026-08-17)
-> Fees and zone checks now run on restaurant ↔ pin coordinates only, with a Zomato/Swiggy-style checkout: map pin + one "House / Flat / Building No." field, a visible delivery-radius circle, and auto-saved defaults so returning customers never re-pin. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
+> **Latest release:** [v1.2.6 — Production-readiness fixes](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.6) (2026-08-17)
+> Coordinates-only delivery engine, Zomato/Swiggy-style checkout with auto-saved address defaults, GDPR privacy integration, translation template, and configuration health warnings. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
 > **Next:** [Phase 1 — Data layer + 8 new `fxw_*` tables](./docs/ROADMAP.md).
 
 ## Features

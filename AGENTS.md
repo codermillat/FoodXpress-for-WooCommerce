@@ -8,7 +8,7 @@
 ## 0. TL;DR
 
 - **Project:** FoodXpress for WooCommerce — a delivery-management plugin for single-restaurant WooCommerce stores
-- **Current version:** **v1.2.5** (2026-08-17 — v1.2.2–1.2.5: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup; repo public, GPL-3.0-or-later. See CHANGELOG.md)
+- **Current version:** **v1.2.6** (2026-08-17 — v1.2.2–1.2.6: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration + config health warning; repo public, GPL-3.0-or-later. See CHANGELOG.md)
 - **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
 - **User profile:** Freelance web developer, building this plugin for **SIAC** (an education consultancy). The plugin is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
@@ -92,6 +92,7 @@ FoodXpress-for-WooCommerce/
 │   ├── class-fxw-admin-bar.php     ← admin bar delivery toggle
 │   ├── class-fxw-reporting.php     ← delivery analytics (will grow in Phase 6)
 │   ├── class-fxw-notifications.php ← email dispatch (will grow into multi-channel in Phase 5)
+│   ├── class-fxw-privacy.php       ← WP/WC privacy export & erasure (added in v1.2.6)
 │   ├── class-fxw-config.php        ← constants (FXW_Config::DEFAULT_DELIVERY_RADIUS, etc.)
 │   ├── api/
 │   │   └── class-fxw-rest-checkout-controller.php  ← REST pattern reference
@@ -134,6 +135,7 @@ FoodXpress-for-WooCommerce/
 | `FXW_Admin_Bar` | Admin bar "Delivery" toggle. | ✓ |
 | `FXW_Reporting` | Delivery analytics queries (will grow into Phase 6 BI). | ✓ |
 | `FXW_Notifications` | Email dispatch facade (will grow into Phase 5 multi-channel). | ✓ |
+| `FXW_Privacy` | Personal-data export/erasure for WP privacy tools + WC order anonymization. | ✓ |
 | `FXW_Config` | Constants only. No instance. | n/a |
 | `FXW_REST_Checkout_Controller` | Reference REST controller — follow this pattern for Phase 1+ REST endpoints. | n/a (registered by FXW_Core) |
 | `FXW_Mapping_Service` | Google Maps wrapper (geocode, distance matrix). Static + instance methods. | n/a |

@@ -1,7 +1,7 @@
 # AGENTS.md — FoodXpress for WooCommerce
 
 > Context for AI coding agents (OpenCode, Codex, Cursor, Aider, Devin, Gemini CLI, Claude Code, etc.).
-> Read this before touching the codebase. The repo is private; the user (MD Millat Hosen) is the sole maintainer.
+> Read this before touching the codebase. The repo is **public and open source** (GPL-3.0-or-later since v1.2.1); the user (MD Millat Hosen) is the sole maintainer.
 
 ---
 
@@ -12,7 +12,7 @@
 - **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
 - **User profile:** Freelance web developer, building this plugin for **SIAC** (an education consultancy). The plugin is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
-- **Remote:** `https://github.com/codermillat/FoodXpress-for-WooCommerce` (private)
+- **Remote:** `https://github.com/codermillat/FoodXpress-for-WooCommerce` (public since v1.2.1, GPL-3.0-or-later)
 - **Test runner:** `php tests/FXWTestRunner.php` → must report **101/101 pass** before any commit
 
 ---
@@ -68,7 +68,7 @@ A complete delivery-management layer for single-restaurant WooCommerce stores:
 FoodXpress-for-WooCommerce/
 ├── foodxpress-for-woocommerce.php   ← slim bootstrap, defines FXW_VERSION + FXW_PLUGIN_DIR/URL
 ├── uninstall.php                   ← cleanup hook
-├── LICENSE.md                      ← proprietary, with WP/WC carve-out (added in v1.2.0)
+├── LICENSE.md                      ← GPL-3.0-or-later (relicensed from proprietary in v1.2.1)
 ├── CHANGELOG.md                    ← Keep a Changelog format
 ├── README.md                       ← user-facing (this is for AI, README is for humans)
 ├── AGENTS.md                       ← you are here
@@ -271,7 +271,7 @@ These came up in the original RR/RDM backport analysis and were explicitly **rej
 
 - Split `class-fxw-checkout.php` (1,046 LOC) into 3 single-purpose files + 2 new services, all under 500 LOC
 - Replaced 4-line `.gitignore` with comprehensive 65-line version
-- Added `LICENSE.md` (proprietary, with WP/WC carve-out)
+- Added `LICENSE.md` (originally proprietary with WP/WC carve-out; relicensed to GPL-3.0-or-later in v1.2.1 when the repo went public)
 - Bumped version 1.1.0 → 1.2.0
 - Updated `tests/FXWTestRunner.php` to recognize the new files
 - Removed 9 AI-tool config folders + 5 AI dev docs (all recoverable in `mavis-trash`); GitHub language tag will re-rank from Python to PHP on next index

@@ -248,7 +248,7 @@ Each phase is independent, deployable, and ends with a tagged release. The phase
   - `services/class-fxw-address-validator.php` (129 LOC) — stateless `validate_address_completeness` (was dead private code; preserved as a public service for Phase 7 multi-outlet editor)
 - [x] Replaced the 4-line `.gitignore` with a comprehensive one covering: OS, editor/IDE, AI tool configs (`.agent/`, `.claude/`, `.cursorrules`, etc.), PHP/Composer/PHPStan/Psalm, logs, build artifacts, TestSprite/Playwright outputs, env/secrets
 - [x] Removed 9 AI-tool config folders (`.agent/`, `.agents/`, `.claude/`, `.cline/`, `.codex/`, `.cursor/`, `.gemini/`, `.kiro/`, `.vscode/`) and 5 AI dev docs (`.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `.CLAUDE.md.swp`) — all moved to `mavis-trash`, recoverable
-- [x] Added `LICENSE.md` — proprietary text matching the plugin header, with explicit carve-out for WordPress + WooCommerce (GPL-2.0+)
+- [x] Added `LICENSE.md` — proprietary text matching the plugin header, with explicit carve-out for WordPress + WooCommerce (GPL-2.0+). *Relicensed to GPL-3.0-or-later in v1.2.1 when the repo went public.*
 - [x] Added `CHANGELOG.md` with 1.2.0 entry (historical 1.0.0 / 1.0.1 / 1.1.0 entries were already present)
 - [x] Bumped version 1.1.0 → **1.2.0** in plugin header and `FXW_VERSION` constant
 - [x] Updated `tests/FXWTestRunner.php` to recognize the 3 new files and skip the orchestrator (no AJAX endpoints) in the nonce-verification check

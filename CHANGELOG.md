@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.2.1] - 2026-08-17
 
+### License
+- **Relicensed from proprietary to GPL-3.0-or-later** (matching the WooCommerce ecosystem), full text in `LICENSE.md`; plugin header now carries `License: GPL-3.0-or-later` + License URI. The repository is public as of this release. All future contributions are accepted under the same license (see `CONTRIBUTING.md`).
+
 ### Added
 - **Blocks-checkout admin warning** (`FXW_Core::warn_blocks_checkout`) — when the WooCommerce Checkout *block* is active on the checkout page, shop managers now see a persistent notice explaining that the FoodXpress map picker, zone validation and distance fee only run on the classic `[woocommerce_checkout]` shortcode, with a direct edit link. The `cart_checkout_blocks` compatibility declaration is informational only and never forced the classic checkout, so previously a blocks store silently lost all delivery logic.
 

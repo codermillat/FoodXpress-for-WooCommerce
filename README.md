@@ -2,15 +2,15 @@
 
 A complete delivery management system for single-restaurant WooCommerce stores.
 
-![Version](https://img.shields.io/badge/Version-1.2.0-blue)
+![Version](https://img.shields.io/badge/Version-1.2.1-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-7.0%2B-purple)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![HPOS](https://img.shields.io/badge/HPOS-Compatible-green)
-![License](https://img.shields.io/badge/License-Proprietary-red)
+![License](https://img.shields.io/badge/License-GPL--3.0--or--later-green)
 
-> **Latest release:** [v1.2.0 — Refactor & Hygiene (Phase 0)](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.0) (2026-08-17)
-> Split the 1,046-LOC checkout class into 5 single-purpose files, all under 500 LOC. No runtime behaviour change. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
+> **Latest release:** [v1.2.1 — Audit fixes](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.1) (2026-08-17)
+> Blocks-checkout admin warning, Google Maps response caching, security-standard fixes — and the project is now open source under GPL-3.0-or-later. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
 > **Next:** [Phase 1 — Data layer + 8 new `fxw_*` tables](./docs/ROADMAP.md).
 
 ## Features
@@ -90,8 +90,9 @@ A complete delivery management system for single-restaurant WooCommerce stores.
 foodxpress-for-woocommerce/
 ├── foodxpress-for-woocommerce.php   # Slim bootstrap
 ├── uninstall.php                   # Cleanup on delete
-├── LICENSE.md                      # Proprietary license (added in v1.2.0)
+├── LICENSE.md                      # GPL-3.0-or-later
 ├── CHANGELOG.md                    # Version history
+├── CONTRIBUTING.md                 # How to contribute
 ├── AGENTS.md                       # Context for AI coding agents
 ├── docs/
 │   ├── ANALYSIS.md                 # 3-repo comparison
@@ -140,9 +141,13 @@ The runner validates:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Run `php tests/FXWTestRunner.php` and make sure it reports 101/101 before opening a pull request.
+
 ## License
 
-Proprietary License - All rights reserved.
+[GPL-3.0-or-later](LICENSE.md) — same license family as WooCommerce itself.
 
 ## Author
 

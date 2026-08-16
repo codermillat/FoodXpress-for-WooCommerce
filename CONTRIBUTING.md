@@ -59,7 +59,7 @@ cd wp-content/plugins/foodxpress-for-woocommerce
 php tests/FXWTestRunner.php
 ```
 
-All 86 tests must pass.
+All 101 tests must pass.
 
 ## Pull Request Process
 
@@ -68,6 +68,12 @@ All 86 tests must pass.
 3. Ensure all tests pass
 4. Update CHANGELOG.md if applicable
 5. Submit a pull request with a clear description
+
+New feature work follows the phased plan in [docs/ROADMAP.md](docs/ROADMAP.md) — please open an issue before starting large changes so work doesn't collide with an in-flight phase. Full architecture context lives in [AGENTS.md](AGENTS.md).
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the [GPL-3.0-or-later](LICENSE.md) license that covers this project.
 
 ## Questions?
 

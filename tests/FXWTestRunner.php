@@ -53,19 +53,69 @@ class FXWTestRunner
         $php_files = $this->findPhpFiles($this->plugin_dir);
 
         foreach ($php_files as $file) {
-            $output = [];
-            $return_var = 0;
-            exec("php -l " . escapeshellarg($file) . " 2>&1", $output, $return_var);
-
             $relative_path = str_replace($this->plugin_dir . '/', '', $file);
+            $error = $this->lintPhpFile($file);
 
-            if ($return_var === 0) {
+            if ($error === null) {
                 $this->pass("Syntax OK: $relative_path");
             } else {
-                $this->fail("Syntax Error: $relative_path - " . implode(' ', $output));
+                $this->fail("Syntax Error: $relative_path - " . $error);
             }
         }
         echo "\n";
+    }
+
+    /**
+     * Pure-PHP syntax check — no subprocess.
+     *
+     * Tokenizes with TOKEN_PARSE (throws ParseError on malformed code)
+     * and additionally verifies bracket balance. Deliberately avoids
+     * shelling out to `php -l` so the runner exposes no
+     * command-execution surface at all.
+     *
+     * @param string $file Absolute path to the file to lint.
+     * @return string|null Error message, or null when the file looks valid.
+     */
+    private function lintPhpFile($file)
+    {
+        $code = @file_get_contents($file);
+        if ($code === false) {
+            return 'Unable to read file';
+        }
+
+        try {
+            $tokens = token_get_all($code, TOKEN_PARSE);
+        } catch (ParseError $e) {
+            return $e->getMessage() . ' on line ' . $e->getLine();
+        } catch (Error $e) {
+            return $e->getMessage();
+        }
+
+        $pairs = array(')' => '(', ']' => '[', '}' => '{');
+        $stack = array();
+        foreach ($tokens as $token) {
+            if (is_array($token)) {
+                // {$var} / ${var} interpolation: the opening brace arrives
+                // as a T_CURLY_OPEN / T_DOLLAR_OPEN_CURLY_BRACES array
+                // token, but its closing "}" arrives as a plain token.
+                if ($token[0] === T_CURLY_OPEN || $token[0] === T_DOLLAR_OPEN_CURLY_BRACES) {
+                    $stack[] = '{';
+                }
+                continue;
+            }
+            if ($token === '(' || $token === '[' || $token === '{') {
+                $stack[] = $token;
+            } elseif (isset($pairs[$token])) {
+                if (array_pop($stack) !== $pairs[$token]) {
+                    return 'Unbalanced brackets';
+                }
+            }
+        }
+        if (!empty($stack)) {
+            return 'Unbalanced brackets';
+        }
+
+        return null;
     }
 
     private function testSecurityPatterns()

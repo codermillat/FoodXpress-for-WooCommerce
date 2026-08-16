@@ -8,7 +8,7 @@
 ## 0. TL;DR
 
 - **Project:** FoodXpress for WooCommerce — a delivery-management plugin for single-restaurant WooCommerce stores
-- **Current version:** **v1.2.0** (released 2026-08-17, commit `140b19f`)
+- **Current version:** **v1.2.1** (2026-08-17 — audit fixes: blocks-checkout warning, Maps API caching, security-standard fixes)
 - **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
 - **User profile:** Freelance web developer, building this plugin for **SIAC** (an education consultancy). The plugin is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
@@ -229,7 +229,7 @@ Expected: `Passed: 101, Failed: 0`. The runner checks:
 | **WordPress skills** | `wordpress-pro` and `wordpress-advanced-architecture` reference content lives in `skills/` | Read files directly |
 | **mcporter** | Manages all MCP server configs. `mcporter list`, `mcporter call`, `mcporter config add/remove` | Binary at `/Users/mdmillathosen/.local/bin/mcporter` |
 
-**Context7 note for the next agent:** Context7 is currently configured but **API-key auth is unreliable** (first call works, subsequent calls return `Invalid API key`). Workaround: Context7 works without auth at lower rate limits (only `query-docs`, not `resolve-library-id` is needed for the second step usually). Do not block on auth retries — if the call fails, fall back to the WooCommerce/WordPress source code in `wp-content/plugins/woocommerce/` if available, or to the bundled `wordpress-pro` / `wordpress-advanced-architecture` skills in `skills/`.
+**Context7 note for the next agent:** Context7 auth was fixed on 2026-08-17 (a fresh API key now lives in `~/.cursor/mcp.json`); use Context7 normally. If `Invalid API key` reappears, the key in that file needs replacing — verify candidates with a direct curl to `https://mcp.context7.com/mcp` before writing, and note that an MCP connection caches its key until the session restarts. Anonymous access (no Authorization header) also works at lower rate limits as a fallback. If Context7 is unavailable entirely, fall back to the WooCommerce/WordPress source code in `wp-content/plugins/woocommerce/` if available, or to the bundled `wordpress-pro` / `wordpress-advanced-architecture` skills in `skills/`.
 
 ---
 

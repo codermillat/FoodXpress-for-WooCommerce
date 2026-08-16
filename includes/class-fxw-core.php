@@ -153,6 +153,7 @@ class FXW_Core
 	{
 		add_action('after_setup_theme', array($this, 'disable_admin_bar'));
 		add_action('wp_enqueue_scripts', array($this, 'enqueue_delivery_dashboard_scripts'));
+		add_action('admin_notices', array($this, 'warn_blocks_checkout'));
 		add_action('init', array($this, 'add_rewrite_rules'));
 		add_filter('query_vars', array($this, 'add_query_vars'));
 		add_action('template_redirect', array($this, 'handle_delivery_dashboard_access'));
@@ -200,7 +201,7 @@ class FXW_Core
 	{
 		if (get_query_var('is_delivery_dashboard')) {
 			if (!is_user_logged_in() || !current_user_can('fxw_delivery_access')) {
-				wp_redirect(home_url());
+				wp_safe_redirect(home_url());
 				exit;
 			}
 		}
@@ -273,6 +274,52 @@ class FXW_Core
 	}
 
 	/**
+	 * Warn when the block-based WooCommerce checkout is active.
+	 *
+	 * The map picker, delivery fields and zone validation only hook into
+	 * the classic shortcode checkout. The cart_checkout_blocks
+	 * compatibility declaration is informational (it does not force the
+	 * classic checkout), so a merchant using the Checkout block would
+	 * silently lose all delivery logic — surface a loud notice until the
+	 * shortcode is restored.
+	 *
+	 * @since 1.2.1
+	 */
+	public function warn_blocks_checkout()
+	{
+		if (!current_user_can('manage_woocommerce')) {
+			return;
+		}
+
+		$checkout_page_id = (int) get_option('woocommerce_checkout_page_id');
+		if (!$checkout_page_id) {
+			return;
+		}
+
+		// Pages (unlike orders) are still posts, so get_post() is safe here.
+		$checkout_page = get_post($checkout_page_id);
+		if (!$checkout_page || !has_block('woocommerce/checkout', $checkout_page)) {
+			return;
+		}
+
+		$edit_url = admin_url('post.php?post=' . $checkout_page_id . '&action=edit');
+		?>
+		<div class="notice notice-error">
+			<p>
+				<strong><?php esc_html_e('FoodXpress:', 'foodxpress'); ?></strong>
+				<?php
+				printf(
+					/* translators: %s: link to edit the checkout page */
+					esc_html__('the block-based checkout is active, so the FoodXpress map picker, delivery-zone validation and distance fee will not appear. Edit the checkout page and replace the Checkout block with the [woocommerce_checkout] shortcode. %s', 'foodxpress'),
+					'<a href="' . esc_url($edit_url) . '">' . esc_html__('Edit the checkout page', 'foodxpress') . '</a>'
+				);
+				?>
+			</p>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Disable admin bar for customers and delivery boys.
 	 *
 	 * @since    1.0.0
@@ -281,7 +328,7 @@ class FXW_Core
 	{
 		if (!current_user_can('manage_options')) {
 			$user = wp_get_current_user();
-			if (in_array('delivery_boy', (array) $user->roles) || in_array('customer', (array) $user->roles)) {
+			if (in_array('delivery_boy', (array) $user->roles, true) || in_array('customer', (array) $user->roles, true)) {
 				add_filter('show_admin_bar', '__return_false');
 			}
 		}

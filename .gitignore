@@ -1,6 +1,6 @@
 # =====================================================================
 # FoodXpress for WooCommerce — .gitignore
-# Last updated: 1.2.0
+# Last updated: 1.2.1
 # =====================================================================
 
 # OS
@@ -38,6 +38,7 @@ nbproject/
 .cursor/
 .gemini/
 .kiro/
+.mimosa/
 .cursorrules
 CLAUDE.md
 .github/copilot-instructions.md
@@ -98,3 +99,4 @@ config-local.php
 *.orig
 *.tmp
 *.swp
+.mimosa/

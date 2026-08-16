@@ -4,6 +4,26 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.1] - 2026-08-17
+
+### Added
+- **Blocks-checkout admin warning** (`FXW_Core::warn_blocks_checkout`) — when the WooCommerce Checkout *block* is active on the checkout page, shop managers now see a persistent notice explaining that the FoodXpress map picker, zone validation and distance fee only run on the classic `[woocommerce_checkout]` shortcode, with a direct edit link. The `cart_checkout_blocks` compatibility declaration is informational only and never forced the classic checkout, so previously a blocks store silently lost all delivery logic.
+
+### Changed (performance)
+- **Google Maps API responses are now cached in transients** (`FXW_Mapping_Service`):
+  - `get_distance()` results cached 30 minutes, keyed on origin/destination with coordinates rounded to 4 decimals (~11 m)
+  - `get_coords()` geocode results cached 24 hours, keyed on the address
+  - `calculate_shipping()` runs on every cart/checkout render — previously each run made a live, uncached Distance Matrix call (plus a fallback Geocode call), burning API quota and adding latency on every address change; only successful results are cached, errors still hit the API on retry
+
+### Fixed
+- `wp_redirect()` → `wp_safe_redirect()` in `FXW_Core::handle_delivery_dashboard_access` (AGENTS.md §5 rule 10 violation)
+- `in_array()` role checks in `FXW_Core::disable_admin_bar` now use strict comparison (AGENTS.md §5 rule 6)
+
+### Hygiene
+- `class-fxw-shipping-method.php` `calculate_shipping()` reindented to consistent tabs (the fallback-geocode block was pasted in with mixed spaces); one redundant duplicate `get_option('fxw_settings')` call removed — behavior identical
+- Header bumps: `Tested up to: 7.0`, `WC tested up to: 11.0` (static analysis + code review against current docs; runtime verification against these versions lands with the Phase 8 CI matrix)
+- `.gitignore` now excludes `.mimosa/` (security-scan tool output)
+
 ## [1.2.0] - 2026-08-17
 
 ### Changed (refactor & hygiene)

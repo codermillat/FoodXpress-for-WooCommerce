@@ -32,6 +32,20 @@ class FXW_Mapping_Service
 	private $geocode_url = 'https://maps.googleapis.com/maps/api/geocode/json';
 
 	/**
+	 * Cache lifetime for geocoding results (addresses rarely move).
+	 *
+	 * @since 1.2.1
+	 */
+	const GEOCODE_CACHE_TTL = DAY_IN_SECONDS;
+
+	/**
+	 * Cache lifetime for distance results (traffic-dependent, keep short).
+	 *
+	 * @since 1.2.1
+	 */
+	const DISTANCE_CACHE_TTL = 30 * MINUTE_IN_SECONDS;
+
+	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
@@ -64,6 +78,15 @@ class FXW_Mapping_Service
 		$dest = $this->normalize_location($destination);
 		if (is_wp_error($dest)) {
 			return $dest;
+		}
+
+		// Serve from cache when possible — calculate_shipping() runs on
+		// every cart/checkout render, so an uncached API call here burns
+		// quota and adds latency on each one.
+		$cache_key = 'fxw_dist_' . md5($this->location_hash($orig) . '|' . $this->location_hash($dest));
+		$cached = get_transient($cache_key);
+		if (false !== $cached && is_array($cached) && isset($cached['distance'], $cached['duration'])) {
+			return $cached;
 		}
 
 		$args = array(
@@ -129,10 +152,14 @@ class FXW_Mapping_Service
 			return new WP_Error('no_results', __('Could not calculate distance.', 'foodxpress'));
 		}
 
-		return array(
+		$result = array(
 			'distance' => $element->distance, // In meters
 			'duration' => $element->duration, // In seconds
 		);
+
+		set_transient($cache_key, $result, self::DISTANCE_CACHE_TTL);
+
+		return $result;
 	}
 
 	/**
@@ -142,6 +169,25 @@ class FXW_Mapping_Service
 	 * @return  array|WP_Error      The coordinates, or an error.
 	 * @since   1.0.0
 	 */
+	/**
+	 * Produce a stable cache identity for a normalized location.
+	 *
+	 * Coordinates are rounded to 4 decimals (~11 m) so the same drop on the
+	 * map reuses the cached result across page loads; addresses are
+	 * lowercased and trimmed.
+	 *
+	 * @param   string  $normalized    Output of normalize_location().
+	 * @return  string
+	 * @since   1.2.1
+	 */
+	private function location_hash($normalized)
+	{
+		if (preg_match('/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/', $normalized, $m)) {
+			return round((float) $m[1], 4) . ',' . round((float) $m[2], 4);
+		}
+		return strtolower(trim($normalized));
+	}
+
 	/**
 	 * Normalize a location value into a "lat,lng" string or pass-through address.
 	 *
@@ -176,6 +222,12 @@ class FXW_Mapping_Service
 	{
 		if (empty($this->api_key)) {
 			return new WP_Error('api_key_missing', __('Google Maps API key is missing.', 'foodxpress'));
+		}
+
+		$cache_key = 'fxw_geo_' . md5(strtolower(trim($address)));
+		$cached = get_transient($cache_key);
+		if (false !== $cached && is_object($cached) && isset($cached->lat, $cached->lng)) {
+			return $cached;
 		}
 
 		$request_url = add_query_arg(
@@ -230,6 +282,10 @@ class FXW_Mapping_Service
 			return new WP_Error('geocoding_service_error', __('No location found for the specified address.', 'foodxpress'));
 		}
 
-		return $data->results[0]->geometry->location;
+		$location = $data->results[0]->geometry->location;
+
+		set_transient($cache_key, $location, self::GEOCODE_CACHE_TTL);
+
+		return $location;
 	}
 }

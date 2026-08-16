@@ -4,6 +4,12 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.4] - 2026-08-17
+
+### Fixed (WooCommerce-compatibility hardening, verified against current docs)
+- **Default the customer's billing/shipping country to the store base country via `WC_Customer` CRUD** when empty on the checkout page. Since v1.2.3 removed the country select, WooCommerce's own posted-data/tax/payment-gateway pipeline could otherwise run without a country; seeding the customer object feeds every downstream step through the official flow (the `woocommerce_checkout_create_order` fallback from v1.2.3 stays as a second belt)
+- Compliance audit of the v1.2.3 changes against current WooCommerce documentation (field removal via `woocommerce_checkout_fields` unset, order data via `woocommerce_checkout_create_order` + `$order->set_*`, Settings API, REST controller): all patterns confirmed documented; zero direct database access anywhere in the plugin (no `$wpdb` usage at all — order data flows exclusively through HPOS CRUD)
+
 ## [1.2.3] - 2026-08-17
 
 ### Changed (coordinates-only delivery engine)

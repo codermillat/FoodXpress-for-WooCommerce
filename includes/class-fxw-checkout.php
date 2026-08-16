@@ -162,19 +162,50 @@ class FXW_Checkout
     }
 
     /**
-     * Seed the session from the saved delivery profile for logged-in
-     * customers on checkout, so the saved pin + distance become the
-     * default without any interaction. The map and fields are also
-     * pre-filled from the same profile (see add_checkout_fields and
-     * the localized saved_address param).
+     * Seed the checkout context from official WooCommerce state.
+     *
+     * 1. Default the customer's billing/shipping country to the store
+     *    base country when empty (WC_Customer CRUD). The checkout no
+     *    longer renders the country select, and WooCommerce's own
+     *    posted-data/tax/gateway pipeline expects a country to exist.
+     * 2. For logged-in customers, seed the session from the saved
+     *    delivery profile so the saved pin + distance become the
+     *    default without any interaction. The map and fields are also
+     *    pre-filled from the same profile (see add_checkout_fields and
+     *    the localized saved_address param).
      *
      * @since 1.0.0
      */
     public function load_saved_address()
     {
-        if (is_user_logged_in() && is_checkout()) {
+        if (!is_checkout()) {
+            return;
+        }
+
+        if (WC()->customer) {
+            $changed = false;
+            if (function_exists('wc_get_base_location')) {
+                $base = wc_get_base_location();
+                $base_country = ($base && !empty($base->country)) ? $base->country : '';
+                if ('' !== $base_country) {
+                    if ('' === WC()->customer->get_billing_country()) {
+                        WC()->customer->set_billing_country($base_country);
+                        $changed = true;
+                    }
+                    if ('' === WC()->customer->get_shipping_country()) {
+                        WC()->customer->set_shipping_country($base_country);
+                        $changed = true;
+                    }
+                }
+            }
+            if ($changed && method_exists(WC()->customer, 'save')) {
+                WC()->customer->save();
+            }
+        }
+
+        if (is_user_logged_in() && WC()->session) {
             $profile = get_user_meta(get_current_user_id(), '_fxw_delivery_profile', true);
-            if (!empty($profile) && !empty($profile['lat']) && !empty($profile['lng']) && WC()->session) {
+            if (!empty($profile) && !empty($profile['lat']) && !empty($profile['lng'])) {
                 WC()->session->set('customer_lat', $profile['lat']);
                 WC()->session->set('customer_lng', $profile['lng']);
                 if (!empty($profile['distance_data'])) {

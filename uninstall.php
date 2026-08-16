@@ -28,10 +28,15 @@ foreach ($users as $user) {
 // Clean up order meta (optional: only if full cleanup is desired).
 // Order meta keys: _fxw_delivery_boy_id, _fxw_delivery_boy_name, _fxw_delivery_status
 // Note: Uncomment below for complete cleanup. Left commented to preserve order history by default.
-// global $wpdb;
-// $wpdb->delete($wpdb->postmeta, array('meta_key' => '_fxw_delivery_boy_id'));
-// $wpdb->delete($wpdb->postmeta, array('meta_key' => '_fxw_delivery_boy_name'));
-// $wpdb->delete($wpdb->postmeta, array('meta_key' => '_fxw_delivery_status'));
+// IMPORTANT: use HPOS-aware order CRUD (never $wpdb->postmeta — order meta may
+// live in custom order tables under HPOS):
+// $orders = wc_get_orders(array('limit' => -1, 'status' => 'all'));
+// foreach ($orders as $order) {
+//     $order->delete_meta_data('_fxw_delivery_boy_id');
+//     $order->delete_meta_data('_fxw_delivery_boy_name');
+//     $order->delete_meta_data('_fxw_delivery_status');
+//     $order->save();
+// }
 
 // Flush rewrite rules.
 flush_rewrite_rules();

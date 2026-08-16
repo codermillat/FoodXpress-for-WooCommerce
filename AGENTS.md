@@ -151,6 +151,7 @@ FoodXpress-for-WooCommerce/
 
 1. **WordPress Coding Standards** for PHP, JS, CSS. Run `phpcs` if you have it.
 2. **Every PHP file:** `if (!defined('ABSPATH')) { exit; }` as the first non-comment line.
+3. **Official WordPress/WooCommerce hooks and APIs ONLY — never bypass the platforms.** This applies to the entire project and all future changes: checkout-page changes, fee/tax calculations, order/customer/session data, settings, emails, uninstall — everything goes through documented hooks (`woocommerce_checkout_fields`, `woocommerce_checkout_create_order`, `woocommerce_cart_calculate_fees`, `wc_get_orders`, Settings API, `WP_REST_Controller`, `WC_Customer`/`WC_Order` CRUD, `WC_Email`, WP HTTP API, `wp_safe_redirect`, etc.). No direct writes to WooCommerce/WordPress tables, no `$_SESSION`, no raw cURL, no shims around core flows. **When unsure of the official pattern, verify against current documentation first** (Context7: `/woocommerce/woocommerce` for WC, WordPress docs for WP) — do not guess or copy unverified patterns.
 3. **Every AJAX handler:** verify nonce with `wp_verify_nonce()` AND check capabilities with `current_user_can()`. **No central wrapper.** Per-handler explicit.
 4. **Sanitize ALL input** with the right primitive: `sanitize_text_field()`, `absint()`, `sanitize_email()`, `sanitize_textarea_field()`, etc. **`wp_unslash()` before `sanitize_*()`** on `$_POST`/`$_GET`/`$_REQUEST`.
 5. **Escape ALL output** with the right primitive: `esc_html()`, `esc_attr()`, `esc_url()`, `wp_kses_post()`. Match the context.

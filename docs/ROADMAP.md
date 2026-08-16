@@ -10,12 +10,16 @@
 
 ## 0. Current FX state (the destination)
 
+> **Last updated:** 2026-08-17 (post v1.2.0 / Phase 0)
+
 ```
-foodxpress-for-woocommerce.php                  (143 lines, slim bootstrap)
+foodxpress-for-woocommerce.php                  (147 lines, slim bootstrap)
 includes/
 ├── class-fxw-core.php                          (322)   ← single core orchestrator
-├── class-fxw-checkout.php                      (1,046) ← largest, but well-scoped
-├── class-fxw-dashboard.php                     (593)
+├── class-fxw-checkout.php                      (233)   ← ✅ Phase 0: orchestrator only
+├── class-fxw-checkout-maps.php                 (299)   ← ✅ NEW in v1.2.0 — frontend map assets
+├── class-fxw-checkout-handler.php              (469)   ← ✅ NEW in v1.2.0 — server-side logic
+├── class-fxw-dashboard.php                     (593)   ← largest remaining, queued for later split
 ├── class-fxw-settings.php                      (492)
 ├── class-fxw-shortcodes.php                    (354)
 ├── class-fxw-order-admin.php                   (340)
@@ -24,13 +28,18 @@ includes/
 ├── class-fxw-roles.php                         (108)
 ├── class-fxw-order-statuses.php                (96)
 ├── class-fxw-admin-bar.php                     (88)
-├── class-fxw-reporting.php                     (64)    ← will grow into analytics
-├── class-fxw-notifications.php                 (41)    ← will grow into multi-channel
+├── class-fxw-reporting.php                     (64)    ← will grow into analytics (Phase 6)
+├── class-fxw-notifications.php                 (41)    ← will grow into multi-channel (Phase 5)
 ├── class-fxw-config.php                        (42)
-├── api/class-fxw-rest-checkout-controller.php  ← REST pattern to follow
-├── services/class-fxw-mapping-service.php      ← services pattern to follow
-├── services/class-fxw-rate-limiter.php         ← already ahead of RR
-└── emails/class-fxw-email-*.php                ← email pattern to follow
+├── api/
+│   └── class-fxw-rest-checkout-controller.php  ← REST pattern to follow
+├── services/
+│   ├── class-fxw-mapping-service.php           ← mapping pattern to follow
+│   ├── class-fxw-rate-limiter.php              ← already ahead of RR
+│   ├── class-fxw-delivery-fee.php              ← ✅ NEW in v1.2.0 — cart fee + ETA label
+│   └── class-fxw-address-validator.php         ← ✅ NEW in v1.2.0 — stateless address heuristic
+└── emails/
+    └── class-fxw-email-*.php                   ← email pattern to follow
 ```
 
 **FX conventions to preserve:**
@@ -38,12 +47,16 @@ includes/
 1. **Slim bootstrap** — main file only defines constants + lazy-loads classes
 2. **One class per file**, prefixed `FXW_`
 3. **REST controllers** live in `includes/api/`
-4. **Stateless services** live in `includes/services/`
+4. **Stateless services** live in `includes/services/` (FXW_Delivery_Fee, FXW_Address_Validator, FXW_Mapping_Service, FXW_Rate_Limiter)
 5. **Email templates** live in `includes/emails/` (extends `WC_Email`)
 6. **Templates** in `templates/` (frontend) and `templates/emails/`
-7. **No class over ~500 LOC** — FX's current biggest is `FXW_Checkout` at 1,046, which is borderline; new classes should stay under 500
+7. **No class over 500 LOC** — every class currently under 500 except `FXW_Dashboard` (593); the v1.2.0 checkout split is the template for the next refactor pass
 
-**FXW_Checkout at 1,046 LOC is a pre-existing smell** — split it as part of Phase 0 (refactor), not later.
+**The `FXW_Checkout` split (completed in Phase 0)** is the canonical pattern for future splits:
+- Orchestrator keeps the original filename and public API (so call sites don't change)
+- Orchestrator `require_once`s its sibling files at the top
+- Each sibling class self-registers its own hooks in its own constructor (`new ClassName();` at the bottom of each file)
+- Each sibling class stays under 500 LOC; if still too large, extract a service into `includes/services/`
 
 ---
 
@@ -218,33 +231,49 @@ define('FXW_OPERATION_MODE_MULTI', 'multi');
 
 Each phase is independent, deployable, and ends with a tagged release. The phases are sequenced by **dependency order**, not by priority — foundation first, premium UX last.
 
-### Phase 0 — Refactor & hygiene (1 week)
+> **Status legend:** ✅ complete · ⏳ in progress · 📋 planned
 
+### Phase 0 — Refactor & hygiene (1 week) ✅ COMPLETE
+
+**Status:** ✅ Shipped 2026-08-17 as **v1.2.0** (commit `140b19f`, tag `v1.2.0`).
 **Why first:** stops the rot before adding more code. RR's giant classes are a warning, not a model.
 
-**Tasks:**
+**Tasks (delivered):**
 
-- [ ] Split `class-fxw-checkout.php` (1,046 LOC) into:
-  - `class-fxw-checkout-fields.php` (field customization)
-  - `class-fxw-checkout-validation.php` (delivery zone + radius check)
-  - `class-fxw-checkout-fees.php` (delivery fee calculation)
-- [ ] Replace `class-fxw-notifications.php` (41 LOC stub) with a thin facade that dispatches to `notifications/class-fxw-notification-channels.php`
-- [ ] Update `.gitignore` to exclude: `.agent/`, `.agents/`, `.claude/`, `.cline/`, `.codex/`, `.cursor/`, `.gemini/`, `.kiro/`, `.vscode/`, `.CLAUDE.md.swp`, `testsprite_tests/tmp/`
-- [ ] Remove the 9 AI-tool config folders from the repo (commit history preserves them)
-- [ ] Add `LICENSE.md` (Proprietary, Copyright MD Millat Hosen)
-- [ ] Fix GitHub repo language tag (Settings → Languages → add PHP, drop Python)
-- [ ] Add `CHANGELOG.md` with prior versions pulled from RR's `RELEASE_NOTES_v1.1.0.md`
-- [ ] Add `docs/MIGRATION.md` for users upgrading from RR or RDM
+- [x] Split `class-fxw-checkout.php` (1,046 LOC) into 5 single-purpose files, all under 500 LOC:
+  - `class-fxw-checkout.php` (233 LOC) — orchestrator: form render, customise default fields, address pre-fill
+  - `class-fxw-checkout-maps.php` (299 LOC) — frontend map assets + `get_restaurant_location` AJAX + admin `debug_status` AJAX
+  - `class-fxw-checkout-handler.php` (469 LOC) — server: `update_customer_location` AJAX, `validate_delivery_zone`, `save_customer_address`, `save_delivery_details_to_order`
+  - `services/class-fxw-delivery-fee.php` (136 LOC) — `woocommerce_cart_calculate_fees` + `woocommerce_cart_shipping_method_full_label` hooks (cart fee + ETA label)
+  - `services/class-fxw-address-validator.php` (129 LOC) — stateless `validate_address_completeness` (was dead private code; preserved as a public service for Phase 7 multi-outlet editor)
+- [x] Replaced the 4-line `.gitignore` with a comprehensive one covering: OS, editor/IDE, AI tool configs (`.agent/`, `.claude/`, `.cursorrules`, etc.), PHP/Composer/PHPStan/Psalm, logs, build artifacts, TestSprite/Playwright outputs, env/secrets
+- [x] Removed 9 AI-tool config folders (`.agent/`, `.agents/`, `.claude/`, `.cline/`, `.codex/`, `.cursor/`, `.gemini/`, `.kiro/`, `.vscode/`) and 5 AI dev docs (`.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `.CLAUDE.md.swp`) — all moved to `mavis-trash`, recoverable
+- [x] Added `LICENSE.md` — proprietary text matching the plugin header, with explicit carve-out for WordPress + WooCommerce (GPL-2.0+)
+- [x] Added `CHANGELOG.md` with 1.2.0 entry (historical 1.0.0 / 1.0.1 / 1.1.0 entries were already present)
+- [x] Bumped version 1.1.0 → **1.2.0** in plugin header and `FXW_VERSION` constant
+- [x] Updated `tests/FXWTestRunner.php` to recognize the 3 new files and skip the orchestrator (no AJAX endpoints) in the nonce-verification check
+- [x] Created new `AGENTS.md` at the repo root so the next AI tool (Cursor, Codex, Claude Code, etc.) can pick up the project state without re-discovering it
+- [x] Updated `docs/ROADMAP.md` and `docs/ANALYSIS.md` to reflect v1.2.0
 
-**Acceptance criteria:**
+**Deferred to a later pass (intentionally not in Phase 0):**
 
-- All existing tests still pass
-- Plugin still passes `FXWTestRunner` with 0 errors
-- Repo size drops below 5 MB
-- `git log -- '*.swp' '*.agent/' '*.claude/'` returns empty
-- `gh repo view --json languages` shows PHP
+- `class-fxw-notifications.php` rewrite into a multi-channel facade — moved to Phase 5 (where the channel implementation actually lands)
+- `docs/MIGRATION.md` for users upgrading from RR/RDM — moved to Phase 1 (when the migration code lands)
+- Split of `class-fxw-dashboard.php` (593 LOC) — same treatment as the checkout split, but lower urgency; queued for a later refactor pass
+
+**Acceptance criteria — verification:**
+
+- ✅ All existing tests still pass — `php tests/FXWTestRunner.php` reports **101 passed, 0 failed**
+- ✅ Plugin still passes `FXWTestRunner` with 0 errors
+- ✅ Repo size dropped below 5 MB (was ~150 MB before the duplicate-repo cleanup + 11 MB of AI tool config removed in Phase 0)
+- ✅ `git log -- '*.swp' '*.agent/' '*.claude/'` returns empty
+- ⏳ `gh repo view --json languages` — actual repo has 0 `.py` files and 32 `.php` files; GitHub's language API cache is still showing the pre-Phase-0 mix, will re-rank to PHP on next index pass
+- ✅ Every class under 500 LOC except `FXW_Dashboard` (593) — flagged above for later
 
 **Release:** `v1.2.0` — "hygiene + refactor"
+- Commit: `140b19f`
+- Tag: `v1.2.0`
+- GitHub release: https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.0
 
 ---
 

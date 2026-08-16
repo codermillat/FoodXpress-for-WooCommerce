@@ -2,10 +2,16 @@
 
 A complete delivery management system for single-restaurant WooCommerce stores.
 
+![Version](https://img.shields.io/badge/Version-1.2.0-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-7.0%2B-purple)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
+![HPOS](https://img.shields.io/badge/HPOS-Compatible-green)
 ![License](https://img.shields.io/badge/License-Proprietary-red)
+
+> **Latest release:** [v1.2.0 — Refactor & Hygiene (Phase 0)](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.0) (2026-08-17)
+> Split the 1,046-LOC checkout class into 5 single-purpose files, all under 500 LOC. No runtime behaviour change. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
+> **Next:** [Phase 1 — Data layer + 8 new `fxw_*` tables](./docs/ROADMAP.md).
 
 ## Features
 
@@ -82,20 +88,30 @@ A complete delivery management system for single-restaurant WooCommerce stores.
 
 ```
 foodxpress-for-woocommerce/
+├── foodxpress-for-woocommerce.php   # Slim bootstrap
+├── uninstall.php                   # Cleanup on delete
+├── LICENSE.md                      # Proprietary license (added in v1.2.0)
+├── CHANGELOG.md                    # Version history
+├── AGENTS.md                       # Context for AI coding agents
+├── docs/
+│   ├── ANALYSIS.md                 # 3-repo comparison
+│   ├── ROADMAP.md                  # 8-phase backport plan (Phase 0 ✅ done)
+│   └── archive/                    # Historical docs
+├── includes/
+│   ├── class-fxw-*.php             # Core + feature classes
+│   ├── api/                        # REST controllers
+│   ├── services/                   # Stateless services
+│   └── emails/                     # WC_Email classes
+├── templates/                      # Frontend templates
 ├── assets/
 │   ├── css/
 │   └── js/
-├── includes/
-│   ├── emails/              # WC_Email classes
-│   ├── services/            # API services
-│   └── class-fxw-*.php      # Core classes
-├── templates/
-│   ├── emails/              # Email templates
-│   └── *.php                # Frontend templates
-└── tests/
-    ├── FXWTestRunner.php    # Static code analysis tests
-    └── testsprite-config.json  # TestSprite MCP configuration
+├── tests/
+│   └── FXWTestRunner.php           # Static analysis + security checks (101 tests)
+└── skills/                         # Developer reference (Claude skills content)
 ```
+
+> **Class size rule:** every class stays under 500 LOC. `FXW_Dashboard` (593) is queued for the same split treatment as the v1.2.0 checkout split.
 
 ## Testing
 
@@ -107,35 +123,18 @@ Run the built-in test suite for syntax, security, and code quality checks:
 php tests/FXWTestRunner.php
 ```
 
-This validates:
+Expected output: `Passed: 101, Failed: 0`.
+
+The runner validates:
 - PHP syntax errors
-- Security patterns (ABSPATH checks, nonce verification)
-- File structure completeness
-- Code quality (unlimited queries, proper hooks)
-- Plugin headers
-- WordPress hooks and filters
+- Security patterns (ABSPATH checks, nonce verification on every AJAX file)
+- File structure completeness (including the 3 checkout split files)
+- Code quality (no unlimited queries, proper hooks registered)
+- Plugin headers (WordPress + WooCommerce compatibility)
+- HPOS compatibility declaration
+- Custom order statuses registered with WC
 
-### Automated Testing with TestSprite MCP
-
-For comprehensive functional testing, use TestSprite MCP in Cursor:
-
-1. **Setup**: See [TESTSPRITE_SETUP.md](TESTSPRITE_SETUP.md) for installation
-2. **Configuration**: Edit `tests/testsprite-config.json` for your environment
-3. **Run Tests**: Use Cursor chat to execute tests:
-   ```
-   "Run TestSprite tests for FoodXpress plugin"
-   ```
-
-TestSprite MCP covers:
-- Plugin activation/deactivation
-- Order management workflows
-- Delivery dashboard functionality
-- Checkout and shipping integration
-- Shortcode functionality
-- Email notifications
-- Security and access control
-
-For detailed testing documentation, see [tests/README-TESTSPRITE.md](tests/README-TESTSPRITE.md).
+**Run this after every change. It must report 101/101 before any commit.**
 
 ## Changelog
 

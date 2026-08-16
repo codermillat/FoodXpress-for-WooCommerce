@@ -339,4 +339,18 @@ Priority order, by user value and risk:
 
 ---
 
-*End of report. See /Users/mdmillathosen/.minimax-agent/projects/repo-merge-analysis/ANALYSIS.md*
+## 6. Status updates since this report
+
+| Date | Event | Reference |
+|---|---|---|
+| 2026-08-16 | `RestroReach` and `restaurant-delivery-manager` archived on GitHub (recoverable, not deleted) | Session 140b19f-Δ |
+| 2026-08-16 | Duplicate local working trees removed to `mavis-trash` (~378 MB): `~/Desktop/FoodXpress*/` and `~/Local Sites/foodxpress-for-woocommerce/` | Session 140b19f-Δ |
+| 2026-08-16 | This report + 8-phase backport roadmap committed to `fx/docs/` | commits `83e42ff`, `cbcdbe8` |
+| 2026-08-17 | **Phase 0 complete** — `v1.2.0` shipped: checkout class split, 2 new services extracted, `.gitignore` rewritten, `LICENSE.md` added, 9 AI-tool config folders + 5 AI dev docs removed (~11 MB), 101/101 tests pass | commit `140b19f`, tag `v1.2.0`, [release](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.0) |
+| 2026-08-17 | New `AGENTS.md` at repo root so the next AI tool (Cursor, Codex, Claude Code, etc.) can pick up the project state without re-discovering it | commit (in this session) |
+
+For the live phase tracker and full delivery plan, see [ROADMAP.md](./ROADMAP.md).
+
+---
+
+*End of report.*

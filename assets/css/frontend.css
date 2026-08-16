@@ -728,11 +728,6 @@
     min-height: 300px;
 }
 
-/* Hide the default address fields for a cleaner checkout */
-.fxw-hidden-field {
-    display: none !important;
-}
-
 /* Error display styling */
 #fxw-geolocation-error {
     margin-top: 15px;

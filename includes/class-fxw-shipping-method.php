@@ -71,7 +71,9 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 		}
 
 		/**
-		 * This function is used to calculate the shipping cost.
+		 * Calculate the shipping cost from the restaurant's coordinates to
+		 * the customer's pinned coordinates. Nothing else influences the
+		 * fee — by design, no address field ever reaches this method.
 		 *
 		 * @param array $package
 		 */
@@ -83,70 +85,8 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 				return;
 			}
 
-			// Ensure session exists and attempt fallback geocoding if lat/lng missing.
 			if ( ! WC()->session ) {
-				if ( function_exists( 'wc_get_logger' ) ) {
-					wc_get_logger()->debug( 'calculate_shipping: WC session missing', array( 'source' => 'foodxpress' ) );
-				}
 				return;
-			}
-
-			$__lat = WC()->session->get( 'customer_lat' );
-			$__lng = WC()->session->get( 'customer_lng' );
-
-			if ( ! $__lat || ! $__lng ) {
-				if ( function_exists( 'wc_get_logger' ) ) {
-					wc_get_logger()->debug( 'calculate_shipping: session lat/lng missing, attempting fallback geocode from shipping address', array( 'source' => 'foodxpress' ) );
-				}
-
-				$addr1    = WC()->customer ? WC()->customer->get_shipping_address_1() : '';
-				$addr2    = WC()->customer ? WC()->customer->get_shipping_address_2() : '';
-				$city     = WC()->customer ? WC()->customer->get_shipping_city() : '';
-				$state    = WC()->customer ? WC()->customer->get_shipping_state() : '';
-				$postcode = WC()->customer ? WC()->customer->get_shipping_postcode() : '';
-				$country  = WC()->customer ? WC()->customer->get_shipping_country() : '';
-				$parts    = array_filter( array( $addr1, $addr2, $city, $state, $postcode, $country ) );
-				$full_address = trim( implode( ', ', $parts ) );
-
-				if ( $full_address ) {
-					$mapping_service = new FXW_Mapping_Service();
-					$coords = $mapping_service->get_coords( $full_address );
-
-					if ( is_wp_error( $coords ) ) {
-						if ( function_exists( 'wc_get_logger' ) ) {
-							wc_get_logger()->error( 'calculate_shipping: fallback geocode failed - ' . $coords->get_error_message(), array( 'source' => 'foodxpress' ) );
-						}
-						return;
-					}
-
-					$lat_val = is_array( $coords ) ? ( $coords['lat'] ?? null ) : ( ( is_object( $coords ) && isset( $coords->lat ) ) ? $coords->lat : null );
-					$lng_val = is_array( $coords ) ? ( $coords['lng'] ?? null ) : ( ( is_object( $coords ) && isset( $coords->lng ) ) ? $coords->lng : null );
-
-					if ( $lat_val && $lng_val ) {
-						WC()->session->set( 'customer_lat', $lat_val );
-						WC()->session->set( 'customer_lng', $lng_val );
-						if ( function_exists( 'wc_get_logger' ) ) {
-							wc_get_logger()->debug( sprintf( 'calculate_shipping: fallback geocode success lat=%s lng=%s from "%s"', $lat_val, $lng_val, $full_address ), array( 'source' => 'foodxpress' ) );
-						}
-					} else {
-						if ( function_exists( 'wc_get_logger' ) ) {
-							wc_get_logger()->error( 'calculate_shipping: fallback geocode returned invalid coords', array( 'source' => 'foodxpress' ) );
-						}
-						return;
-					}
-				} else {
-					if ( function_exists( 'wc_get_logger' ) ) {
-						wc_get_logger()->debug( 'calculate_shipping: no shipping address available for fallback geocode', array( 'source' => 'foodxpress' ) );
-					}
-					return;
-				}
-			}
-
-			if ( function_exists( 'wc_get_logger' ) ) {
-				$addr_dbg   = isset( $options['fxw_restaurant_address'] ) ? $options['fxw_restaurant_address'] : '';
-				$radius_dbg = isset( $options['fxw_delivery_zone_radius'] ) ? $options['fxw_delivery_zone_radius'] : '';
-				$is_open_dbg = isset( $options['fxw_is_open'] ) ? $options['fxw_is_open'] : true;
-				wc_get_logger()->debug( sprintf( 'calculate_shipping: settings is_open=%s radius=%s address="%s"', $is_open_dbg ? 'true' : 'false', $radius_dbg, $addr_dbg ), array( 'source' => 'foodxpress' ) );
 			}
 
 			// Check if deliveries are open
@@ -158,20 +98,29 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 				return;
 			}
 
-			// Get customer's lat/lng from the session, which is set by our AJAX call
+			// Customer's pinned coordinates (session, set by the map/REST flow)
 			$customer_lat = WC()->session->get( 'customer_lat' );
 			$customer_lng = WC()->session->get( 'customer_lng' );
 
 			if ( ! $customer_lat || ! $customer_lng ) {
-				return; // Can't calculate shipping without a location
+				return; // Can't calculate shipping without a pinned location
 			}
 
-			$customer_location = array( 'lat' => $customer_lat, 'lng' => $customer_lng );
-
-			$restaurant_address = isset( $options['fxw_restaurant_address'] ) ? $options['fxw_restaurant_address'] : '';
-
+			// Restaurant coordinates — explicit setting, else geocoded address (cached)
 			$mapping_service = new FXW_Mapping_Service();
-			$distance_data = $mapping_service->get_distance( $restaurant_address, $customer_location );
+			$restaurant      = $mapping_service->get_restaurant_location( $options );
+
+			if ( is_wp_error( $restaurant ) ) {
+				if ( function_exists( 'wc_get_logger' ) ) {
+					wc_get_logger()->error( 'calculate_shipping: ' . $restaurant->get_error_message(), array( 'source' => 'foodxpress' ) );
+				}
+				return;
+			}
+
+			$distance_data = $mapping_service->get_distance(
+				$restaurant,
+				array( 'lat' => $customer_lat, 'lng' => $customer_lng )
+			);
 
 			if ( is_wp_error( $distance_data ) ) {
 				// Log and surface a user-friendly error at checkout
@@ -179,15 +128,16 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 					wc_get_logger()->error( 'FoodXpress distance error: ' . $distance_data->get_error_message(), array( 'source' => 'foodxpress' ) );
 				}
 				if ( function_exists( 'wc_add_notice' ) && function_exists( 'is_checkout' ) && is_checkout() ) {
-					wc_add_notice( __( 'We could not calculate delivery distance. Please verify your address and try again.', 'foodxpress' ), 'error' );
+					wc_add_notice( __( 'We could not calculate delivery distance. Please verify your location and try again.', 'foodxpress' ), 'error' );
 				}
 				return;
 			}
 
-			if ( function_exists( 'wc_get_logger' ) ) {
-				$dist_val = ( isset( $distance_data['distance'] ) && is_object( $distance_data['distance'] ) && isset( $distance_data['distance']->value ) ) ? $distance_data['distance']->value : null;
-				$dur_val  = ( isset( $distance_data['duration'] ) && is_object( $distance_data['duration'] ) && isset( $distance_data['duration']->value ) ) ? $distance_data['duration']->value : null;
-				wc_get_logger()->debug( sprintf( 'calculate_shipping: distance=%s m, duration=%s s', $dist_val, $dur_val ), array( 'source' => 'foodxpress' ) );
+			if ( ! isset( $distance_data['distance'] ) || ! is_object( $distance_data['distance'] ) || ! isset( $distance_data['distance']->value ) ) {
+				if ( function_exists( 'wc_get_logger' ) ) {
+					wc_get_logger()->error( 'calculate_shipping: distance response missing distance value', array( 'source' => 'foodxpress' ) );
+				}
+				return;
 			}
 
 			// Store distance data in session for UI/ETA reuse
@@ -217,9 +167,6 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 			}
 
 			$rate_id = $this->id . ( $this->instance_id ? ':' . $this->instance_id : '' );
-			if ( function_exists( 'wc_get_logger' ) ) {
-				wc_get_logger()->debug( 'calculate_shipping: rate_id=' . $rate_id, array( 'source' => 'foodxpress' ) );
-			}
 
 			$this->add_rate( array(
 				'id'      => $rate_id,

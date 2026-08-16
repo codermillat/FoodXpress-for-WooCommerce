@@ -130,25 +130,17 @@ class FXW_Checkout
                 'custom_attributes' => array(
                     'rows' => 2,
                 ),
-            ), WC()->checkout->get_value('fxw_delivery_instructions'));
+            ), isset($saved_profile['delivery_instructions']) ? $saved_profile['delivery_instructions'] : WC()->checkout->get_value('fxw_delivery_instructions'));
             ?>
-
-            <?php if (is_user_logged_in()): ?>
-                <p class="form-row form-row-wide">
-                    <label class="woocommerce-form__label woocommerce-form__label-for-checkbox checkbox">
-                        <input type="checkbox" class="woocommerce-form__input woocommerce-form__input-checkbox input-checkbox"
-                            name="fxw_save_address" id="fxw_save_address" value="1" />
-                        <span><?php esc_html_e('Save this address for future orders', 'foodxpress'); ?></span>
-                    </label>
-                </p>
-            <?php endif; ?>
         </div>
         <?php
     }
 
     /**
-     * Hide default WC billing/shipping fields — the map + delivery detail
-     * fields render the equivalent data.
+     * Remove the default WC billing/shipping address fields — the map pin
+     * (coordinates) plus the exact-address field carry everything the
+     * store needs. Unsetting (not CSS-hiding) keeps WooCommerce from
+     * validating or submitting them; fees depend on the pin only.
      *
      * @param array $fields Checkout fields.
      * @return array
@@ -156,12 +148,12 @@ class FXW_Checkout
      */
     public function customize_checkout_fields($fields)
     {
-        $hidden_suffixes = array('address_1', 'address_2', 'city', 'state', 'postcode', 'country');
+        $removed_suffixes = array('address_1', 'address_2', 'city', 'state', 'postcode', 'country');
         foreach (array('billing', 'shipping') as $group) {
-            foreach ($hidden_suffixes as $suffix) {
+            foreach ($removed_suffixes as $suffix) {
                 $key = $group . '_' . $suffix;
                 if (isset($fields[$group][$key])) {
-                    $fields[$group][$key]['class'][] = 'fxw-hidden-field';
+                    unset($fields[$group][$key]);
                 }
             }
         }
@@ -170,7 +162,11 @@ class FXW_Checkout
     }
 
     /**
-     * Pre-fill saved delivery address for logged-in customers on checkout.
+     * Seed the session from the saved delivery profile for logged-in
+     * customers on checkout, so the saved pin + distance become the
+     * default without any interaction. The map and fields are also
+     * pre-filled from the same profile (see add_checkout_fields and
+     * the localized saved_address param).
      *
      * @since 1.0.0
      */
@@ -178,27 +174,11 @@ class FXW_Checkout
     {
         if (is_user_logged_in() && is_checkout()) {
             $profile = get_user_meta(get_current_user_id(), '_fxw_delivery_profile', true);
-            if (!empty($profile) && !empty($profile['lat']) && !empty($profile['lng']) && WC()->customer) {
-                WC()->customer->set_shipping_address_1($profile['address_1']);
-                WC()->customer->set_shipping_address_2($profile['address_2']);
-                WC()->customer->set_shipping_city($profile['city']);
-                WC()->customer->set_shipping_state($profile['state']);
-                WC()->customer->set_shipping_postcode($profile['postcode']);
-                WC()->customer->set_shipping_country($profile['country']);
-
-                WC()->customer->set_billing_address_1($profile['address_1']);
-                WC()->customer->set_billing_address_2($profile['address_2']);
-                WC()->customer->set_billing_city($profile['city']);
-                WC()->customer->set_billing_state($profile['state']);
-                WC()->customer->set_billing_postcode($profile['postcode']);
-                WC()->customer->set_billing_country($profile['country']);
-
-                if (WC()->session) {
-                    WC()->session->set('customer_lat', $profile['lat']);
-                    WC()->session->set('customer_lng', $profile['lng']);
-                    if (!empty($profile['distance_data'])) {
-                        WC()->session->set('fxw_distance_data', $profile['distance_data']);
-                    }
+            if (!empty($profile) && !empty($profile['lat']) && !empty($profile['lng']) && WC()->session) {
+                WC()->session->set('customer_lat', $profile['lat']);
+                WC()->session->set('customer_lng', $profile['lng']);
+                if (!empty($profile['distance_data'])) {
+                    WC()->session->set('fxw_distance_data', $profile['distance_data']);
                 }
             }
         }

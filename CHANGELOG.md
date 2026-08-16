@@ -4,6 +4,20 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.3] - 2026-08-17
+
+### Changed (coordinates-only delivery engine)
+- **The fee and zone checks now run on coordinates only — restaurant lat/lng ↔ customer pin lat/lng.** New optional setting *Restaurant Coordinates (lat, lng)*; when unset, the restaurant address is geocoded once and cached (24 h). All three distance call sites (shipping method, checkout validation, REST) share the new `FXW_Mapping_Service::get_restaurant_location()` helper. **No customer-entered field can influence the fee.**
+- **Google Maps supplies coordinates only.** `checkout.js` no longer reverse-geocodes into checkout fields and no longer pushes addresses to the WC Store API (`fillWCFields` / `pushToStoreAPI` removed). The reverse geocode feeds the read-only "Selected Location" caption under the map — it never fills an input.
+- **WC billing/shipping address fields (address, city, state, postcode, country) are removed from checkout entirely** (unset, not hidden). Orders default their country to the store base country; the exact-address line remains on `address_2` for receipts/emails.
+- **Delivery-radius circle** drawn on the map around the restaurant (subtle green overlay) so customers can see the selectable zone; pins outside it get the immediate out-of-zone error and Place Order stays blocked server-side. Map default center is now the restaurant (saved pin still wins).
+
+### Changed (saved address = the default)
+- **Returning customers no longer re-pin or re-type.** The delivery profile (pin lat/lng, exact address, landmark, instructions) is auto-saved for logged-in customers on every order — the opt-in checkbox is gone — and auto-fills the map, the fields, and the session on the next checkout. Everything stays editable.
+
+### Removed
+- Dead address-based fallback-geocode branches in `calculate_shipping()` and `validate_delivery_zone()` (unreachable once WC address fields are gone), `.fxw-hidden-field` CSS, and the `fetchRestaurantCenter()` stub
+
 ## [1.2.2] - 2026-08-17
 
 ### Changed (Zomato/Swiggy-style checkout address)

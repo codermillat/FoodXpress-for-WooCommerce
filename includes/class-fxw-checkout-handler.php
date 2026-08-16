@@ -142,12 +142,10 @@ class FXW_Checkout_Handler
     }
 
     /**
-     * Save the delivery address to user meta when the customer ticked
-     * "Save this address for future orders" at checkout.
-     *
-     * Until 1.2.2 this never ran: the gate required POST keys that no
-     * form ever submitted, so _fxw_delivery_profile was never written
-     * and the returning-customer pre-fill was dead.
+     * Persist the delivery profile for logged-in customers at order time —
+     * automatically, no opt-in. The saved pin + fields become the default
+     * for the next checkout (auto-filled, no re-pinning required); the
+     * customer can always move the pin or edit the fields.
      *
      * @param int   $customer_id The customer ID.
      * @param array $data        The posted data.
@@ -155,26 +153,17 @@ class FXW_Checkout_Handler
      */
     public function save_customer_address($customer_id, $data)
     {
-        $save_requested = isset($_POST['fxw_save_address']) ? absint(wp_unslash($_POST['fxw_save_address'])) : 0;
-        if (!$save_requested) {
-            return;
-        }
-
         $address_details = isset($_POST['fxw_address_details']) ? sanitize_text_field(wp_unslash($_POST['fxw_address_details'])) : '';
         $landmark = isset($_POST['fxw_landmark']) ? sanitize_text_field(wp_unslash($_POST['fxw_landmark'])) : '';
+        $instructions = isset($_POST['fxw_delivery_instructions']) ? sanitize_textarea_field(wp_unslash($_POST['fxw_delivery_instructions'])) : '';
         $distance_data = WC()->session ? WC()->session->get('fxw_distance_data') : null;
 
         $profile = array(
-            'address_1' => isset($data['shipping_address_1']) ? $data['shipping_address_1'] : '',
-            'address_2' => $address_details,
-            'city' => isset($data['shipping_city']) ? $data['shipping_city'] : '',
-            'state' => isset($data['shipping_state']) ? $data['shipping_state'] : '',
-            'postcode' => isset($data['shipping_postcode']) ? $data['shipping_postcode'] : '',
-            'country' => isset($data['shipping_country']) ? $data['shipping_country'] : '',
             'lat' => WC()->session ? WC()->session->get('customer_lat') : null,
             'lng' => WC()->session ? WC()->session->get('customer_lng') : null,
             'address_details' => $address_details,
             'landmark' => $landmark,
+            'delivery_instructions' => $instructions,
             'distance_data' => $distance_data,
         );
         update_user_meta($customer_id, '_fxw_delivery_profile', $profile);
@@ -232,6 +221,19 @@ class FXW_Checkout_Handler
             // get_formatted_shipping_address() show the exact flat/house info.
             $order->set_address_2($full_delivery_address);
             $order->set_shipping_address_2($full_delivery_address);
+        }
+
+        // The checkout no longer renders WC address fields — default the
+        // country to the store's base country so orders stay well-formed.
+        $base_country = function_exists('wc_get_base_location') ? wc_get_base_location() : null;
+        $base_country_code = ($base_country && !empty($base_country->country)) ? $base_country->country : '';
+        if ('' !== $base_country_code) {
+            if ('' === (string) $order->get_billing_country()) {
+                $order->set_billing_country($base_country_code);
+            }
+            if ('' === (string) $order->get_shipping_country()) {
+                $order->set_shipping_country($base_country_code);
+            }
         }
 
         // Fallback to POST data if session is empty to prevent data loss.
@@ -315,15 +317,6 @@ class FXW_Checkout_Handler
             return;
         }
 
-        // Check if restaurant address is configured
-        $restaurant_address = isset($options['fxw_restaurant_address']) ? trim($options['fxw_restaurant_address']) : '';
-        if (empty($restaurant_address)) {
-            if (function_exists('wc_get_logger')) {
-                wc_get_logger()->error('validate_delivery_zone: restaurant address not configured', array('source' => 'foodxpress'));
-            }
-            $errors->add('delivery_zone', __('Delivery service is not properly configured. Please contact support.', 'foodxpress'));
-            return;
-        }
         if (!$is_open) {
             if (function_exists('wc_get_logger')) {
                 wc_get_logger()->info('validate_delivery_zone: store closed (fxw_is_open=false)', array('source' => 'foodxpress'));
@@ -332,82 +325,23 @@ class FXW_Checkout_Handler
             return;
         }
 
-        // Re-read from session in case early validation updated them
-        if (function_exists('wc_get_logger')) {
-            wc_get_logger()->debug(sprintf('validate_delivery_zone session lat=%s lng=%s', $customer_lat, $customer_lng), array('source' => 'foodxpress'));
-        }
+        // Restaurant coordinates — explicit setting, else geocoded address (cached).
+        // The fee/zone check depends on coordinates only, never on customer-entered fields.
+        $mapping_service = new FXW_Mapping_Service();
+        $restaurant = $mapping_service->get_restaurant_location($options);
 
-        if (!$customer_lat || !$customer_lng) {
-            // Fallback: try to geocode current shipping address when session coords are missing
-            // Apply stricter rate limiting for automated fallback operations (5 per minute)
-            $rate_limit_check = FXW_Rate_Limiter::check_rate_limit('fallback_geocode', 5, MINUTE_IN_SECONDS);
-            if (is_wp_error($rate_limit_check)) {
-                if (function_exists('wc_get_logger')) {
-                    wc_get_logger()->warning('validate_delivery_zone: fallback geocode rate limit exceeded', array('source' => 'foodxpress'));
-                }
-                $errors->add('delivery_zone', __('Too many address verification attempts. Please use the map to select your exact location instead of relying on automatic address lookup.', 'foodxpress'));
-                return;
-            }
-
+        if (is_wp_error($restaurant)) {
             if (function_exists('wc_get_logger')) {
-                wc_get_logger()->warning('validate_delivery_zone: missing coords, attempting fallback geocode from shipping address', array('source' => 'foodxpress'));
+                wc_get_logger()->error('validate_delivery_zone: ' . $restaurant->get_error_message(), array('source' => 'foodxpress'));
             }
-
-            $addr1 = WC()->customer ? WC()->customer->get_shipping_address_1() : '';
-            $addr2 = WC()->customer ? WC()->customer->get_shipping_address_2() : '';
-            $city = WC()->customer ? WC()->customer->get_shipping_city() : '';
-            $state = WC()->customer ? WC()->customer->get_shipping_state() : '';
-            $postcode = WC()->customer ? WC()->customer->get_shipping_postcode() : '';
-            $country = WC()->customer ? WC()->customer->get_shipping_country() : '';
-
-            $parts = array_filter(array($addr1, $addr2, $city, $state, $postcode, $country));
-            $full_address = trim(implode(', ', $parts));
-
-            if ($full_address) {
-                $mapping_service = new FXW_Mapping_Service();
-                $coords = $mapping_service->get_coords($full_address);
-
-                if (is_wp_error($coords)) {
-                    if (function_exists('wc_get_logger')) {
-                        wc_get_logger()->error('validate_delivery_zone: fallback geocode failed - ' . $coords->get_error_message(), array('source' => 'foodxpress'));
-                    }
-                    $errors->add('delivery_zone', __('We could not verify your address automatically. Please use the interactive map above to pinpoint your exact delivery location.', 'foodxpress'));
-                    return;
-                }
-
-                $lat_val = is_array($coords) ? ($coords['lat'] ?? null) : ((is_object($coords) && isset($coords->lat)) ? $coords->lat : null);
-                $lng_val = is_array($coords) ? ($coords['lng'] ?? null) : ((is_object($coords) && isset($coords->lng)) ? $coords->lng : null);
-
-                if ($lat_val && $lng_val) {
-                    WC()->session->set('customer_lat', $lat_val);
-                    WC()->session->set('customer_lng', $lng_val);
-                    $customer_lat = $lat_val;
-                    $customer_lng = $lng_val;
-
-                    if (function_exists('wc_get_logger')) {
-                        wc_get_logger()->debug(sprintf('validate_delivery_zone: fallback geocode success lat=%s lng=%s from "%s"', $lat_val, $lng_val, $full_address), array('source' => 'foodxpress'));
-                    }
-                } else {
-                    if (function_exists('wc_get_logger')) {
-                        wc_get_logger()->error('validate_delivery_zone: fallback geocode returned invalid coords', array('source' => 'foodxpress'));
-                    }
-                    $errors->add('delivery_zone', __('We could not determine your coordinates from the address provided. Please use the map to select your location.', 'foodxpress'));
-                    return;
-                }
-            } else {
-                if (function_exists('wc_get_logger')) {
-                    wc_get_logger()->warning('validate_delivery_zone: no shipping address to geocode', array('source' => 'foodxpress'));
-                }
-                $errors->add('delivery_zone', __('Please select your location on the map to enable accurate delivery.', 'foodxpress'));
-                return;
-            }
+            $errors->add('delivery_zone', __('Delivery service is not properly configured. Please contact support.', 'foodxpress'));
+            return;
         }
 
         $customer_location = array('lat' => $customer_lat, 'lng' => $customer_lng);
 
-        $mapping_service = new FXW_Mapping_Service();
         $distance_data = $mapping_service->get_distance(
-            $options['fxw_restaurant_address'],
+            $restaurant,
             $customer_location
         );
 

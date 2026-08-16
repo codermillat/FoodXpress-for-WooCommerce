@@ -1,9 +1,11 @@
 /* global jQuery, google, fxw_checkout_params */
 /**
- * FoodXpress Native Checkout Manager v2
+ * FoodXpress Native Checkout Manager v3
  *
- * Uses PlaceAutocompleteElement (auto session tokens), Promise-based Geocoder,
- * WC Store API cart/update-customer, and REST-based zone validation.
+ * Coordinates-only map flow: PlaceAutocompleteElement, Promise-based
+ * Geocoder (display caption only — never fills form fields), draggable
+ * pin, geolocation, delivery-radius circle, and REST-based zone
+ * validation. Fees depend on the pin's lat/lng only.
  *
  * @since 1.1.0
  */
@@ -15,7 +17,6 @@
         state: {
             lat: null,
             lng: null,
-            address: '',
             isCalculating: false,
             isValid: false,
             map: null,
@@ -28,8 +29,7 @@
         C: {
             DEFAULT_CENTER: { lat: 23.8103, lng: 90.4125 },
             SKELETON_CLASS: 'fxw-skeleton-loading',
-            NOTIFICATION_DURATION: 4000,
-            WC_STORE_API: '/wp-json/wc/store/v1'
+            NOTIFICATION_DURATION: 4000
         },
 
         // ─── Boot ────────────────────────────────────────────────
@@ -58,18 +58,9 @@
                 locateBtn: $('#fxw-get-location'),
                 selectedLocation: $('#fxw-selected-location'),
                 selectedAddress: $('#fxw-selected-address'),
-                addressField: $('#fxw_delivery_address'),
                 hiddenLat: $('#fxw_lat'),
                 hiddenLng: $('#fxw_lng'),
-                checkoutForm: $('form.checkout'),
-                // WooCommerce standard shipping fields
-                wc: {
-                    address1: $('#shipping_address_1'),
-                    city: $('#shipping_city'),
-                    state: $('#shipping_state'),
-                    postcode: $('#shipping_postcode'),
-                    country: $('#shipping_country')
-                }
+                checkoutForm: $('form.checkout')
             };
         },
 
@@ -118,18 +109,19 @@
                     this.onLocationChange(pos.lat, pos.lng, true);
                 });
 
+                // Delivery radius circle around the restaurant (visual zone limit)
+                this.drawDeliveryRadius();
+
                 // Setup PlaceAutocompleteElement
                 this.setupAutocomplete();
 
-                // Load saved address or fetch restaurant centre
+                // Validate the saved/default location on load
                 if (this.state.settings.saved_address && this.state.settings.saved_address.lat) {
                     this.onLocationChange(
                         parseFloat(this.state.settings.saved_address.lat),
                         parseFloat(this.state.settings.saved_address.lng),
                         false
                     );
-                } else {
-                    this.fetchRestaurantCenter();
                 }
             } catch (err) {
                 console.error('FXW: Map init failed', err);
@@ -163,7 +155,7 @@
 
                 // fetchFields ends the session token automatically
                 await place.fetchFields({
-                    fields: ['location', 'formattedAddress', 'addressComponents', 'displayName']
+                    fields: ['location', 'formattedAddress', 'displayName']
                 });
 
                 if (place.location) {
@@ -173,12 +165,7 @@
                     this.panMap(lat, lng);
                     this.onLocationChange(lat, lng, false);
 
-                    // Auto-fill WooCommerce fields
-                    if (place.addressComponents) {
-                        this.fillWCFields(place.addressComponents);
-                    }
-
-                    // Show selected address banner
+                    // Show selected address caption (display only — no form filling)
                     this.showSelectedAddress(place.formattedAddress || place.displayName || '');
                 }
             });
@@ -186,11 +173,14 @@
 
         // ─── Location Lifecycle ──────────────────────────────────
         /**
-         * Called whenever the delivery location changes (autocomplete, geolocation, drag).
+         * Called whenever the delivery location changes (autocomplete,
+         * geolocation, drag). The pin's coordinates are the ONLY thing
+         * that flows onward — the reverse geocode feeds a display
+         * caption and never touches any form field.
          *
          * @param {number}  lat
          * @param {number}  lng
-         * @param {boolean} reverseGeocode  Whether to reverse-geocode to get address.
+         * @param {boolean} reverseGeocode  Whether to reverse-geocode for the caption.
          */
         onLocationChange: async function (lat, lng, reverseGeocode) {
             this.state.lat = lat;
@@ -200,7 +190,7 @@
             this.$el.hiddenLat.val(lat);
             this.$el.hiddenLng.val(lng);
 
-            // Reverse geocode if needed (e.g. marker drag, geolocation)
+            // Caption under the map (display only)
             if (reverseGeocode && this.state.geocoder) {
                 try {
                     const { results } = await this.state.geocoder.geocode({
@@ -209,18 +199,15 @@
 
                     if (results && results.length > 0) {
                         this.showSelectedAddress(results[0].formatted_address);
-                        this.fillWCFields(results[0].address_components);
                     }
                 } catch (err) {
                     console.warn('FXW: Reverse geocode failed', err);
                 }
             }
 
-            // Two parallel actions:
-            // 1. Validate delivery zone via our REST API
-            // 2. Push address to WC Store API for shipping recalc
+            // Validate delivery zone via REST (also stores the session
+            // coordinates the shipping method reads server-side)
             this.validateZone(lat, lng);
-            this.pushToStoreAPI();
         },
 
         // ─── REST API: Validate Zone ─────────────────────────────
@@ -263,114 +250,10 @@
             }
         },
 
-        // ─── WC Store API: Push Address ──────────────────────────
-        /**
-         * Pushes the current shipping address to WC Store API
-         * so that WooCommerce recalculates shipping rates & taxes in real time.
-         */
-        pushToStoreAPI: async function () {
-            // Only push if we have WC fields populated
-            const addr1 = this.$el.wc.address1.val();
-            const city = this.$el.wc.city.val();
-            const country = this.$el.wc.country.val();
-
-            if (!addr1 || !city || !country) {
-                return; // Not enough data to push yet
-            }
-
-            try {
-                // Get the Store API nonce from WC's localized data
-                const storeNonce = (typeof wc_store_js_params !== 'undefined' && wc_store_js_params.nonce)
-                    ? wc_store_js_params.nonce
-                    : '';
-
-                const headers = {
-                    'Content-Type': 'application/json'
-                };
-
-                if (storeNonce) {
-                    headers['X-WC-Store-API-Nonce'] = storeNonce;
-                } else {
-                    // Fallback to WP REST nonce (works for logged-in users)
-                    headers['X-WP-Nonce'] = fxw_checkout_params.rest_nonce;
-                }
-
-                await fetch(this.C.WC_STORE_API + '/cart/update-customer', {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify({
-                        shipping_address: {
-                            address_1: this.$el.wc.address1.val() || '',
-                            city: this.$el.wc.city.val() || '',
-                            state: this.$el.wc.state.val() || '',
-                            postcode: this.$el.wc.postcode.val() || '',
-                            country: this.$el.wc.country.val() || ''
-                        }
-                    })
-                });
-                // We don't need to process the response —
-                // WooCommerce checkout will refresh via update_checkout trigger.
-            } catch (err) {
-                // Non-critical; WC will still recalculate on form submit
-                console.warn('FXW: Store API push failed', err);
-            }
-        },
-
         // ─── Auto-fill WC Fields ─────────────────────────────────
-        /**
-         * Maps Google Maps address_components to WooCommerce checkout fields.
-         *
-         * @param {Array} components  Google Maps GeocoderAddressComponent[]
-         */
-        fillWCFields: function (components) {
-            if (!components || !components.length) {
-                return;
-            }
-
-            const mapping = {};
-            components.forEach(function (c) {
-                // Handle both the old format ({types: []}) and new Place class ({types: []})
-                const types = c.types || [];
-                types.forEach(function (t) {
-                    mapping[t] = c;
-                });
-            });
-
-            // Street address (route + street_number if present)
-            const streetNumber = mapping.street_number
-                ? (mapping.street_number.long_name || mapping.street_number.longText || '') + ' '
-                : '';
-            const route = mapping.route
-                ? (mapping.route.long_name || mapping.route.longText || '')
-                : '';
-            if (streetNumber || route) {
-                this.$el.wc.address1.val(streetNumber + route).trigger('change');
-            }
-
-            // City
-            const city = mapping.locality || mapping.sublocality_level_1 || mapping.administrative_area_level_2;
-            if (city) {
-                this.$el.wc.city.val(city.long_name || city.longText || '').trigger('change');
-            }
-
-            // State / Province
-            const state = mapping.administrative_area_level_1;
-            if (state) {
-                this.$el.wc.state.val(state.short_name || state.shortText || '').trigger('change');
-            }
-
-            // Postcode
-            const postcode = mapping.postal_code;
-            if (postcode) {
-                this.$el.wc.postcode.val(postcode.long_name || postcode.longText || '').trigger('change');
-            }
-
-            // Country (ISO 2-letter code)
-            const country = mapping.country;
-            if (country) {
-                this.$el.wc.country.val(country.short_name || country.shortText || '').trigger('change');
-            }
-        },
+        // Removed in v1.2.3: Google Maps supplies coordinates only. The
+        // exact address comes from the customer's own input and the fee
+        // depends on the pin's lat/lng alone.
 
         // ─── Geolocation ─────────────────────────────────────────
         getCurrentLocation: function () {
@@ -420,19 +303,44 @@
                     lng: parseFloat(saved.lng)
                 };
             }
+            const restaurant = this.state.settings.restaurant_center;
+            if (restaurant && restaurant.lat && restaurant.lng) {
+                return {
+                    lat: parseFloat(restaurant.lat),
+                    lng: parseFloat(restaurant.lng)
+                };
+            }
             return this.C.DEFAULT_CENTER;
         },
 
-        fetchRestaurantCenter: function () {
-            fetch(fxw_checkout_params.rest_url + '/settings', {
-                headers: { 'X-WP-Nonce': fxw_checkout_params.rest_nonce }
-            })
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    // Restaurant lat/lng can be added to settings endpoint later
-                    // For now we use the default center
-                })
-                .catch(function () { /* non-critical */ });
+        /**
+         * Draws the delivery-radius circle around the restaurant so the
+         * customer can see the selectable zone. Pins outside it are
+         * rejected by the zone validation toast (and server-side).
+         */
+        drawDeliveryRadius: function () {
+            const restaurant = this.state.settings.restaurant_center;
+            const radiusKm = parseFloat(this.state.settings.radius_km);
+
+            if (!restaurant || !restaurant.lat || !restaurant.lng || !radiusKm) {
+                return;
+            }
+
+            try {
+                new google.maps.Circle({
+                    map: this.state.map,
+                    center: { lat: parseFloat(restaurant.lat), lng: parseFloat(restaurant.lng) },
+                    radius: radiusKm * 1000,
+                    clickable: false,
+                    fillColor: '#28a745',
+                    fillOpacity: 0.06,
+                    strokeColor: '#28a745',
+                    strokeOpacity: 0.5,
+                    strokeWeight: 1.5
+                });
+            } catch (err) {
+                console.warn('FXW: Radius circle failed', err);
+            }
         },
 
         // ─── UI Helpers ──────────────────────────────────────────

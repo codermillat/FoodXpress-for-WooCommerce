@@ -165,6 +165,12 @@ class FXW_Checkout_Maps
 
         // Localize script with minimal required data (security: avoid exposing full options)
         $saved_address = is_user_logged_in() ? get_user_meta(get_current_user_id(), '_fxw_delivery_profile', true) : null;
+
+        // Restaurant centre for the radius circle + map default (coords only;
+        // pure parse when fxw_restaurant_latlng is set, else 24h-cached geocode)
+        $restaurant_center = (new FXW_Mapping_Service())->get_restaurant_location($options);
+        $restaurant_center = is_wp_error($restaurant_center) ? null : $restaurant_center;
+
         wp_localize_script('fxw-checkout', 'fxw_checkout_params', array(
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('fxw-checkout-nonce'),
@@ -174,6 +180,8 @@ class FXW_Checkout_Maps
             'debug' => defined('WP_DEBUG') && WP_DEBUG,
             'prep_time' => isset($options['fxw_preparation_time']) ? (int) $options['fxw_preparation_time'] : FXW_Config::DEFAULT_PREP_TIME,
             'saved_address' => $saved_address,
+            'restaurant_center' => $restaurant_center,
+            'radius_km' => isset($options['fxw_delivery_zone_radius']) ? (float) $options['fxw_delivery_zone_radius'] : (float) FXW_Config::DEFAULT_DELIVERY_RADIUS,
             'max_retries' => FXW_Config::MAX_RETRIES,
             'retry_delay' => FXW_Config::RETRY_DELAY,
             'translations' => array(

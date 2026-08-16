@@ -12,22 +12,14 @@ if (!defined('ABSPATH')) {
 class FXW_Settings
 {
 
-	/**
-	 * Initialize the class and set its properties.
-	 *
-	 * @since    1.0.0
-	 */
-	public function __construct()
-	{
-		add_action('admin_menu', array($this, 'add_settings_page'));
-		add_action('admin_init', array($this, 'register_settings'));
-	}
+		/** Initialize the class and set its properties. */
+		public function __construct()
+		{
+			add_action('admin_menu', array($this, 'add_settings_page'));
+			add_action('admin_init', array($this, 'register_settings'));
+		}
 
-	/**
-	 * Add the settings page to the WordPress admin menu.
-	 *
-	 * @since    1.0.0
-	 */
+	/** See method name. */
 	public function add_settings_page()
 	{
 		add_options_page(
@@ -60,11 +52,7 @@ class FXW_Settings
 		<?php
 	}
 
-	/**
-	 * Register the settings, sections, and fields.
-	 *
-	 * @since    1.0.0
-	 */
+	/** See method name. */
 	public function register_settings()
 	{
 		register_setting('fxw_settings_group', 'fxw_settings', array(
@@ -95,6 +83,18 @@ class FXW_Settings
 			'foodxpress-settings',
 			'fxw_general_settings_section',
 			array('id' => 'fxw_restaurant_address')
+		);
+
+		add_settings_field(
+			'fxw_restaurant_latlng',
+			__('Restaurant Coordinates (lat, lng)', 'foodxpress'),
+			array($this, 'render_text_field'),
+			'foodxpress-settings',
+			'fxw_general_settings_section',
+			array(
+				'id' => 'fxw_restaurant_latlng',
+				'description' => __('Optional. Exact "lat, lng" used for fee & zone checks, e.g. 23.8103, 90.4125. Overrides the address above.', 'foodxpress')
+			)
 		);
 
 		add_settings_field(
@@ -419,6 +419,11 @@ class FXW_Settings
 
 		if (isset($input['fxw_restaurant_address'])) {
 			$sanitized['fxw_restaurant_address'] = sanitize_text_field($input['fxw_restaurant_address']);
+		}
+
+		if (isset($input['fxw_restaurant_latlng'])) {
+			$raw = sanitize_text_field($input['fxw_restaurant_latlng']);
+			$sanitized['fxw_restaurant_latlng'] = preg_match('/^-?\d{1,3}(\.\d+)?\s*,\s*-?\d{1,3}(\.\d+)?$/', $raw) ? $raw : '';
 		}
 
 		if (isset($input['fxw_preparation_time'])) {

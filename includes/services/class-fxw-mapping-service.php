@@ -170,6 +170,50 @@ class FXW_Mapping_Service
 	 * @since   1.0.0
 	 */
 	/**
+	 * Resolve the restaurant's coordinates from plugin settings.
+	 *
+	 * Uses the explicit `fxw_restaurant_latlng` setting ("lat, lng") when
+	 * present; otherwise falls back to geocoding `fxw_restaurant_address`
+	 * (cached 24 h via get_coords). Distance/fee calculations must always
+	 * go through this so they depend on coordinates only — never on any
+	 * customer-entered field.
+	 *
+	 * @param   array|mixed      $options    Plugin settings (fxw_settings option).
+	 * @return  array|WP_Error               array('lat' => float, 'lng' => float) or error.
+	 * @since   1.2.3
+	 */
+	public function get_restaurant_location($options = null)
+	{
+		if (!is_array($options)) {
+			$options = get_option('fxw_settings');
+		}
+
+		$raw = isset($options['fxw_restaurant_latlng']) ? trim((string) $options['fxw_restaurant_latlng']) : '';
+		if (preg_match('/^(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)$/', $raw, $m)) {
+			$lat = (float) $m[1];
+			$lng = (float) $m[2];
+			if (abs($lat) <= 90 && abs($lng) <= 180) {
+				return array('lat' => $lat, 'lng' => $lng);
+			}
+		}
+
+		$address = isset($options['fxw_restaurant_address']) ? trim((string) $options['fxw_restaurant_address']) : '';
+		if ('' === $address) {
+			return new WP_Error('restaurant_location_missing', __('Restaurant address or coordinates are not configured.', 'foodxpress'));
+		}
+
+		$coords = $this->get_coords($address);
+		if (is_wp_error($coords)) {
+			return $coords;
+		}
+
+		$lat = is_array($coords) ? $coords['lat'] : $coords->lat;
+		$lng = is_array($coords) ? $coords['lng'] : $coords->lng;
+
+		return array('lat' => (float) $lat, 'lng' => (float) $lng);
+	}
+
+	/**
 	 * Produce a stable cache identity for a normalized location.
 	 *
 	 * Coordinates are rounded to 4 decimals (~11 m) so the same drop on the

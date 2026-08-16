@@ -108,13 +108,15 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
             return new WP_Error('store_closed', __('Sorry, we are currently closed for deliveries.', 'foodxpress'), array('status' => 400));
         }
 
-        $restaurant_address = isset($options['fxw_restaurant_address']) ? $options['fxw_restaurant_address'] : '';
-        if (empty($restaurant_address)) {
-            return new WP_Error('configuration_error', __('Restaurant address not configured.', 'foodxpress'), array('status' => 500));
+        // Restaurant coordinates — explicit setting, else geocoded address (cached)
+        $mapping_service = new FXW_Mapping_Service();
+        $restaurant = $mapping_service->get_restaurant_location($options);
+
+        if (is_wp_error($restaurant)) {
+            return new WP_Error('configuration_error', $restaurant->get_error_message(), array('status' => 500));
         }
 
-        $mapping_service = new FXW_Mapping_Service();
-        $distance_data = $mapping_service->get_distance($restaurant_address, array('lat' => $lat, 'lng' => $lng));
+        $distance_data = $mapping_service->get_distance($restaurant, array('lat' => $lat, 'lng' => $lng));
 
         if (is_wp_error($distance_data)) {
             return $distance_data;

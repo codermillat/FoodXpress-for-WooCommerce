@@ -2,15 +2,15 @@
 
 A complete delivery management system for single-restaurant WooCommerce stores.
 
-![Version](https://img.shields.io/badge/Version-1.2.1-blue)
+![Version](https://img.shields.io/badge/Version-1.2.3-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-7.0%2B-purple)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![HPOS](https://img.shields.io/badge/HPOS-Compatible-green)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-green)
 
-> **Latest release:** [v1.2.1 — Audit fixes](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.1) (2026-08-17)
-> Blocks-checkout admin warning, Google Maps response caching, security-standard fixes — and the project is now open source under GPL-3.0-or-later. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
+> **Latest release:** [v1.2.3 — Coordinates-only delivery engine](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.3) (2026-08-17)
+> Fees and zone checks now run on restaurant ↔ pin coordinates only, with a Zomato/Swiggy-style checkout: map pin + one "House / Flat / Building No." field, a visible delivery-radius circle, and auto-saved defaults so returning customers never re-pin. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
 > **Next:** [Phase 1 — Data layer + 8 new `fxw_*` tables](./docs/ROADMAP.md).
 
 ## Features
@@ -22,10 +22,11 @@ A complete delivery management system for single-restaurant WooCommerce stores.
 - **Real-time Tracking**: Customers can track their orders via shortcode
 
 ### 🗺️ Location-Based Delivery
-- **Google Maps Integration**: Interactive map for delivery location selection
-- **Distance Calculation**: Automatic delivery radius validation
-- **Dynamic Fees**: Distance-based delivery fee calculation
-- **Address Geocoding**: Convert addresses to coordinates automatically
+- **Google Maps Integration**: Interactive map with draggable pin, place search, "use my location", and a visible delivery-radius circle
+- **Zomato/Swiggy-style address**: pinned location + one "House / Flat / Building No." field + optional landmark
+- **Distance Calculation**: Automatic delivery radius validation from coordinates only
+- **Dynamic Fees**: Distance-based delivery fee (restaurant coordinates ↔ pin coordinates)
+- **Saved defaults**: returning customers get their pin and address auto-filled
 
 ### 📧 Customer Notifications
 - **WooCommerce Emails**: Customizable email templates for each status

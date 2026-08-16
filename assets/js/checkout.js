@@ -27,7 +27,13 @@
 
         // ─── Constants ───────────────────────────────────────────
         C: {
-            DEFAULT_CENTER: { lat: 23.8103, lng: 90.4125 },
+            // Region-neutral fallback only used when neither a saved pin nor
+            // the restaurant center exists (the map is near-useless
+            // unconfigured anyway — the admin gets a warning notice).
+            DEFAULT_CENTER: { lat: 20, lng: 10 },
+            DEFAULT_ZOOM: 2,
+            ZONE_ZOOM: 11,
+            PIN_ZOOM: 15,
             SKELETON_CLASS: 'fxw-skeleton-loading',
             NOTIFICATION_DURATION: 4000
         },
@@ -85,11 +91,12 @@
                 // Geocoder (promise-based)
                 this.state.geocoder = new google.maps.Geocoder();
 
-                const startCenter = this.getSavedCenter();
+                // Initial viewport: saved pin > restaurant zone > neutral fallback
+                const viewport = this.getInitialViewport();
 
                 this.state.map = new Map(this.$el.mapContainer[0], {
-                    center: startCenter,
-                    zoom: 15,
+                    center: viewport.center,
+                    zoom: viewport.zoom,
                     mapId: 'FOODXPRESS_MAP',
                     streetViewControl: false,
                     mapTypeControl: false,
@@ -99,7 +106,7 @@
                 // Draggable marker
                 this.state.marker = new AdvancedMarkerElement({
                     map: this.state.map,
-                    position: startCenter,
+                    position: viewport.center,
                     gmpDraggable: true
                 });
 
@@ -134,9 +141,9 @@
          * This auto-manages session tokens internally (no billing leaks).
          */
         setupAutocomplete: function () {
+            // No region/language bias — results follow the user's own
+            // language and search text wherever in the world they are.
             const autocompleteEl = new google.maps.places.PlaceAutocompleteElement({
-                requestedRegion: 'bd',
-                requestedLanguage: 'en',
                 includedPrimaryTypes: ['geocode', 'establishment']
             });
 
@@ -230,7 +237,7 @@
 
                 if (res.ok && data.status === 'success') {
                     this.state.isValid = true;
-                    const currency = fxw_checkout_params.currency_symbol || '৳';
+                    const currency = fxw_checkout_params.currency_symbol || '';
                     this.notify(
                         `${this.t('calculating').replace('...', '')} ${currency}${data.fee} · ${data.distance_km} km · ${data.duration_text}`,
                         'success'
@@ -294,22 +301,26 @@
             this.state.marker.position = pos;
         },
 
-        getSavedCenter: function () {
+        /**
+         * Initial map viewport: the saved pin wins (returning customer),
+         * then the restaurant zone, then a region-neutral world view.
+         */
+        getInitialViewport: function () {
             const saved = this.state.settings.saved_address;
             if (saved && saved.lat && saved.lng) {
                 return {
-                    lat: parseFloat(saved.lat),
-                    lng: parseFloat(saved.lng)
+                    center: { lat: parseFloat(saved.lat), lng: parseFloat(saved.lng) },
+                    zoom: this.C.PIN_ZOOM
                 };
             }
             const restaurant = this.state.settings.restaurant_center;
             if (restaurant && restaurant.lat && restaurant.lng) {
                 return {
-                    lat: parseFloat(restaurant.lat),
-                    lng: parseFloat(restaurant.lng)
+                    center: { lat: parseFloat(restaurant.lat), lng: parseFloat(restaurant.lng) },
+                    zoom: this.C.ZONE_ZOOM
                 };
             }
-            return this.C.DEFAULT_CENTER;
+            return { center: this.C.DEFAULT_CENTER, zoom: this.C.DEFAULT_ZOOM };
         },
 
         /**

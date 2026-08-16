@@ -2,15 +2,15 @@
 
 A complete delivery management system for single-restaurant WooCommerce stores.
 
-![Version](https://img.shields.io/badge/Version-1.2.6-blue)
+![Version](https://img.shields.io/badge/Version-1.2.7-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-7.0%2B-purple)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![HPOS](https://img.shields.io/badge/HPOS-Compatible-green)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-green)
 
-> **Latest release:** [v1.2.6 — Production-readiness fixes](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.6) (2026-08-17)
-> Coordinates-only delivery engine, Zomato/Swiggy-style checkout with auto-saved address defaults, GDPR privacy integration, translation template, and configuration health warnings. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
+> **Latest release:** [v1.2.7 — Region-neutral defaults](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.7) (2026-08-17)
+> Coordinates-only delivery engine, Zomato/Swiggy-style checkout with auto-saved address defaults, GDPR privacy integration, translation template, configuration health warnings — with region-neutral defaults, usable by any restaurant anywhere. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
 > **Next:** [Phase 1 — Data layer + 8 new `fxw_*` tables](./docs/ROADMAP.md).
 
 ## Features

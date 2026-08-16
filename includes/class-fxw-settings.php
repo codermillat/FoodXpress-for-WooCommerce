@@ -93,7 +93,7 @@ class FXW_Settings
 			'fxw_general_settings_section',
 			array(
 				'id' => 'fxw_restaurant_latlng',
-				'description' => __('Optional. Exact "lat, lng" used for fee & zone checks, e.g. 23.8103, 90.4125. Overrides the address above.', 'foodxpress')
+				'description' => __('Optional. Exact "lat, lng" used for fee & zone checks, e.g. 40.7128, -74.0060. Overrides the address above.', 'foodxpress')
 			)
 		);
 

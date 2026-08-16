@@ -4,6 +4,16 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.7] - 2026-08-17
+
+### Changed (general open-source release — no client/region specifics)
+- **Region-neutral defaults everywhere.** The plugin is a general open-source release for any restaurant worldwide:
+  - Map fallback center is no longer hard-coded to a specific city — the initial viewport now picks the saved pin (zoom 15) → restaurant zone (zoom 11) → neutral world view (zoom 2)
+  - Place autocomplete no longer biases searches to a specific country or language — results follow the user's own language and query anywhere in the world
+  - Currency fallback is no longer a specific currency symbol; it comes from WooCommerce store settings
+  - Settings example coordinates replaced with a neutral example
+- **Removed the client reference in AGENTS.md** — the project is documented as a general open-source release, not tied to any specific restaurant or client
+
 ## [1.2.6] - 2026-08-17
 
 ### Added (production-readiness)

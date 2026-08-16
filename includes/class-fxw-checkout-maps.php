@@ -129,7 +129,7 @@ class FXW_Checkout_Maps
         wp_localize_script('fxw-checkout', 'fxw_checkout_params', array(
             'rest_url' => esc_url_raw(rest_url('foodxpress/v1/checkout')),
             'rest_nonce' => wp_create_nonce('wp_rest'),
-            'currency_symbol' => function_exists('get_woocommerce_currency_symbol') ? get_woocommerce_currency_symbol() : '৳',
+            'currency_symbol' => function_exists('get_woocommerce_currency_symbol') ? get_woocommerce_currency_symbol() : '',
             'saved_address' => $saved_address,
             'restaurant_center' => $restaurant_center,
             'radius_km' => isset($options['fxw_delivery_zone_radius']) ? (float) $options['fxw_delivery_zone_radius'] : (float) FXW_Config::DEFAULT_DELIVERY_RADIUS,

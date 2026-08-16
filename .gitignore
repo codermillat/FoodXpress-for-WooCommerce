@@ -100,3 +100,5 @@ config-local.php
 *.tmp
 *.swp
 .mimosa/
+# ZCode agent session artifacts
+.zcode/

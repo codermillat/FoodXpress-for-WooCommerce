@@ -4,6 +4,11 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.8] - 2026-08-17
+
+### Changed (author credits)
+- **Author/developer credits standardized across the project**: plugin header `Author URI` now points to the developer's site ([millat.is-a.dev](https://millat.is-a.dev/)), the `@author` docblock in all 22 PHP files carries the same link, and the README author section lists both the website and GitHub ([@codermillat](https://github.com/codermillat))
+
 ## [1.2.7] - 2026-08-17
 
 ### Changed (general open-source release — no client/region specifics)

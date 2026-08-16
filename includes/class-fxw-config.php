@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
  *
  * @since      1.0.1
  * @package    FoodXpress
- * @author     MD MILLAT HOSEN <https://github.com/codermillat>
+ * @author     MD MILLAT HOSEN <https://millat.is-a.dev/>
  */
 class FXW_Config
 {

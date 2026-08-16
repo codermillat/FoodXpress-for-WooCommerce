@@ -8,7 +8,7 @@
  *
  * @since      1.2.0
  * @package    FoodXpress
- * @author     MD MILLAT HOSEN <https://github.com/codermillat>
+ * @author     MD MILLAT HOSEN <https://millat.is-a.dev/>
  */
 
 if (!defined('ABSPATH')) {

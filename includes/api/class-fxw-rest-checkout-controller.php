@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
  *
  * @since      1.1.0
  * @package    FoodXpress
- * @author     MD MILLAT HOSEN <https://github.com/codermillat>
+ * @author     MD MILLAT HOSEN <https://millat.is-a.dev/>
  */
 class FXW_REST_Checkout_Controller extends WP_REST_Controller
 {

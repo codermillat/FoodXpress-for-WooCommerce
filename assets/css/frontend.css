@@ -728,16 +728,6 @@
     min-height: 300px;
 }
 
-/* Error display styling */
-#fxw-geolocation-error {
-    margin-top: 15px;
-    padding: 12px 15px;
-    background-color: #fee;
-    border: 1px solid #fcc;
-    border-radius: 6px;
-    color: #c33;
-    font-weight: 500;
-}
 
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {

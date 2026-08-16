@@ -4,6 +4,18 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.5] - 2026-08-17
+
+### Removed (dead code — full-project audit, every item verified caller-free)
+- **3 orphaned AJAX endpoints** (registered in PHP, called by no JS file, template, or inline script): `fxw_update_customer_location` (superseded by the REST `validate-location` route in v1.2.3), `fxw_get_restaurant_location` (restaurant center is now localized server-side), `fxw_debug_status` (debug-only, no caller)
+- **6 localized params nothing reads** (`ajax_url`, `nonce`, `debug`, `prep_time`, `max_retries`, `retry_delay` in `fxw_checkout_params`) plus the never-read `store_closed` translation key; `FXW_Config::MAX_RETRIES` / `RETRY_DELAY` constants existed only to feed two of those params and are gone too
+- Dead markup/CSS/JS: the never-written `#fxw-geolocation-error` div + its CSS rules, and the unused `checkoutForm` element cache in `checkout.js`
+
+### Fixed (docs)
+- Plugin header `Plugin URI` corrected to the real repo casing (`FoodXpress-for-WooCommerce`)
+- AGENTS.md refreshed: current-version line (was stale at v1.2.1), class map no longer describes the removed endpoints, coding-standard rule numbering fixed (duplicate "3"), `DOCKER_SETUP.md` drops its stale TestSprite reference
+- `FXW_Address_Validator` intentionally retained (documented for the Phase 7 multi-outlet editor)
+
 ## [1.2.4] - 2026-08-17
 
 ### Fixed (WooCommerce-compatibility hardening, verified against current docs)

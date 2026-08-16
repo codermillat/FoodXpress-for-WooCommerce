@@ -140,8 +140,7 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
 
         // Store in session for checkout (Critical for order processing).
         // Note: REST requests from same-origin checkout page typically have WooCommerce session cookies.
-        // Cross-origin or stateless clients may not have WC()->session; frontend should use AJAX
-        // update_customer_location for session-based flows.
+        // Cross-origin or stateless clients may not have WC()->session.
         if (WC()->session) {
             WC()->session->set('customer_lat', $lat);
             WC()->session->set('customer_lng', $lng);

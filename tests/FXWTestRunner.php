@@ -234,14 +234,11 @@ class FXWTestRunner
         }
 
         // Check for proper nonce verification in AJAX handlers.
-        // NOTE: class-fxw-checkout.php is the orchestrator (form rendering,
-        // address pre-fill) and has no AJAX endpoints — its nonce verification
-        // lives in the sibling files class-fxw-checkout-maps.php and
-        // class-fxw-checkout-handler.php.
+        // NOTE: the checkout classes register no admin-ajax endpoints since
+        // 1.2.5 (REST validate-location owns location updates) — verified
+        // by the no-ajax guard below.
         $ajax_files = [
             'includes/class-fxw-admin-bar.php',
-            'includes/class-fxw-checkout-maps.php',
-            'includes/class-fxw-checkout-handler.php',
             'includes/class-fxw-shortcodes.php',
             'includes/class-fxw-dashboard.php',
         ];
@@ -258,6 +255,28 @@ class FXWTestRunner
                     $this->pass("Nonce verification present: $rel_path");
                 } else {
                     $this->fail("Missing nonce verification: $rel_path");
+                }
+            }
+        }
+
+        // Since 1.2.5 the checkout classes register no admin-ajax endpoints
+        // (REST validate-location owns location updates; the restaurant
+        // center is localized server-side). Guard against orphaned wp_ajax
+        // registrations reappearing.
+        $no_ajax_files = [
+            'includes/class-fxw-checkout-maps.php',
+            'includes/class-fxw-checkout-handler.php',
+        ];
+
+        foreach ($no_ajax_files as $rel_path) {
+            $file = $this->plugin_dir . '/' . $rel_path;
+            if (file_exists($file)) {
+                $content = file_get_contents($file);
+
+                if (strpos($content, 'wp_ajax') === false) {
+                    $this->pass("No stale admin-ajax registration: $rel_path");
+                } else {
+                    $this->fail("Unexpected wp_ajax registration: $rel_path");
                 }
             }
         }

@@ -8,7 +8,7 @@
 ## 0. TL;DR
 
 - **Project:** FoodXpress for WooCommerce — a delivery-management plugin for single-restaurant WooCommerce stores
-- **Current version:** **v1.2.1** (2026-08-17 — audit fixes: blocks-checkout warning, Maps API caching, security-standard fixes)
+- **Current version:** **v1.2.5** (2026-08-17 — v1.2.2–1.2.5: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup; repo public, GPL-3.0-or-later. See CHANGELOG.md)
 - **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
 - **User profile:** Freelance web developer, building this plugin for **SIAC** (an education consultancy). The plugin is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
@@ -121,8 +121,8 @@ FoodXpress-for-WooCommerce/
 |---|---|---|
 | `FXW_Core` | Bootstrap. `require`s all classes, wires admin/frontend dispatches, adds rewrite rules, enqueues admin assets. | ✓ |
 | `FXW_Checkout` | **Orchestrator.** Renders location picker + delivery fields on the WC checkout. Hides default billing/shipping fields. Pre-fills saved address for returning customers. | ✓ |
-| `FXW_Checkout_Maps` | **Frontend map assets.** `enqueue_scripts` (Google Maps with API-key guard), `add_async_defer_to_maps_script`, AJAX `get_restaurant_location`, AJAX `debug_status` (admin-only). | ✓ |
-| `FXW_Checkout_Handler` | **Server-side logic.** AJAX `update_customer_location`, `validate_delivery_zone` (with fallback geocoding), `save_customer_address`, `save_delivery_details_to_order` (HPOS-aware). | ✓ |
+| `FXW_Checkout_Maps` | **Frontend map assets.** `enqueue_scripts` (Google Maps with API-key guard + localized `restaurant_center`/`radius_km`/`saved_address` params), `add_async_defer_to_maps_script`. | ✓ |
+| `FXW_Checkout_Handler` | **Server-side logic.** `validate_delivery_zone` (coordinates-only, restaurant via `FXW_Mapping_Service::get_restaurant_location()`), `save_customer_address` (auto-saves the delivery profile for logged-in users), `save_delivery_details_to_order` (HPOS-aware; store-base country default). | ✓ |
 | `FXW_Dashboard` | Admin order dashboard. Largest class at 593 LOC — **flagged for the same split treatment as the checkout split.** | ✓ |
 | `FXW_Settings` | WC Settings → FoodXpress page. | ✓ |
 | `FXW_Shortcodes` | `[fxw_track_order]`, `[fxw_reorder]`, plus tracking page rewrite. | ✓ |
@@ -152,17 +152,17 @@ FoodXpress-for-WooCommerce/
 1. **WordPress Coding Standards** for PHP, JS, CSS. Run `phpcs` if you have it.
 2. **Every PHP file:** `if (!defined('ABSPATH')) { exit; }` as the first non-comment line.
 3. **Official WordPress/WooCommerce hooks and APIs ONLY — never bypass the platforms.** This applies to the entire project and all future changes: checkout-page changes, fee/tax calculations, order/customer/session data, settings, emails, uninstall — everything goes through documented hooks (`woocommerce_checkout_fields`, `woocommerce_checkout_create_order`, `woocommerce_cart_calculate_fees`, `wc_get_orders`, Settings API, `WP_REST_Controller`, `WC_Customer`/`WC_Order` CRUD, `WC_Email`, WP HTTP API, `wp_safe_redirect`, etc.). No direct writes to WooCommerce/WordPress tables, no `$_SESSION`, no raw cURL, no shims around core flows. **When unsure of the official pattern, verify against current documentation first** (Context7: `/woocommerce/woocommerce` for WC, WordPress docs for WP) — do not guess or copy unverified patterns.
-3. **Every AJAX handler:** verify nonce with `wp_verify_nonce()` AND check capabilities with `current_user_can()`. **No central wrapper.** Per-handler explicit.
-4. **Sanitize ALL input** with the right primitive: `sanitize_text_field()`, `absint()`, `sanitize_email()`, `sanitize_textarea_field()`, etc. **`wp_unslash()` before `sanitize_*()`** on `$_POST`/`$_GET`/`$_REQUEST`.
-5. **Escape ALL output** with the right primitive: `esc_html()`, `esc_attr()`, `esc_url()`, `wp_kses_post()`. Match the context.
-6. **Strict comparisons only** (`===` / `!==`) — never `==` / `!=`. Critical for auth checks.
-7. **Null-check `WC()->session` and `WC()->customer`** before any method call: `WC()->session ? WC()->session->get('key') : null`.
-8. **All queries use `$wpdb->prepare()`** with `%s`, `%d`, `%f` placeholders. **No PDO wrapper.**
-9. **HPOS-aware order access:** use `wc_get_order($id)` (never `get_post($id)` for orders) and `$order->get_meta()` / `$order->update_meta_data()` (never `get_post_meta()` / `update_post_meta()` for order meta).
-10. **`wp_safe_redirect()` always has a fallback URL:** `wp_safe_redirect($referer ? $referer : admin_url())`.
-11. **`get_edit_post_link()` returns null under HPOS.** Fallback: `admin_url('admin.php?page=wc-orders&action=edit&id=' . $id)`.
-12. **All translatable strings via `__()` / `_e()`** with `'foodxpress'` text domain.
-13. **No class over 500 LOC.** Use the same split pattern as the v1.2.0 checkout split: orchestrator keeps the public API, sibling files `require_once`'d at the top, services extracted to `includes/services/`.
+4. **Every AJAX handler:** verify nonce with `wp_verify_nonce()` AND check capabilities with `current_user_can()`. **No central wrapper.** Per-handler explicit.
+5. **Sanitize ALL input** with the right primitive: `sanitize_text_field()`, `absint()`, `sanitize_email()`, `sanitize_textarea_field()`, etc. **`wp_unslash()` before `sanitize_*()`** on `$_POST`/`$_GET`/`$_REQUEST`.
+6. **Escape ALL output** with the right primitive: `esc_html()`, `esc_attr()`, `esc_url()`, `wp_kses_post()`. Match the context.
+7. **Strict comparisons only** (`===` / `!==`) — never `==` / `!=`. Critical for auth checks.
+8. **Null-check `WC()->session` and `WC()->customer`** before any method call: `WC()->session ? WC()->session->get('key') : null`.
+9. **All queries use `$wpdb->prepare()`** with `%s`, `%d`, `%f` placeholders. **No PDO wrapper.**
+10. **HPOS-aware order access:** use `wc_get_order($id)` (never `get_post($id)` for orders) and `$order->get_meta()` / `$order->update_meta_data()` (never `get_post_meta()` / `update_post_meta()` for order meta).
+11. **`wp_safe_redirect()` always has a fallback URL:** `wp_safe_redirect($referer ? $referer : admin_url())`.
+12. **`get_edit_post_link()` returns null under HPOS.** Fallback: `admin_url('admin.php?page=wc-orders&action=edit&id=' . $id)`.
+13. **All translatable strings via `__()` / `_e()`** with `'foodxpress'` text domain.
+14. **No class over 500 LOC.** Use the same split pattern as the v1.2.0 checkout split: orchestrator keeps the public API, sibling files `require_once`'d at the top, services extracted to `includes/services/`.
 
 ### JavaScript
 

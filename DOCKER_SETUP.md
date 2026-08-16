@@ -1,6 +1,6 @@
-# Docker WordPress Setup for FoodXpress Testing
+# Docker WordPress Setup for FoodXpress Local Testing
 
-This guide will help you set up a local WordPress environment using Docker for TestSprite testing.
+This guide will help you set up a local WordPress environment using Docker for local testing.
 
 ## Prerequisites
 

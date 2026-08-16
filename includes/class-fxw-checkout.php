@@ -80,8 +80,6 @@ class FXW_Checkout
 
             <div id="fxw-map" style="height: 300px; margin: 20px 0;"></div>
 
-            <div id="fxw-geolocation-error" class="woocommerce-error" style="display:none;"></div>
-
             <!-- Display selected location (read-only, from map) -->
             <div id="fxw-selected-location" class="fxw-selected-location"
                 style="display:none; padding: 10px; background: #f8f9fa; border-left: 3px solid #28a745; margin-bottom: 20px;">

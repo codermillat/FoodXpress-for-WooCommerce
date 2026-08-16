@@ -59,8 +59,7 @@
                 selectedLocation: $('#fxw-selected-location'),
                 selectedAddress: $('#fxw-selected-address'),
                 hiddenLat: $('#fxw_lat'),
-                hiddenLng: $('#fxw_lng'),
-                checkoutForm: $('form.checkout')
+                hiddenLng: $('#fxw_lng')
             };
         },
 

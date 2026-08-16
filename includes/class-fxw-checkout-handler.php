@@ -47,99 +47,11 @@ class FXW_Checkout_Handler
      */
     public function __construct()
     {
-        add_action('wp_ajax_fxw_update_customer_location', array($this, 'update_customer_location'));
-        add_action('wp_ajax_nopriv_fxw_update_customer_location', array($this, 'update_customer_location'));
         add_action('woocommerce_after_checkout_validation', array($this, 'validate_delivery_zone'), 20, 2);
         add_action('woocommerce_checkout_update_user_meta', array($this, 'save_customer_address'), 10, 2);
         add_action('woocommerce_checkout_create_order', array($this, 'save_delivery_details_to_order'), 10, 2);
     }
 
-    /**
-     * Update customer location via AJAX.
-     *
-     * @since    1.0.0
-     */
-    public function update_customer_location()
-    {
-        $rate_limit_check = FXW_Rate_Limiter::check_rate_limit('update_customer_location', 30);
-        if (is_wp_error($rate_limit_check)) {
-            wp_send_json_error(array('message' => $rate_limit_check->get_error_message()), 429);
-            return;
-        }
-
-        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
-        if (!wp_verify_nonce($nonce, 'fxw-checkout-nonce')) {
-            wp_send_json_error(array('message' => __('Session has expired. Please reload the page.', 'foodxpress')), 403);
-            return;
-        }
-
-        $lat = isset($_POST['lat']) ? floatval($_POST['lat']) : 0;
-        $lng = isset($_POST['lng']) ? floatval($_POST['lng']) : 0;
-
-        // Parse and sanitize address array with defaults to prevent notices
-        $address_defaults = array(
-            'country' => '',
-            'state' => '',
-            'postcode' => '',
-            'city' => '',
-            'address_1' => '',
-            'address_2' => '',
-        );
-        $raw_address = isset($_POST['address'])
-            ? wp_parse_args((array) wc_clean(wp_unslash($_POST['address'])), $address_defaults)
-            : $address_defaults;
-
-        if (!$lat || !$lng) {
-            wp_send_json_error('Invalid location data.');
-            return;
-        }
-
-        if (!WC()->customer) {
-            wp_send_json_error(array('message' => __('Customer session not available.', 'foodxpress')));
-            return;
-        }
-
-        WC()->customer->set_shipping_location($raw_address['country'], $raw_address['state'], $raw_address['postcode'], $raw_address['city']);
-        WC()->customer->set_shipping_address_1($raw_address['address_1']);
-        WC()->customer->set_shipping_address_2($raw_address['address_2']);
-
-        // Also set billing to keep destination in sync if store forces shipping to billing
-        WC()->customer->set_billing_country($raw_address['country']);
-        WC()->customer->set_billing_state($raw_address['state']);
-        WC()->customer->set_billing_postcode($raw_address['postcode']);
-        WC()->customer->set_billing_city($raw_address['city']);
-        WC()->customer->set_billing_address_1($raw_address['address_1']);
-        WC()->customer->set_billing_address_2($raw_address['address_2']);
-
-        if (method_exists(WC()->customer, 'save')) {
-            WC()->customer->save();
-        }
-
-        WC()->session->set('customer_lat', $lat);
-        WC()->session->set('customer_lng', $lng);
-        WC()->session->set('fxw_coords_locked', true);
-
-        // Ensure WC session cookie exists for guests and log state
-        if (function_exists('wc_get_logger')) {
-            wc_get_logger()->debug('fxw_update_customer_location: ensuring session cookie + verifying session values', array('source' => 'foodxpress'));
-        }
-        if (WC()->session && method_exists(WC()->session, 'set_customer_session_cookie')) {
-            WC()->session->set_customer_session_cookie(true);
-        }
-
-        // Log update for debugging
-        if (function_exists('wc_get_logger')) {
-            wc_get_logger()->debug(sprintf('fxw_update_customer_location lat=%s lng=%s city=%s state=%s country=%s', $lat, $lng, $raw_address['city'], $raw_address['state'], $raw_address['country']), array('source' => 'foodxpress'));
-            $lat_check = WC()->session ? WC()->session->get('customer_lat') : null;
-            $lng_check = WC()->session ? WC()->session->get('customer_lng') : null;
-            wc_get_logger()->debug(sprintf('fxw_update_customer_location: session_after_set lat=%s lng=%s logged_in=%s', $lat_check, $lng_check, is_user_logged_in() ? 'yes' : 'no'), array('source' => 'foodxpress'));
-        }
-
-        // Trigger cart recalculation
-        WC()->cart->calculate_totals();
-
-        wp_send_json_success(array('lat' => $lat, 'lng' => $lng));
-    }
 
     /**
      * Persist the delivery profile for logged-in customers at order time —

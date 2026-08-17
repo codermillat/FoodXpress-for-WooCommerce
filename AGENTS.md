@@ -8,7 +8,7 @@
 ## 0. TL;DR
 
 - **Project:** FoodXpress for WooCommerce — a delivery-management plugin for single-restaurant WooCommerce stores
-- **Current version:** **v1.2.9** (2026-08-17 — v1.2.2–1.2.9: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration, config health warning, region-neutral defaults; repo public, GPL-3.0-or-later. See CHANGELOG.md)
+- **Current version:** **v1.2.10** (2026-08-17 — v1.2.2–1.2.10: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration, config health warning, region-neutral defaults; repo public, GPL-3.0-or-later. See CHANGELOG.md)
 - **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
 - **User profile:** Freelance web developer. The plugin is a **general open-source release for everyone** (GPL-3.0-or-later) — not tied to any specific restaurant or client. It is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
@@ -128,7 +128,7 @@ FoodXpress-for-WooCommerce/
 | `FXW_Checkout_Maps` | **Frontend map assets.** `enqueue_scripts` (Google Maps with API-key guard + localized `restaurant_center`/`radius_km`/`saved_address` params), `add_async_defer_to_maps_script`. | ✓ |
 | `FXW_Checkout_Handler` | **Server-side logic.** `validate_delivery_zone` (coordinates-only, restaurant via `FXW_Mapping_Service::get_restaurant_location()`), `save_customer_address` (auto-saves the delivery profile for logged-in users), `save_delivery_details_to_order` (HPOS-aware; store-base country default). | ✓ |
 | `FXW_Dashboard` | Admin order dashboard. Largest class at 593 LOC — **flagged for the same split treatment as the checkout split.** | ✓ |
-| `FXW_Settings` | WC Settings → FoodXpress page. | ✓ |
+| `FXW_Settings` | Native tab in WooCommerce → Settings (manage_woocommerce). | ✓ |
 | `FXW_Shortcodes` | `[fxw_track_order]`, `[fxw_reorder]`, plus tracking page rewrite. | ✓ |
 | `FXW_Order_Admin` | Order meta boxes (delivery details, assignment, etc.). | ✓ |
 | `FXW_Shipping_Method` | Registers `foodxpress_delivery` shipping method with WC. | ✓ |

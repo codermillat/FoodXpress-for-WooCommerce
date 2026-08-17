@@ -312,7 +312,7 @@ class FXW_Core
 			return;
 		}
 
-		$settings_url = admin_url('admin.php?page=foodxpress-settings');
+		$settings_url = admin_url('admin.php?page=wc-settings&tab=foodxpress');
 		?>
 		<div class="notice notice-error">
 			<p>

@@ -13,43 +13,41 @@ class FXW_Settings
 {
 
 		/** Initialize the class and set its properties. */
-		public function __construct()
-		{
-			add_action('admin_menu', array($this, 'add_settings_page'));
-			add_action('admin_init', array($this, 'register_settings'));
-		}
-
-	/** See method name. */
-	public function add_settings_page()
+	public function __construct()
 	{
-		add_options_page(
-			__('FoodXpress Settings', 'foodxpress'),
-			__('FoodXpress', 'foodxpress'),
-			'manage_options',
-			'foodxpress-settings',
-			array($this, 'render_settings_page')
-		);
+		// Native tab under WooCommerce → Settings via documented hooks,
+		// gated by manage_woocommerce like every other WC settings tab
+		// (shop managers can configure delivery). Moved from a standalone
+		// manage_options page in 1.2.10.
+		add_filter('woocommerce_settings_tabs_array', array($this, 'register_wc_settings_tab'), 50);
+		add_action('woocommerce_settings_foodxpress', array($this, 'render_wc_settings_tab'));
+		add_action('woocommerce_update_options_foodxpress', array($this, 'save_wc_settings_tab'));
+		add_action('admin_init', array($this, 'register_settings'));
 	}
 
-	/**
-	 * Render the settings page HTML.
-	 *
-	 * @since    1.0.0
-	 */
-	public function render_settings_page()
+	/** Add the FoodXpress tab to WooCommerce → Settings. */
+	public function register_wc_settings_tab($tabs)
 	{
-		?>
-		<div class="wrap">
-			<h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-			<form action="options.php" method="post">
-				<?php
-				settings_fields('fxw_settings_group');
-				do_settings_sections('foodxpress-settings');
-				submit_button();
-				?>
-			</form>
-		</div>
-		<?php
+		$tabs['foodxpress'] = __('FoodXpress', 'foodxpress');
+		return $tabs;
+	}
+
+	/** Render tab content; WooCommerce provides form, nonce, save button. */
+	public function render_wc_settings_tab()
+	{
+		echo '<table class="form-table">';
+		do_settings_sections('foodxpress-settings');
+		echo '</table>';
+	}
+
+	/** Save on WooCommerce tab save; WC verified nonce + capability. */
+	public function save_wc_settings_tab()
+	{
+		if (!isset($_POST['fxw_settings'])) {
+			return;
+		}
+		$input = (array) wc_clean(wp_unslash($_POST['fxw_settings']));
+		update_option('fxw_settings', $this->sanitize_settings($input));
 	}
 
 	/** See method name. */
@@ -57,6 +55,7 @@ class FXW_Settings
 	{
 		register_setting('fxw_settings_group', 'fxw_settings', array(
 			'sanitize_callback' => array($this, 'sanitize_settings'),
+			'capability' => 'manage_woocommerce',
 		));
 
 		// General Settings Section

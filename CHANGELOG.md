@@ -4,6 +4,13 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.10] - 2026-08-17
+
+### Fixed (shop-manager capability audit)
+- **Settings now live as a native tab under WooCommerce → Settings** (`FXW_Settings`, via the documented `woocommerce_settings_tabs_array` / `woocommerce_settings_{tab}` / `woocommerce_update_options_{tab}` hooks — names verified against WooCommerce core source). Previously a standalone WordPress-Settings page gated by `manage_options`, which (a) blocked shop managers who can configure every other WooCommerce shipping/fee setting, (b) contradicted the plugin's own "delivery is not configured" warning (shown to `manage_woocommerce` users, linking to a page they couldn't open), and (c) didn't match the documented "WooCommerce → Settings → FoodXpress" location. Saving is gated consistently (`manage_woocommerce` on `register_setting` + the WC settings nonce)
+- **Admin-bar "Deliveries: Open/Closed" toggle now works for shop managers** — it was displayed to admins *or* shop managers but the AJAX action accepted admins only, so shop managers saw the toggle and got "Unauthorized access" on click. The action now matches the display capability
+- The configuration warning's settings link now points to the new tab URL
+
 ## [1.2.9] - 2026-08-17
 
 ### Added

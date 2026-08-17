@@ -59,8 +59,10 @@ class FXW_Admin_Bar
 	 */
 	public function toggle_delivery_status()
 	{
-		// Security: Check user capability
-		if (!current_user_can('manage_options')) {
+		// Capability matches the nodes we display (admins OR shop managers)
+		// — previously manage_options only, so shop managers saw the toggle
+		// but could not use it. Fixed in 1.2.10.
+		if (!current_user_can('manage_options') && !current_user_can('manage_woocommerce')) {
 			wp_send_json_error(array('message' => __('Unauthorized access.', 'foodxpress')), 403);
 		}
 

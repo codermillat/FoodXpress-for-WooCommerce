@@ -59,7 +59,7 @@ cd wp-content/plugins/foodxpress-for-woocommerce
 php tests/FXWTestRunner.php
 ```
 
-All 114 tests must pass.
+All 115 tests must pass.
 
 ## Pull Request Process
 

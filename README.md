@@ -109,7 +109,7 @@ foodxpress-for-woocommerce/
 │   ├── css/
 │   └── js/
 ├── tests/
-│   └── FXWTestRunner.php           # Static analysis + security checks (114 tests)
+│   └── FXWTestRunner.php           # Static analysis + security checks (115 tests)
 └── skills/                         # Developer reference (Claude skills content)
 ```
 
@@ -125,7 +125,7 @@ Run the built-in test suite for syntax, security, and code quality checks:
 php tests/FXWTestRunner.php
 ```
 
-Expected output: `Passed: 114, Failed: 0`.
+Expected output: `Passed: 115, Failed: 0`.
 
 The runner validates:
 - PHP syntax errors

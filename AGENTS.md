@@ -13,7 +13,7 @@
 - **User profile:** Freelance web developer. The plugin is a **general open-source release for everyone** (GPL-3.0-or-later) — not tied to any specific restaurant or client. It is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
 - **Remote:** `https://github.com/codermillat/FoodXpress-for-WooCommerce` (public since v1.2.1, GPL-3.0-or-later)
-- **Test runner:** `php tests/FXWTestRunner.php` → must report **114/114 pass** before any commit
+- **Test runner:** `php tests/FXWTestRunner.php` → must report **115/115 pass** before any commit
 
 ---
 
@@ -226,7 +226,7 @@ Expected: `Passed: 101, Failed: 0`. The runner checks:
 - Hooks & filters (registered correctly, custom statuses registered)
 - Security patterns (ABSPATH check, nonce verification)
 
-**Run the test runner after every change. It must report 114/114 before commit.**
+**Run the test runner after every change. It must report 115/115 before commit.**
 
 ---
 

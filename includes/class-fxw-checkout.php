@@ -22,6 +22,7 @@ if (!defined('ABSPATH')) {
 
 require_once __DIR__ . '/class-fxw-checkout-maps.php';
 require_once __DIR__ . '/class-fxw-checkout-handler.php';
+require_once __DIR__ . '/class-fxw-blocks-checkout.php';
 
 /**
  * Class FXW_Checkout
@@ -51,7 +52,7 @@ class FXW_Checkout
     }
 
     /**
-     * Add custom fields to the checkout page.
+     * Add custom fields to the classic checkout page.
      *
      * @since    1.0.0
      */
@@ -65,33 +66,9 @@ class FXW_Checkout
                 $saved_profile = array();
             }
         }
+
+        self::render_location_picker();
         ?>
-        <div id="fxw-location-picker-container">
-            <h3><?php esc_html_e('Step 1: Select Your Location on Map', 'foodxpress'); ?></h3>
-            <p><?php esc_html_e('Search for your area, use current location, or drag the marker to set your exact delivery point.', 'foodxpress'); ?>
-            </p>
-
-            <div class="fxw-location-search-wrapper">
-                <input id="fxw-location-search-input" type="text"
-                    placeholder="<?php esc_attr_e('Search for your area or landmark...', 'foodxpress'); ?>" class="input-text"
-                    value="" />
-                <a href="#" id="fxw-get-location" class="button"><?php esc_html_e('Use My Location', 'foodxpress'); ?></a>
-            </div>
-
-            <div id="fxw-map" style="height: 300px; margin: 20px 0;"></div>
-
-            <!-- Display selected location (read-only, from map) -->
-            <div id="fxw-selected-location" class="fxw-selected-location"
-                style="display:none; padding: 10px; background: #f8f9fa; border-left: 3px solid #28a745; margin-bottom: 20px;">
-                <strong><?php esc_html_e('Selected Location:', 'foodxpress'); ?></strong>
-                <span id="fxw-selected-address"></span>
-            </div>
-
-            <!-- Hidden fields for POST fallback when session is empty (populated by checkout.js) -->
-            <input type="hidden" name="fxw_lat" id="fxw_lat" value="" />
-            <input type="hidden" name="fxw_lng" id="fxw_lng" value="" />
-        </div>
-
         <div id="fxw-delivery-details-container" style="margin-top: 20px;">
             <h3><?php esc_html_e('Step 2: Enter Your Delivery Details', 'foodxpress'); ?></h3>
             <p><?php esc_html_e('Please provide complete details to help our delivery agent find you easily.', 'foodxpress'); ?>
@@ -132,6 +109,57 @@ class FXW_Checkout
             ?>
         </div>
         <?php
+    }
+
+    /**
+     * Render the Step-1 map location picker — shared by the classic
+     * checkout (via the billing-form hook) and block-based checkout
+     * pages (via FXW_Blocks_Checkout's the_content filter). checkout.js
+     * boots on the presence of #fxw-map, so both surfaces behave
+     * identically.
+     *
+     * @param bool $return Return the markup as a string instead of echoing.
+     * @return string|null Markup when $return is true.
+     * @since 1.2.9
+     */
+    public static function render_location_picker($return = false)
+    {
+        ob_start();
+        ?>
+        <div id="fxw-location-picker-container">
+            <h3><?php esc_html_e('Step 1: Select Your Location on Map', 'foodxpress'); ?></h3>
+            <p><?php esc_html_e('Search for your area, use current location, or drag the marker to set your exact delivery point.', 'foodxpress'); ?>
+            </p>
+
+            <div class="fxw-location-search-wrapper">
+                <input id="fxw-location-search-input" type="text"
+                    placeholder="<?php esc_attr_e('Search for your area or landmark...', 'foodxpress'); ?>" class="input-text"
+                    value="" />
+                <a href="#" id="fxw-get-location" class="button"><?php esc_html_e('Use My Location', 'foodxpress'); ?></a>
+            </div>
+
+            <div id="fxw-map" style="height: 300px; margin: 20px 0;"></div>
+
+            <!-- Display selected location (read-only, from map) -->
+            <div id="fxw-selected-location" class="fxw-selected-location"
+                style="display:none; padding: 10px; background: #f8f9fa; border-left: 3px solid #28a745; margin-bottom: 20px;">
+                <strong><?php esc_html_e('Selected Location:', 'foodxpress'); ?></strong>
+                <span id="fxw-selected-address"></span>
+            </div>
+
+            <!-- Hidden fields for POST fallback when session is empty (populated by checkout.js) -->
+            <input type="hidden" name="fxw_lat" id="fxw_lat" value="" />
+            <input type="hidden" name="fxw_lng" id="fxw_lng" value="" />
+        </div>
+        <?php
+        $markup = ob_get_clean();
+
+        if ($return) {
+            return $markup;
+        }
+
+        echo $markup; // phpcs:ignore WordPress.Security.EscapeOutput -- static trusted markup only
+        return null;
     }
 
     /**

@@ -4,6 +4,22 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.9] - 2026-08-17
+
+### Added
+- **Block-based Checkout support** (`FXW_Blocks_Checkout`, built entirely on documented extension points, verified against current WooCommerce docs):
+  - The three delivery fields register via the **Additional Checkout Fields API** (WC 8.9+; older stores keep full classic-checkout support): required *House / Flat / Building No.* (`foodxpress/address-details`, address section), optional *Landmark* (address), optional *Delivery Instructions* (order section)
+  - The **map picker renders above the Checkout block** — same Step-1 markup as classic checkout (`FXW_Checkout::render_location_picker()`), same `checkout.js`, same REST zone validation
+  - **Block orders persist identical data to classic orders** through the shared `FXW_Checkout_Handler::apply_delivery_data_to_order()` via `woocommerce_store_api_checkout_update_order_from_request` — same `_fxw_*` meta, composed address, address second line, coordinates, distance, country defaults, and delivery-profile auto-save
+  - Zone enforcement on blocks: the required field is validated through `woocommerce_validate_additional_field`, running the same store-open / pin-present / radius check as classic checkout (`get_zone_error()`)
+  - `cart_checkout_blocks` compatibility now declared **true**; the v1.2.1 blocks warning is removed (real support replaced it)
+  - Known v1 limitation: after dropping a pin, the blocks shipping total refreshes on the next checkout interaction rather than instantly (no build step → no React slotFill); order-time enforcement is unaffected
+
+### Changed
+- **`FXW_Dashboard` split into three files** (593 → 137/365/278 LOC, all under the 500 cap, logic unchanged): orchestrator keeps `FXW_Dashboard`; rendering → `FXW_Dashboard_Render`; write handlers → `FXW_Dashboard_Actions`
+- **Two real bugs fixed during the split**: admin *Print Receipt* buttons always failed their nonce check (dashboard created `fxw_nonce`, handler verifies `fxw_print_receipt`), and dashboard order links were empty under HPOS (`get_edit_post_link()` returns null — now falls back to the HPOS admin URL)
+- New `docs/QA-CHECKLIST.md` — the full pre-production runtime pass (configuration + classic/blocks checkout + operations + privacy), with expected outcomes per step
+
 ## [1.2.8] - 2026-08-17
 
 ### Changed (author credits)

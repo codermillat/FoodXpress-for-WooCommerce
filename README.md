@@ -2,14 +2,14 @@
 
 A complete delivery management system for single-restaurant WooCommerce stores.
 
-![Version](https://img.shields.io/badge/Version-1.2.8-blue)
+![Version](https://img.shields.io/badge/Version-1.2.9-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-7.0%2B-purple)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![HPOS](https://img.shields.io/badge/HPOS-Compatible-green)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-green)
 
-> **Latest release:** [v1.2.8 — Author credits](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.8) (2026-08-17)
+> **Latest release:** [v1.2.9 — Blocks-checkout support](https://github.com/codermillat/FoodXpress-for-WooCommerce/releases/tag/v1.2.9) (2026-08-17)
 > Coordinates-only delivery engine, Zomato/Swiggy-style checkout with auto-saved address defaults, GDPR privacy integration, translation template, configuration health warnings — with region-neutral defaults, usable by any restaurant anywhere. See [`CHANGELOG.md`](./CHANGELOG.md) for full details.
 > **Next:** [Phase 1 — Data layer + 8 new `fxw_*` tables](./docs/ROADMAP.md).
 
@@ -109,7 +109,7 @@ foodxpress-for-woocommerce/
 │   ├── css/
 │   └── js/
 ├── tests/
-│   └── FXWTestRunner.php           # Static analysis + security checks (103 tests)
+│   └── FXWTestRunner.php           # Static analysis + security checks (112 tests)
 └── skills/                         # Developer reference (Claude skills content)
 ```
 
@@ -125,7 +125,7 @@ Run the built-in test suite for syntax, security, and code quality checks:
 php tests/FXWTestRunner.php
 ```
 
-Expected output: `Passed: 103, Failed: 0`.
+Expected output: `Passed: 112, Failed: 0`.
 
 The runner validates:
 - PHP syntax errors

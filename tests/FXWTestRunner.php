@@ -177,9 +177,12 @@ class FXWTestRunner
             'includes/class-fxw-checkout.php' => 'Checkout orchestrator',
             'includes/class-fxw-checkout-maps.php' => 'Checkout maps / frontend assets',
             'includes/class-fxw-checkout-handler.php' => 'Checkout server handler',
+            'includes/class-fxw-blocks-checkout.php' => 'Blocks checkout support',
             'includes/services/class-fxw-delivery-fee.php' => 'Delivery fee service',
             'includes/services/class-fxw-address-validator.php' => 'Address validator service',
             'includes/class-fxw-dashboard.php' => 'Dashboard class',
+            'includes/class-fxw-dashboard-render.php' => 'Deliveries dashboard renderer',
+            'includes/class-fxw-dashboard-actions.php' => 'Deliveries dashboard write handlers',
             'includes/class-fxw-settings.php' => 'Settings class',
             'includes/class-fxw-roles.php' => 'Roles class',
             'includes/class-fxw-notifications.php' => 'Notifications class',
@@ -240,7 +243,7 @@ class FXWTestRunner
         $ajax_files = [
             'includes/class-fxw-admin-bar.php',
             'includes/class-fxw-shortcodes.php',
-            'includes/class-fxw-dashboard.php',
+            'includes/class-fxw-dashboard-actions.php',
         ];
 
         foreach ($ajax_files as $rel_path) {

@@ -54,6 +54,31 @@ class FXW_Checkout_Handler
 
 
     /**
+     * Persist the delivery profile for a user — shared by the classic
+     * checkout hook and the blocks Store API flow.
+     *
+     * @param int    $user_id      User ID.
+     * @param string $details      Exact delivery address.
+     * @param string $landmark     Optional landmark.
+     * @param string $instructions Optional delivery instructions.
+     * @since 1.2.9
+     */
+    public static function save_delivery_profile_for_user($user_id, $details, $landmark, $instructions)
+    {
+        $distance_data = WC()->session ? WC()->session->get('fxw_distance_data') : null;
+
+        $profile = array(
+            'lat' => WC()->session ? WC()->session->get('customer_lat') : null,
+            'lng' => WC()->session ? WC()->session->get('customer_lng') : null,
+            'address_details' => $details,
+            'landmark' => $landmark,
+            'delivery_instructions' => $instructions,
+            'distance_data' => $distance_data,
+        );
+        update_user_meta($user_id, '_fxw_delivery_profile', $profile);
+    }
+
+    /**
      * Persist the delivery profile for logged-in customers at order time —
      * automatically, no opt-in. The saved pin + fields become the default
      * for the next checkout (auto-filled, no re-pinning required); the
@@ -68,46 +93,43 @@ class FXW_Checkout_Handler
         $address_details = isset($_POST['fxw_address_details']) ? sanitize_text_field(wp_unslash($_POST['fxw_address_details'])) : '';
         $landmark = isset($_POST['fxw_landmark']) ? sanitize_text_field(wp_unslash($_POST['fxw_landmark'])) : '';
         $instructions = isset($_POST['fxw_delivery_instructions']) ? sanitize_textarea_field(wp_unslash($_POST['fxw_delivery_instructions'])) : '';
-        $distance_data = WC()->session ? WC()->session->get('fxw_distance_data') : null;
 
-        $profile = array(
-            'lat' => WC()->session ? WC()->session->get('customer_lat') : null,
-            'lng' => WC()->session ? WC()->session->get('customer_lng') : null,
-            'address_details' => $address_details,
-            'landmark' => $landmark,
-            'delivery_instructions' => $instructions,
-            'distance_data' => $distance_data,
-        );
-        update_user_meta($customer_id, '_fxw_delivery_profile', $profile);
+        self::save_delivery_profile_for_user($customer_id, $address_details, $landmark, $instructions);
     }
 
     /**
-     * Save delivery details to order meta during checkout.
+     * Apply all FoodXpress delivery data to an order — the single shared
+     * path for classic checkout (woocommerce_checkout_create_order) and
+     * block-based checkout (Store API flow). Writes the `_fxw_*` meta,
+     * the composed display address, the address second line, coordinates,
+     * distance, and the store-base country default.
      *
-     * @param WC_Order $order
-     * @param array    $data
-     * @since 1.0.0
+     * @param WC_Order $order         Order (not yet persisted in the classic flow).
+     * @param string   $details       Exact delivery address.
+     * @param string   $landmark      Optional landmark.
+     * @param string   $instructions  Optional delivery instructions.
+     * @param mixed    $fallback_lat  Optional posted latitude (classic hidden input).
+     * @param mixed    $fallback_lng  Optional posted longitude (classic hidden input).
+     * @since 1.2.9
      */
-    public function save_delivery_details_to_order($order, $data)
+    public static function apply_delivery_data_to_order($order, $details, $landmark, $instructions, $fallback_lat = null, $fallback_lng = null)
     {
         if (!is_a($order, 'WC_Order')) {
             return;
         }
 
-        // Get the exact delivery address (single field + landmark)
-        $address_details = isset($_POST['fxw_address_details']) ? trim(sanitize_text_field(wp_unslash($_POST['fxw_address_details']))) : '';
-        $landmark = isset($_POST['fxw_landmark']) ? trim(sanitize_text_field(wp_unslash($_POST['fxw_landmark']))) : '';
+        $details = trim((string) $details);
+        $landmark = trim((string) $landmark);
+        $instructions = trim((string) $instructions);
 
-        if (!empty($address_details)) {
-            $order->update_meta_data('_fxw_address_details', $address_details);
+        if ('' !== $details) {
+            $order->update_meta_data('_fxw_address_details', $details);
         }
-        if (!empty($landmark)) {
+        if ('' !== $landmark) {
             $order->update_meta_data('_fxw_landmark', $landmark);
         }
-
-        $delivery_instructions = isset($_POST['fxw_delivery_instructions']) ? sanitize_textarea_field(wp_unslash($_POST['fxw_delivery_instructions'])) : '';
-        if (!empty($delivery_instructions)) {
-            $order->update_meta_data('_fxw_delivery_instructions', $delivery_instructions);
+        if ('' !== $instructions) {
+            $order->update_meta_data('_fxw_delivery_instructions', $instructions);
         }
 
         // Get coordinates from session (guard against null session in REST/CLI contexts)
@@ -122,11 +144,11 @@ class FXW_Checkout_Handler
         }
 
         // Full delivery address for display: exact-address field + landmark
-        $full_delivery_address = $address_details;
-        if (!empty($landmark)) {
+        $full_delivery_address = $details;
+        if ('' !== $landmark) {
             $full_delivery_address .= sprintf(' (%s: %s)', __('Landmark', 'foodxpress'), $landmark);
         }
-        if (!empty($full_delivery_address)) {
+        if ('' !== $full_delivery_address) {
             $order->update_meta_data('_fxw_delivery_address', $full_delivery_address);
 
             // Also store as the address second line so receipts/emails using
@@ -148,25 +170,13 @@ class FXW_Checkout_Handler
             }
         }
 
-        // Fallback to POST data if session is empty to prevent data loss.
-        // Validate as numeric coordinates to prevent manipulation (WPCS: sanitize input).
-        if (!$lat && isset($_POST['fxw_lat'])) {
-            $raw_lat = is_scalar($_POST['fxw_lat']) ? sanitize_text_field(wp_unslash($_POST['fxw_lat'])) : '';
-            if (is_numeric($raw_lat)) {
-                $post_lat = (float) $raw_lat;
-                if (abs($post_lat) <= 90) {
-                    $lat = $post_lat;
-                }
-            }
+        // Fallback to posted coordinates if session is empty (classic flow
+        // posts the hidden fxw_lat/fxw_lng inputs). Validated numeric ranges.
+        if (!$lat && null !== $fallback_lat && is_numeric($fallback_lat) && abs((float) $fallback_lat) <= 90) {
+            $lat = (float) $fallback_lat;
         }
-        if (!$lng && isset($_POST['fxw_lng'])) {
-            $raw_lng = is_scalar($_POST['fxw_lng']) ? sanitize_text_field(wp_unslash($_POST['fxw_lng'])) : '';
-            if (is_numeric($raw_lng)) {
-                $post_lng = (float) $raw_lng;
-                if (abs($post_lng) <= 180) {
-                    $lng = $post_lng;
-                }
-            }
+        if (!$lng && null !== $fallback_lng && is_numeric($fallback_lng) && abs((float) $fallback_lng) <= 180) {
+            $lng = (float) $fallback_lng;
         }
 
         if ($lat && $lng && abs((float) $lat) <= 90 && abs((float) $lng) <= 180) {
@@ -181,14 +191,88 @@ class FXW_Checkout_Handler
         // Log the saved data for debugging
         if (function_exists('wc_get_logger')) {
             wc_get_logger()->debug(sprintf(
-                'save_delivery_details_to_order: order_id=%d, details=%s, lat=%s, lng=%s, distance=%s km',
+                'apply_delivery_data_to_order: order_id=%d, details=%s, lat=%s, lng=%s, distance=%s km',
                 $order->get_id(),
-                $address_details,
+                $details,
                 $lat,
                 $lng,
                 $distance_km
             ), array('source' => 'foodxpress'));
         }
+    }
+
+    /**
+     * Compact zone check shared with the blocks-checkout field validation:
+     * returns an error message when the store is closed, the pinned
+     * coordinates are missing, the service is misconfigured, or the pin
+     * is outside the delivery radius; null when the location is fine.
+     *
+     * @return string|null
+     * @since 1.2.9
+     */
+    public static function get_zone_error()
+    {
+        $options = get_option('fxw_settings');
+
+        $is_open_raw = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : 'yes';
+        $is_open = in_array($is_open_raw, array('yes', 'true', 1, '1', true), true);
+        if (!$is_open) {
+            return __('We are currently closed for deliveries. Please try again later.', 'foodxpress');
+        }
+
+        $customer_lat = WC()->session ? WC()->session->get('customer_lat') : null;
+        $customer_lng = WC()->session ? WC()->session->get('customer_lng') : null;
+
+        if (!$customer_lat || !$customer_lng || !is_numeric($customer_lat) || !is_numeric($customer_lng)
+            || abs($customer_lat) > 90 || abs($customer_lng) > 180) {
+            return __('Please select your exact location on the map above to enable delivery.', 'foodxpress');
+        }
+
+        $mapping_service = new FXW_Mapping_Service();
+        $restaurant = $mapping_service->get_restaurant_location($options);
+        if (is_wp_error($restaurant)) {
+            return __('Delivery service is not properly configured. Please contact support.', 'foodxpress');
+        }
+
+        $distance_data = $mapping_service->get_distance(
+            $restaurant,
+            array('lat' => $customer_lat, 'lng' => $customer_lng)
+        );
+
+        if (is_wp_error($distance_data)
+            || !isset($distance_data['distance']) || !is_object($distance_data['distance']) || !isset($distance_data['distance']->value)) {
+            return __('Could not calculate delivery distance. Please try again.', 'foodxpress');
+        }
+
+        $radius = isset($options['fxw_delivery_zone_radius']) ? (float) $options['fxw_delivery_zone_radius'] : FXW_Config::DEFAULT_DELIVERY_RADIUS;
+        if (($distance_data['distance']->value / 1000) > $radius) {
+            return __('Sorry, we do not deliver to your location.', 'foodxpress');
+        }
+
+        return null;
+    }
+
+    /**
+     * Save delivery details to order meta during checkout.
+     *
+     * @param WC_Order $order
+     * @param array    $data
+     * @since 1.0.0
+     */
+    public function save_delivery_details_to_order($order, $data)
+    {
+        if (!is_a($order, 'WC_Order')) {
+            return;
+        }
+
+        $address_details = isset($_POST['fxw_address_details']) ? trim(sanitize_text_field(wp_unslash($_POST['fxw_address_details']))) : '';
+        $landmark = isset($_POST['fxw_landmark']) ? trim(sanitize_text_field(wp_unslash($_POST['fxw_landmark']))) : '';
+        $instructions = isset($_POST['fxw_delivery_instructions']) ? trim(sanitize_textarea_field(wp_unslash($_POST['fxw_delivery_instructions']))) : '';
+
+        $post_lat = isset($_POST['fxw_lat']) && is_numeric($_POST['fxw_lat']) ? (float) wp_unslash($_POST['fxw_lat']) : null;
+        $post_lng = isset($_POST['fxw_lng']) && is_numeric($_POST['fxw_lng']) ? (float) wp_unslash($_POST['fxw_lng']) : null;
+
+        self::apply_delivery_data_to_order($order, $address_details, $landmark, $instructions, $post_lat, $post_lng);
     }
 
     /**

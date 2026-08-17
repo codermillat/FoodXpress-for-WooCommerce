@@ -157,9 +157,37 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 				return; // Outside delivery zone
 			}
 
+			// Admin-configurable pricing rules (FXW_Pricing): minimum order,
+			// distance tiers, free-delivery threshold.
+			if ( class_exists( 'FXW_Pricing' ) ) {
+				$min_error = FXW_Pricing::minimum_order_error();
+				if ( null !== $min_error ) {
+					if ( function_exists( 'wc_get_logger' ) ) {
+						wc_get_logger()->info( 'calculate_shipping: below minimum order — no rate', array( 'source' => 'foodxpress' ) );
+					}
+					return;
+				}
+			}
+
 			$base_fee = isset( $options['fxw_delivery_fee_base'] ) ? (float) $options['fxw_delivery_fee_base'] : 5;
 			$fee_per_km = isset( $options['fxw_delivery_fee_per_km'] ) ? (float) $options['fxw_delivery_fee_per_km'] : 1.5;
 			$cost = $base_fee + ( $distance_in_km * $fee_per_km );
+
+			if ( class_exists( 'FXW_Pricing' ) ) {
+				$tier_fee = FXW_Pricing::fee_for_distance( $distance_in_km, $options );
+				if ( false === $tier_fee ) {
+					if ( function_exists( 'wc_get_logger' ) ) {
+						wc_get_logger()->info( sprintf( 'calculate_shipping: distance %.2f km beyond all tiers — no rate', $distance_in_km ), array( 'source' => 'foodxpress' ) );
+					}
+					return;
+				}
+				if ( null !== $tier_fee ) {
+					$cost = $tier_fee;
+				}
+				if ( FXW_Pricing::is_free_delivery() ) {
+					$cost = 0;
+				}
+			}
 
 			if ( function_exists( 'wc_get_logger' ) ) {
 				wc_get_logger()->debug( sprintf( 'calculate_shipping: adding rate cost=%.2f (distance=%.3f km, base=%.2f, per_km=%.2f)', $cost, $distance_in_km, $base_fee, $fee_per_km ), array( 'source' => 'foodxpress' ) );

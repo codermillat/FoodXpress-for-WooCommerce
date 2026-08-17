@@ -4,6 +4,15 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.13] - 2026-08-17
+
+### Added
+- **Admin-configurable pricing rules** (`FXW_Pricing`, new *Pricing Rules* section on the FoodXpress settings tab — nothing hardcoded):
+  - **Fee structure**: choose *base + per-km* (classic) or **distance tiers** — up to five "up to X km → flat fee" rows, matched by the calculated distance; a tier with `0` km means "and above"; distances beyond every tier get no rate
+  - **Free delivery threshold**: order subtotal at or above the configured amount gets delivery free (0 disables)
+  - **Minimum order amount**: below the configured subtotal no delivery orders are accepted (0 disables) — no shipping rate, a cart-page notice telling the customer how much more to add, and a checkout validation error on both classic and blocks checkouts
+  - Applied consistently at every decision point: the shipping method, classic and blocks validation, the REST fee estimate, and the legacy opt-in cart-fee path all resolve fees through `FXW_Pricing`
+
 ## [1.2.12] - 2026-08-17
 
 ### Fixed (enterprise review — critical items)

@@ -133,10 +133,19 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
             return new WP_Error('out_of_zone', __('Sorry, we do not deliver to your location.', 'foodxpress'), array('status' => 400));
         }
 
-        // Calculate Fee
+        // Calculate Fee (estimate — honors configured tiers + threshold)
         $base_fee = isset($options['fxw_delivery_fee_base']) ? (float) $options['fxw_delivery_fee_base'] : 5;
         $fee_per_km = isset($options['fxw_delivery_fee_per_km']) ? (float) $options['fxw_delivery_fee_per_km'] : 1.5;
         $cost = $base_fee + ($distance_in_km * $fee_per_km);
+        if (class_exists('FXW_Pricing')) {
+            $tier_fee = FXW_Pricing::fee_for_distance($distance_in_km, $options);
+            if (null !== $tier_fee && false !== $tier_fee) {
+                $cost = $tier_fee;
+            }
+            if (FXW_Pricing::is_free_delivery()) {
+                $cost = 0;
+            }
+        }
 
         // Store in session for checkout (Critical for order processing).
         // Note: REST requests from same-origin checkout page typically have WooCommerce session cookies.

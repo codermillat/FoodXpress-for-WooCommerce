@@ -179,6 +179,7 @@ class FXWTestRunner
             'includes/class-fxw-checkout-handler.php' => 'Checkout server handler',
             'includes/class-fxw-blocks-checkout.php' => 'Blocks checkout support',
             'includes/class-fxw-store-hours.php' => 'Scheduled opening hours',
+            'includes/class-fxw-pricing.php' => 'Admin-configurable pricing rules',
             'includes/services/class-fxw-delivery-fee.php' => 'Delivery fee service',
             'includes/services/class-fxw-address-validator.php' => 'Address validator service',
             'includes/class-fxw-dashboard.php' => 'Dashboard class',

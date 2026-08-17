@@ -90,6 +90,12 @@ class FXW_Delivery_Fee
 
         $distance_in_km = $distance_data['distance']->value / 1000;
         $delivery_fee = $base_fee + ($distance_in_km * $fee_per_km);
+        if (class_exists('FXW_Pricing')) {
+            $tier_fee = FXW_Pricing::fee_for_distance($distance_in_km, $options);
+            if (null !== $tier_fee && false !== $tier_fee) {
+                $delivery_fee = $tier_fee;
+            }
+        }
 
         $cart->add_fee(__('Delivery Fee', 'foodxpress'), $delivery_fee);
     }

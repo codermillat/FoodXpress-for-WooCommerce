@@ -2,7 +2,7 @@
 
 A complete delivery management system for single-restaurant WooCommerce stores.
 
-![Version](https://img.shields.io/badge/Version-1.2.12-blue)
+![Version](https://img.shields.io/badge/Version-1.2.13-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-7.0%2B-purple)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
@@ -25,7 +25,7 @@ A complete delivery management system for single-restaurant WooCommerce stores.
 - **Google Maps Integration**: Interactive map with draggable pin, place search, "use my location", and a visible delivery-radius circle
 - **Zomato/Swiggy-style address**: pinned location + one "House / Flat / Building No." field + optional landmark
 - **Distance Calculation**: Automatic delivery radius validation from coordinates only
-- **Dynamic Fees**: Distance-based delivery fee (restaurant coordinates ↔ pin coordinates)
+- **Dynamic Fees**: Distance-based fee — base + per-km or admin-defined distance tiers, free-delivery threshold, and minimum order amount — all configurable from the settings tab
 - **Saved defaults**: returning customers get their pin and address auto-filled
 
 ### 📧 Customer Notifications
@@ -109,7 +109,7 @@ foodxpress-for-woocommerce/
 │   ├── css/
 │   └── js/
 ├── tests/
-│   └── FXWTestRunner.php           # Static analysis + security checks (115 tests)
+│   └── FXWTestRunner.php           # Static analysis + security checks (118 tests)
 └── skills/                         # Developer reference (Claude skills content)
 ```
 
@@ -125,7 +125,7 @@ Run the built-in test suite for syntax, security, and code quality checks:
 php tests/FXWTestRunner.php
 ```
 
-Expected output: `Passed: 115, Failed: 0`.
+Expected output: `Passed: 118, Failed: 0`.
 
 The runner validates:
 - PHP syntax errors

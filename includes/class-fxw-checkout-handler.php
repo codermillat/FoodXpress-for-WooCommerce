@@ -218,6 +218,13 @@ class FXW_Checkout_Handler
             return __('We are currently closed for deliveries. Please try again later.', 'foodxpress');
         }
 
+        if (class_exists('FXW_Pricing')) {
+            $min_error = FXW_Pricing::minimum_order_error();
+            if (null !== $min_error) {
+                return $min_error;
+            }
+        }
+
         $customer_lat = WC()->session ? WC()->session->get('customer_lat') : null;
         $customer_lng = WC()->session ? WC()->session->get('customer_lng') : null;
 
@@ -293,6 +300,15 @@ class FXW_Checkout_Handler
             }
             $errors->add('delivery_zone', __('We are currently closed for deliveries. Please try again later.', 'foodxpress'));
             return;
+        }
+
+        // Admin-configurable minimum order amount
+        if (class_exists('FXW_Pricing')) {
+            $min_error = FXW_Pricing::minimum_order_error();
+            if (null !== $min_error) {
+                $errors->add('fxw_minimum_order', $min_error);
+                return;
+            }
         }
 
         // Validate the single exact-address field (separate from map location)

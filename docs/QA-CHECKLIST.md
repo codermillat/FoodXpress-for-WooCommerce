@@ -27,6 +27,7 @@ Install the plugin: symlink or copy this folder into `wp-content/plugins/`, then
 | 2.2 | **Google Cloud Console**: enable *Maps JavaScript API*, *Geocoding API*, *Distance Matrix API*; create an API key with billing enabled; restrict the key to your site's domain | Key works on the site only |
 | 2.3 | **WooCommerce → Settings → FoodXpress**: paste the API key; set *Restaurant Address* **and ideally Restaurant Coordinates* (e.g. from Google Maps right-click → the first two numbers, `lat, lng`); set radius (km), base fee, per-km fee, prep time | Settings save; the red **"delivery is not configured"** admin notice disappears |
 | 2.4 | **WooCommerce → Settings → Shipping**: create a zone covering your area → add the **FoodXpress Delivery** method | Method listed and enabled |
+| 2.5 | *Pricing Rules* section: try **distance tiers** (e.g. 3 km → small fee, 0 → higher fee), a **free-delivery threshold**, and a **minimum order**; retest §3/§5 with each | Fee matches the tier; threshold order shows Free; below-minimum cart shows the notice and blocks checkout |
 
 ## 3. Checkout — classic shortcode (default `[woocommerce_checkout]`)
 

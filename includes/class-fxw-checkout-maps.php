@@ -133,6 +133,7 @@ class FXW_Checkout_Maps
             'saved_address' => $saved_address,
             'restaurant_center' => $restaurant_center,
             'radius_km' => isset($options['fxw_delivery_zone_radius']) ? (float) $options['fxw_delivery_zone_radius'] : (float) FXW_Config::DEFAULT_DELIVERY_RADIUS,
+            'map_id' => isset($options['fxw_google_maps_map_id']) ? trim((string) $options['fxw_google_maps_map_id']) : '',
             'translations' => array(
                 'calculating' => __('Calculating delivery fee...', 'foodxpress'),
                 'out_of_zone' => __('Sorry, we do not deliver to this location.', 'foodxpress'),

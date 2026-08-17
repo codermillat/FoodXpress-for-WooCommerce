@@ -76,6 +76,30 @@ class FXW_Settings
 		);
 
 		add_settings_field(
+			'fxw_google_maps_server_key',
+			__('Google Maps Server Key (optional)', 'foodxpress'),
+			array($this, 'render_text_field'),
+			'foodxpress-settings',
+			'fxw_general_settings_section',
+			array(
+				'id' => 'fxw_google_maps_server_key',
+				'description' => __('Optional separate key for Geocoding/Distance Matrix — lets you restrict the main key to your site domain and this one to your server IP. Falls back to the main key when empty.', 'foodxpress')
+			)
+		);
+
+		add_settings_field(
+			'fxw_google_maps_map_id',
+			__('Google Maps Map ID (optional)', 'foodxpress'),
+			array($this, 'render_text_field'),
+			'foodxpress-settings',
+			'fxw_general_settings_section',
+			array(
+				'id' => 'fxw_google_maps_map_id',
+				'description' => __('Optional Map ID from your Cloud Console (enables Advanced Markers). Leave empty to use classic markers — works with any API key.', 'foodxpress')
+			)
+		);
+
+		add_settings_field(
 			'fxw_restaurant_address',
 			__('Restaurant Address', 'foodxpress'),
 			array($this, 'render_text_field'),
@@ -229,11 +253,7 @@ class FXW_Settings
 		);
 	}
 
-	/**
-	 * Render receipt branding section description.
-	 *
-	 * @since   1.0.0
-	 */
+	/** Describe the receipt branding section. */
 	public function render_receipt_branding_description()
 	{
 		?>
@@ -241,12 +261,7 @@ class FXW_Settings
 		<?php
 	}
 
-	/**
-	 * Render a generic text field.
-	 *
-	 * @param   array   $args   The arguments for the field.
-	 * @since   1.0.0
-	 */
+	/** Render a generic text field. */
 	public function render_text_field($args)
 	{
 		$options = get_option('fxw_settings');
@@ -262,12 +277,7 @@ class FXW_Settings
 		<?php endif;
 	}
 
-	/**
-	 * Render a textarea field.
-	 *
-	 * @param   array   $args   The arguments for the field.
-	 * @since   1.0.0
-	 */
+	/** Render a textarea field. */
 	public function render_textarea_field($args)
 	{
 		$options = get_option('fxw_settings');
@@ -281,12 +291,7 @@ class FXW_Settings
 		<?php endif;
 	}
 
-	/**
-	 * Render an image upload field using WordPress Media Library.
-	 *
-	 * @param   array   $args   The arguments for the field.
-	 * @since   1.0.0
-	 */
+	/** Render an image-upload field. */
 	public function render_image_upload_field($args)
 	{
 		$options = get_option('fxw_settings');
@@ -355,12 +360,7 @@ class FXW_Settings
 		<?php
 	}
 
-	/**
-	 * Render a checkbox field.
-	 *
-	 * @param   array   $args   The arguments for the field.
-	 * @since   1.1.0
-	 */
+	/** Render a checkbox field. */
 	public function render_checkbox_field($args)
 	{
 		$options = get_option('fxw_settings');
@@ -377,12 +377,7 @@ class FXW_Settings
 		<?php
 	}
 
-	/**
-	 * Render a generic number field.
-	 *
-	 * @param   array   $args   The arguments for the field.
-	 * @since   1.0.0
-	 */
+	/** Render a number field. */
 	public function render_number_field($args)
 	{
 		$options = get_option('fxw_settings');
@@ -394,15 +389,11 @@ class FXW_Settings
 		<input type="number" step="<?php echo esc_attr($step); ?>" name="fxw_settings[<?php echo esc_attr($id); ?>]"
 			value="<?php echo esc_attr($value); ?>" class="small-text">
 		<?php
+
+		do_action('fxw_settings_register_extra_fields');
 	}
 
-	/**
-	 * Sanitize settings before saving.
-	 *
-	 * @param   array   $input    The input values to sanitize.
-	 * @return  array   The sanitized values.
-	 * @since   1.0.0
-	 */
+	/** Sanitize settings before saving. */
 	public function sanitize_settings($input)
 	{
 		$existing = get_option('fxw_settings', array());
@@ -414,6 +405,14 @@ class FXW_Settings
 		// General settings
 		if (isset($input['fxw_google_maps_api_key'])) {
 			$sanitized['fxw_google_maps_api_key'] = sanitize_text_field($input['fxw_google_maps_api_key']);
+		}
+
+		if (isset($input['fxw_google_maps_server_key'])) {
+			$sanitized['fxw_google_maps_server_key'] = sanitize_text_field($input['fxw_google_maps_server_key']);
+		}
+
+		if (isset($input['fxw_google_maps_map_id'])) {
+			$sanitized['fxw_google_maps_map_id'] = sanitize_text_field($input['fxw_google_maps_map_id']);
 		}
 
 		if (isset($input['fxw_restaurant_address'])) {
@@ -454,6 +453,9 @@ class FXW_Settings
 		} else {
 			$sanitized['fxw_enable_extra_delivery_fee'] = 'no';
 		}
+
+		// Extra settings (e.g. opening hours) registered by other classes
+		$sanitized = apply_filters('fxw_sanitize_settings_extra', $sanitized, $input);
 
 		// Receipt branding settings
 		if (isset($input['fxw_receipt_logo'])) {

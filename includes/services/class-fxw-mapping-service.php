@@ -53,7 +53,47 @@ class FXW_Mapping_Service
 	public function __construct()
 	{
 		$options = get_option('fxw_settings');
-		$this->api_key = isset($options['fxw_google_maps_api_key']) ? $options['fxw_google_maps_api_key'] : '';
+		// Server-side calls (Geocoding/Distance Matrix) prefer the dedicated
+		// server key so merchants can restrict the browser key by referrer.
+		$server_key = isset($options['fxw_google_maps_server_key']) ? trim((string) $options['fxw_google_maps_server_key']) : '';
+		if ('' !== $server_key) {
+			$this->api_key = $server_key;
+		} else {
+			$this->api_key = isset($options['fxw_google_maps_api_key']) ? $options['fxw_google_maps_api_key'] : '';
+		}
+	}
+
+	/**
+	 * wp_remote_get with a single retry on transient failures (network
+	 * error or 5xx) — smooths brief Google API hiccups at checkout.
+	 *
+	 * @param   string  $request_url    Full request URL.
+	 * @return  array|WP_Error          Response or error.
+	 * @since   1.2.12
+	 */
+	private function remote_get_with_retry($request_url)
+	{
+		$args = array(
+			'timeout' => 15,
+			'headers' => array(
+				'User-Agent' => 'FoodXpress/' . FXW_VERSION . ' WordPress/' . get_bloginfo('version'),
+			),
+		);
+
+		$response = wp_remote_get($request_url, $args);
+
+		$transient_failure = is_wp_error($response)
+			|| (is_array($response) && isset($response['response']['code']) && (int) $response['response']['code'] >= 500);
+
+		if ($transient_failure) {
+			if (function_exists('wc_get_logger')) {
+				wc_get_logger()->debug('Maps API transient failure — retrying once', array('source' => 'foodxpress'));
+			}
+			usleep(300000); // 300 ms
+			$response = wp_remote_get($request_url, $args);
+		}
+
+		return $response;
 	}
 
 	/**
@@ -99,12 +139,7 @@ class FXW_Mapping_Service
 
 		$request_url = add_query_arg($args, $this->base_url);
 
-		$response = wp_remote_get($request_url, array(
-			'timeout' => 15,
-			'headers' => array(
-				'User-Agent' => 'FoodXpress/' . FXW_VERSION . ' WordPress/' . get_bloginfo('version'),
-			),
-		));
+		$response = $this->remote_get_with_retry($request_url);
 
 		if (is_wp_error($response)) {
 			if (function_exists('wc_get_logger')) {
@@ -282,12 +317,7 @@ class FXW_Mapping_Service
 			$this->geocode_url
 		);
 
-		$response = wp_remote_get($request_url, array(
-			'timeout' => 15,
-			'headers' => array(
-				'User-Agent' => 'FoodXpress/' . FXW_VERSION . ' WordPress/' . get_bloginfo('version'),
-			),
-		));
+		$response = $this->remote_get_with_retry($request_url);
 
 		if (is_wp_error($response)) {
 			if (function_exists('wc_get_logger')) {

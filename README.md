@@ -2,7 +2,7 @@
 
 A complete delivery management system for single-restaurant WooCommerce stores.
 
-![Version](https://img.shields.io/badge/Version-1.2.11-blue)
+![Version](https://img.shields.io/badge/Version-1.2.12-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)
 ![WooCommerce](https://img.shields.io/badge/WooCommerce-7.0%2B-purple)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
@@ -109,7 +109,7 @@ foodxpress-for-woocommerce/
 │   ├── css/
 │   └── js/
 ├── tests/
-│   └── FXWTestRunner.php           # Static analysis + security checks (112 tests)
+│   └── FXWTestRunner.php           # Static analysis + security checks (114 tests)
 └── skills/                         # Developer reference (Claude skills content)
 ```
 
@@ -125,7 +125,7 @@ Run the built-in test suite for syntax, security, and code quality checks:
 php tests/FXWTestRunner.php
 ```
 
-Expected output: `Passed: 112, Failed: 0`.
+Expected output: `Passed: 114, Failed: 0`.
 
 The runner validates:
 - PHP syntax errors

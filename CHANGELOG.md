@@ -4,6 +4,18 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.12] - 2026-08-17
+
+### Fixed (enterprise review — critical items)
+- **Map ID + classic-marker fallback** — `AdvancedMarkerElement` requires a real Cloud Console Map ID, so the hardcoded placeholder could break the draggable pin on production keys. The Map ID is now an optional setting (`fxw_google_maps_map_id`); when empty, the map uses the classic `google.maps.Marker`, which works with any API key — no cloud configuration required
+- **Dual Google Maps keys** — new optional *Server Key* setting (`fxw_google_maps_server_key`) for Geocoding/Distance Matrix, so merchants can restrict the browser key by HTTP referrer and the server key by IP (previously one key had to serve both, making proper key restriction impossible). Falls back to the shared key when empty
+
+### Added
+- **Scheduled opening hours** (`FXW_Store_Hours`) — an optional per-day schedule (time inputs + all-day-closed checkboxes, overnight spans like 18:00–02:00 supported) on the FoodXpress settings tab. The admin-bar toggle remains the manual master close; the schedule additionally pauses ordering outside hours, and closed notices tell customers when you reopen ("We reopen Sunday at 09:00.")
+
+### Changed (hardening)
+- Google Maps server calls now retry once (300 ms backoff) on transient failures — network errors or 5xx — smoothing brief API hiccups at checkout
+
 ## [1.2.11] - 2026-08-17
 
 ### Changed

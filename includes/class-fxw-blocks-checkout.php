@@ -148,7 +148,14 @@ class FXW_Blocks_Checkout
 		// say so clearly on the blocks checkout too (the field validation
 		// blocks placement server-side).
 		if (!FXW_Checkout::is_store_open()) {
-			$prefix .= '<div class="woocommerce-error fxw-store-closed-notice" role="alert">' . esc_html__('We are currently closed for deliveries. You can browse and fill your cart — ordering will be available as soon as we reopen.', 'foodxpress') . '</div>';
+			$closed_message = __('We are currently closed for deliveries. You can browse and fill your cart — ordering will be available as soon as we reopen.', 'foodxpress');
+			if (class_exists('FXW_Store_Hours')) {
+				$hint = FXW_Store_Hours::reopen_hint();
+				if ('' !== $hint) {
+					$closed_message .= ' ' . $hint;
+				}
+			}
+			$prefix .= '<div class="woocommerce-error fxw-store-closed-notice" role="alert">' . esc_html($closed_message) . '</div>';
 		}
 
 		$options = get_option('fxw_settings');

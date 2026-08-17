@@ -67,10 +67,22 @@ class FXW_Checkout
         $is_open = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : true;
 
         if (is_bool($is_open)) {
-            return $is_open;
+            $manual_open = $is_open;
+        } else {
+            $manual_open = in_array($is_open, array('yes', 'true', '1', 1), true);
         }
 
-        return in_array($is_open, array('yes', 'true', '1', 1), true);
+        if (!$manual_open) {
+            return false; // manual toggle: closed NOW
+        }
+
+        // Scheduled opening hours (optional) additionally pause ordering
+        // outside configured hours.
+        if (class_exists('FXW_Store_Hours')) {
+            return FXW_Store_Hours::is_open_now();
+        }
+
+        return true;
     }
 
     /**
@@ -90,11 +102,14 @@ class FXW_Checkout
         }
 
         if (function_exists('wc_print_notice')) {
-            wc_print_notice(
-                __('We are currently closed for deliveries. You can browse and fill your cart — ordering will be available as soon as we reopen.', 'foodxpress'),
-                'error',
-                array('fxw-store-closed')
-            );
+            $message = __('We are currently closed for deliveries. You can browse and fill your cart — ordering will be available as soon as we reopen.', 'foodxpress');
+            if (class_exists('FXW_Store_Hours')) {
+                $hint = FXW_Store_Hours::reopen_hint();
+                if ('' !== $hint) {
+                    $message .= ' ' . $hint;
+                }
+            }
+            wc_print_notice($message, 'error', array('fxw-store-closed'));
         }
     }
 

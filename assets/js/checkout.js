@@ -94,26 +94,47 @@
                 // Initial viewport: saved pin > restaurant zone > neutral fallback
                 const viewport = this.getInitialViewport();
 
-                this.state.map = new Map(this.$el.mapContainer[0], {
+                const mapOptions = {
                     center: viewport.center,
                     zoom: viewport.zoom,
-                    mapId: 'FOODXPRESS_MAP',
                     streetViewControl: false,
                     mapTypeControl: false,
                     fullscreenControl: false
-                });
+                };
 
-                // Draggable marker
-                this.state.marker = new AdvancedMarkerElement({
-                    map: this.state.map,
-                    position: viewport.center,
-                    gmpDraggable: true
-                });
+                // Advanced markers REQUIRE a real Cloud Console Map ID; when the
+                // store has none configured we fall back to the classic marker,
+                // which works with any API key. (v1.2.12)
+                const mapId = (this.state.settings.map_id || '').trim();
+                if (mapId) {
+                    mapOptions.mapId = mapId;
+                }
 
-                this.state.marker.addListener('dragend', () => {
-                    const pos = this.state.marker.position;
-                    this.onLocationChange(pos.lat, pos.lng, true);
-                });
+                this.state.map = new Map(this.$el.mapContainer[0], mapOptions);
+
+                if (mapId) {
+                    this.state.marker = new AdvancedMarkerElement({
+                        map: this.state.map,
+                        position: viewport.center,
+                        gmpDraggable: true
+                    });
+
+                    this.state.marker.addListener('dragend', () => {
+                        const pos = this.state.marker.position;
+                        this.onLocationChange(pos.lat, pos.lng, true);
+                    });
+                } else {
+                    this.state.marker = new google.maps.Marker({
+                        map: this.state.map,
+                        position: viewport.center,
+                        draggable: true
+                    });
+
+                    google.maps.event.addListener(this.state.marker, 'dragend', () => {
+                        const latLng = this.state.marker.getPosition();
+                        this.onLocationChange(latLng.lat(), latLng.lng(), true);
+                    });
+                }
 
                 // Delivery radius circle around the restaurant (visual zone limit)
                 this.drawDeliveryRadius();
@@ -298,7 +319,11 @@
             }
             const pos = { lat, lng };
             this.state.map.panTo(pos);
-            this.state.marker.position = pos;
+            if (typeof this.state.marker.setPosition === 'function') {
+                this.state.marker.setPosition(pos); // classic marker
+            } else {
+                this.state.marker.position = pos;   // advanced marker
+            }
         },
 
         /**

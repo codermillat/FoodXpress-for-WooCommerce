@@ -73,6 +73,7 @@ class FXW_Core
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-order-statuses.php';
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-notifications.php';
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-privacy.php';
+		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-store-hours.php';
 
 		/**
 		 * Frontend and AJAX (admin-ajax.php) files

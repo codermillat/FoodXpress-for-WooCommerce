@@ -8,12 +8,12 @@
 ## 0. TL;DR
 
 - **Project:** FoodXpress for WooCommerce — a delivery-management plugin for single-restaurant WooCommerce stores
-- **Current version:** **v1.2.11** (2026-08-17 — v1.2.2–1.2.11: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration, config health warning, region-neutral defaults; repo public, GPL-3.0-or-later. See CHANGELOG.md)
+- **Current version:** **v1.2.12** (2026-08-17 — v1.2.2–1.2.12: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration, config health warning, region-neutral defaults; repo public, GPL-3.0-or-later. See CHANGELOG.md)
 - **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
 - **User profile:** Freelance web developer. The plugin is a **general open-source release for everyone** (GPL-3.0-or-later) — not tied to any specific restaurant or client. It is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
 - **Remote:** `https://github.com/codermillat/FoodXpress-for-WooCommerce` (public since v1.2.1, GPL-3.0-or-later)
-- **Test runner:** `php tests/FXWTestRunner.php` → must report **112/112 pass** before any commit
+- **Test runner:** `php tests/FXWTestRunner.php` → must report **114/114 pass** before any commit
 
 ---
 
@@ -96,6 +96,7 @@ FoodXpress-for-WooCommerce/
 │   ├── class-fxw-notifications.php ← email dispatch (will grow into multi-channel in Phase 5)
 │   ├── class-fxw-privacy.php       ← WP/WC privacy export & erasure (added in v1.2.6)
 │   ├── class-fxw-blocks-checkout.php ← blocks-checkout fields + map + order persistence (v1.2.9)
+│   ├── class-fxw-store-hours.php     ← scheduled opening hours (v1.2.12)
 │   ├── class-fxw-config.php        ← constants (FXW_Config::DEFAULT_DELIVERY_RADIUS, etc.)
 │   ├── api/
 │   │   └── class-fxw-rest-checkout-controller.php  ← REST pattern reference
@@ -140,6 +141,7 @@ FoodXpress-for-WooCommerce/
 | `FXW_Notifications` | Email dispatch facade (will grow into Phase 5 multi-channel). | ✓ |
 | `FXW_Privacy` | Personal-data export/erasure for WP privacy tools + WC order anonymization. | ✓ |
 | `FXW_Blocks_Checkout` | Blocks-checkout support: Additional Checkout Fields + map via the_content + Store API order persistence. | ✓ |
+| `FXW_Store_Hours` | Optional per-day opening schedule feeding `FXW_Checkout::is_store_open()`. | ✓ |
 | `FXW_Dashboard_Render` / `FXW_Dashboard_Actions` | Dashboard page rendering / write handlers (v1.2.9 split). | ✓ |
 | `FXW_Config` | Constants only. No instance. | n/a |
 | `FXW_REST_Checkout_Controller` | Reference REST controller — follow this pattern for Phase 1+ REST endpoints. | n/a (registered by FXW_Core) |
@@ -224,7 +226,7 @@ Expected: `Passed: 101, Failed: 0`. The runner checks:
 - Hooks & filters (registered correctly, custom statuses registered)
 - Security patterns (ABSPATH check, nonce verification)
 
-**Run the test runner after every change. It must report 112/112 before commit.**
+**Run the test runner after every change. It must report 114/114 before commit.**
 
 ---
 

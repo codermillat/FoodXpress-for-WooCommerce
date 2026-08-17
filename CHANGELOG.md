@@ -4,6 +4,12 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.14] - 2026-08-17
+
+### Fixed (currency is 100% WooCommerce-driven)
+- **The map's fee toast now uses store-formatted prices**: the REST endpoint returns `fee_formatted` from `wc_price()` — correct currency, decimals, thousand separators, and symbol position (prefix or suffix) for whatever the store uses, with no currency hardcoded anywhere. Previously the toast built `symbol + raw number` in JS, which ignored store formatting (e.g. `$6.4` instead of `$6.40`, wrong position for suffix currencies); the JS fallback also derives from `get_woocommerce_currency_symbol()`, never a literal
+- **LANDING-PAGE.md** currency examples made store-currency-neutral, and the stale "$99 Lifetime" pitch corrected to the actual free/open-source (GPL-3.0-or-later) positioning; verified zero hardcoded currency symbols or codes (USD/BDT/INR/৳/₹/$) anywhere in runtime code — every amount renders through `wc_price()` or `get_woocommerce_currency_symbol()`
+
 ## [1.2.13] - 2026-08-17
 
 ### Added

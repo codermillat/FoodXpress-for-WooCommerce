@@ -32,7 +32,7 @@
 Google Maps-powered delivery zones, real-time order tracking, a mobile delivery agent dashboard, and dynamic distance-based pricing — all inside WooCommerce. No monthly fees. No third-party dependencies.
 
 ### Primary CTA
-**Get FoodXpress — $99 Lifetime**
+**Get FoodXpress — Free & Open Source (GPL-3.0-or-later)**
 
 ### Secondary CTA
 View Live Demo
@@ -201,14 +201,14 @@ Delivery Fee = Base Fee + (Driving Distance in KM x Per-KM Rate)
 You set the base fee and per-km rate. The plugin does the rest using Google's Distance Matrix API — the same technology Uber and Grab use for ride pricing.
 
 **Example:**
-- Base fee: $3.00
-- Per-km rate: $0.80
+- Base fee: 3.00 (in your store currency)
+- Per-km rate: 0.80
 - Customer is 4.2 km away by road
-- **Delivery fee: $3.00 + (4.2 x $0.80) = $6.36**
+- **Delivery fee: 3.00 + (4.2 x 0.80) = 6.36** — displayed automatically in whatever currency WooCommerce uses
 
 The fee appears as a WooCommerce shipping method, fully integrated with shipping zones, tax calculations, and cart totals.
 
-**Screenshot:** The checkout totals showing "FoodXpress Delivery (ETA ~ 25 mins): $6.36"
+**Screenshot:** The checkout totals showing "FoodXpress Delivery (ETA ~ 25 mins)" with the fee formatted by WooCommerce in your store currency
 
 ---
 

@@ -258,9 +258,13 @@
 
                 if (res.ok && data.status === 'success') {
                     this.state.isValid = true;
-                    const currency = fxw_checkout_params.currency_symbol || '';
+                    // Store-formatted price from the server (auto currency,
+                    // decimals, and symbol position); manual fallback only
+                    // if formatting was unavailable.
+                    const price = data.fee_formatted
+                        || `${fxw_checkout_params.currency_symbol || ''}${data.fee}`;
                     this.notify(
-                        `${this.t('calculating').replace('...', '')} ${currency}${data.fee} · ${data.distance_km} km · ${data.duration_text}`,
+                        `${this.t('calculating').replace('...', '')} ${price} · ${data.distance_km} km · ${data.duration_text}`,
                         'success'
                     );
                     $(document.body).trigger('update_checkout');

@@ -156,11 +156,18 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
             WC()->session->set('fxw_distance_data', $distance_data);
         }
 
+        // Store-formatted fee (auto currency, decimals, symbol position)
+        $fee_formatted = '';
+        if (function_exists('wc_price')) {
+            $fee_formatted = wp_strip_all_tags(wc_price($cost));
+        }
+
         return rest_ensure_response(array(
             'status' => 'success',
             'in_zone' => true,
             'distance_km' => round($distance_in_km, 2),
             'fee' => round($cost, 2),
+            'fee_formatted' => $fee_formatted,
             'duration_text' => (isset($distance_data['duration']) && is_object($distance_data['duration']) && isset($distance_data['duration']->text)) ? $distance_data['duration']->text : ''
         ));
     }

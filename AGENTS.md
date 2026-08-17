@@ -8,7 +8,7 @@
 ## 0. TL;DR
 
 - **Project:** FoodXpress for WooCommerce — a delivery-management plugin for single-restaurant WooCommerce stores
-- **Current version:** **v1.2.10** (2026-08-17 — v1.2.2–1.2.10: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration, config health warning, region-neutral defaults; repo public, GPL-3.0-or-later. See CHANGELOG.md)
+- **Current version:** **v1.2.11** (2026-08-17 — v1.2.2–1.2.11: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration, config health warning, region-neutral defaults; repo public, GPL-3.0-or-later. See CHANGELOG.md)
 - **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
 - **User profile:** Freelance web developer. The plugin is a **general open-source release for everyone** (GPL-3.0-or-later) — not tied to any specific restaurant or client. It is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)

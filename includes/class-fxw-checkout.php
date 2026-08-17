@@ -49,6 +49,53 @@ class FXW_Checkout
         add_action('wp_loaded', array($this, 'load_saved_address'));
         add_filter('woocommerce_checkout_fields', array($this, 'customize_checkout_fields'));
         add_action('woocommerce_before_checkout_billing_form', array($this, 'add_checkout_fields'));
+        add_action('woocommerce_before_cart', array($this, 'render_store_closed_notice'));
+        add_action('woocommerce_before_checkout_form', array($this, 'render_store_closed_notice'));
+    }
+
+    /**
+     * Is the store accepting delivery orders right now? Single shared
+     * source of truth for the admin-bar "Deliveries: Open/Closed"
+     * switch (the option value is a boolean written by FXW_Admin_Bar).
+     *
+     * @return bool
+     * @since 1.2.11
+     */
+    public static function is_store_open()
+    {
+        $options = get_option('fxw_settings');
+        $is_open = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : true;
+
+        if (is_bool($is_open)) {
+            return $is_open;
+        }
+
+        return in_array($is_open, array('yes', 'true', '1', 1), true);
+    }
+
+    /**
+     * The Open/Closed switch controls order placement: when closed,
+     * customers can still browse and fill their cart, but a clear
+     * notice explains why they cannot order (and validation blocks
+     * placement server-side). Rendered on the cart and classic
+     * checkout pages; the blocks checkout gets its notice from
+     * FXW_Blocks_Checkout.
+     *
+     * @since 1.2.11
+     */
+    public function render_store_closed_notice()
+    {
+        if (self::is_store_open()) {
+            return;
+        }
+
+        if (function_exists('wc_print_notice')) {
+            wc_print_notice(
+                __('We are currently closed for deliveries. You can browse and fill your cart — ordering will be available as soon as we reopen.', 'foodxpress'),
+                'error',
+                array('fxw-store-closed')
+            );
+        }
     }
 
     /**

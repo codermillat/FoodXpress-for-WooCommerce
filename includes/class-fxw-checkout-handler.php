@@ -214,9 +214,7 @@ class FXW_Checkout_Handler
     {
         $options = get_option('fxw_settings');
 
-        $is_open_raw = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : 'yes';
-        $is_open = in_array($is_open_raw, array('yes', 'true', 1, '1', true), true);
-        if (!$is_open) {
+        if (!FXW_Checkout::is_store_open()) {
             return __('We are currently closed for deliveries. Please try again later.', 'foodxpress');
         }
 
@@ -286,8 +284,16 @@ class FXW_Checkout_Handler
     {
         $options = get_option('fxw_settings');
         $radius = isset($options['fxw_delivery_zone_radius']) ? (float) $options['fxw_delivery_zone_radius'] : FXW_Config::DEFAULT_DELIVERY_RADIUS;
-        $is_open_raw = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : 'yes';
-        $is_open = in_array($is_open_raw, array('yes', 'true', 1, '1', true), true);
+
+        // The Open/Closed switch controls order placement — checked first
+        // so the closed message dominates any other validation failure.
+        if (!FXW_Checkout::is_store_open()) {
+            if (function_exists('wc_get_logger')) {
+                wc_get_logger()->info('validate_delivery_zone: store closed', array('source' => 'foodxpress'));
+            }
+            $errors->add('delivery_zone', __('We are currently closed for deliveries. Please try again later.', 'foodxpress'));
+            return;
+        }
 
         // Validate the single exact-address field (separate from map location)
         $address_details = isset($_POST['fxw_address_details']) ? trim(sanitize_text_field(wp_unslash($_POST['fxw_address_details']))) : '';
@@ -310,14 +316,6 @@ class FXW_Checkout_Handler
         // Validate coordinate precision (must be reasonable GPS coordinates)
         if (abs($customer_lat) > 90 || abs($customer_lng) > 180) {
             $errors->add('delivery_zone', __('Invalid location coordinates detected. Please select your location again using the map.', 'foodxpress'));
-            return;
-        }
-
-        if (!$is_open) {
-            if (function_exists('wc_get_logger')) {
-                wc_get_logger()->info('validate_delivery_zone: store closed (fxw_is_open=false)', array('source' => 'foodxpress'));
-            }
-            $errors->add('delivery_zone', __('We are currently closed for deliveries. Please try again later.', 'foodxpress'));
             return;
         }
 

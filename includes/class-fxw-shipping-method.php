@@ -89,9 +89,8 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 				return;
 			}
 
-			// Check if deliveries are open
-			$is_open = isset( $options['fxw_is_open'] ) ? $options['fxw_is_open'] : true;
-			if ( ! $is_open ) {
+			// The Open/Closed switch controls order placement (no rate when closed)
+			if ( ! FXW_Checkout::is_store_open() ) {
 				if ( function_exists( 'wc_get_logger' ) ) {
 					wc_get_logger()->info( 'calculate_shipping: store closed (fxw_is_open=false)', array( 'source' => 'foodxpress' ) );
 				}

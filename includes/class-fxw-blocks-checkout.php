@@ -142,13 +142,22 @@ class FXW_Blocks_Checkout
 			return $content;
 		}
 
+		$prefix = '';
+
+		// The Open/Closed switch controls order placement — when closed,
+		// say so clearly on the blocks checkout too (the field validation
+		// blocks placement server-side).
+		if (!FXW_Checkout::is_store_open()) {
+			$prefix .= '<div class="woocommerce-error fxw-store-closed-notice" role="alert">' . esc_html__('We are currently closed for deliveries. You can browse and fill your cart — ordering will be available as soon as we reopen.', 'foodxpress') . '</div>';
+		}
+
 		$options = get_option('fxw_settings');
 		$api_key = isset($options['fxw_google_maps_api_key']) ? trim((string) $options['fxw_google_maps_api_key']) : '';
 		if ('' === $api_key) {
-			return $content; // map is useless without a key; admin sees the config warning
+			return $prefix . $content; // map is useless without a key; admin sees the config warning
 		}
 
-		return FXW_Checkout::render_location_picker(true) . $content;
+		return $prefix . FXW_Checkout::render_location_picker(true) . $content;
 	}
 
 	/**

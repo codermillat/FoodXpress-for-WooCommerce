@@ -4,6 +4,15 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.11] - 2026-08-17
+
+### Changed
+- **The "Deliveries: Open/Closed" admin-bar switch now visibly controls order placement end to end.** Previously, closing removed the delivery rate and blocked at validation — customers just hit a generic "no shipping method selected" with no explanation. Now:
+  - A clear error notice on the **cart and classic checkout** pages ("We are currently closed for deliveries. You can browse and fill your cart — ordering will be available as soon as we reopen.") via `wc_print_notice` on the documented `woocommerce_before_cart` / `woocommerce_before_checkout_form` hooks
+  - The same notice renders on **block-based checkout** pages above the Checkout block
+  - Server-side placement stays hard-blocked in both checkouts, with the closed check now running **first** in validation so its message dominates; the shipping method offers no rate; the REST `validate-location` endpoint reports closed on every pin drop
+  - New single source of truth `FXW_Checkout::is_store_open()` replaces the four scattered `fxw_is_open` normalizations (shipping method, zone validation, blocks check, notices)
+
 ## [1.2.10] - 2026-08-17
 
 ### Fixed (shop-manager capability audit)

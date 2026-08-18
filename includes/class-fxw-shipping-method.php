@@ -205,6 +205,7 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 			$base_fee = isset( $options['fxw_delivery_fee_base'] ) ? (float) $options['fxw_delivery_fee_base'] : 5;
 			$fee_per_km = isset( $options['fxw_delivery_fee_per_km'] ) ? (float) $options['fxw_delivery_fee_per_km'] : 1.5;
 			$cost = $base_fee + ( $distance_in_km * $fee_per_km );
+			$is_free = false;
 
 			if ( class_exists( 'FXW_Pricing' ) ) {
 				$tier_fee = FXW_Pricing::fee_for_distance( $distance_in_km, $options );
@@ -219,6 +220,7 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 				}
 				if ( FXW_Pricing::is_free_delivery() ) {
 					$cost = 0;
+					$is_free = true;
 				}
 			}
 
@@ -228,9 +230,17 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 
 			$rate_id = $this->id . ( $this->instance_id ? ':' . $this->instance_id : '' );
 
+			// When the free-delivery threshold zeroed the cost, say so in the
+			// label itself — the confirmation screen otherwise renders the
+			// shipping row with a blank/zero amount and customers read that
+			// as a broken order rather than a discount (1.3.9).
+			$label = $is_free
+				? sprintf( __( '%s (Free delivery)', 'foodxpress' ), $this->title )
+				: $this->title;
+
 			$this->add_rate( array(
 				'id'      => $rate_id,
-				'label'   => $this->title,
+				'label'   => $label,
 				'cost'    => $cost,
 				'package' => $package,
 			) );

@@ -4,6 +4,13 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.9] - 2026-08-18
+
+### Fixed (order UI — duplicated address line + blank free-shipping amount)
+- **The exact address is no longer shown twice on the order confirmation, receipt and admin screens.** Since v1.3.0 the customer types the exact address into WooCommerce's own `address_1` field (relabeled "Flat / Floor / Block / Society / Tower"), but `apply_delivery_data_to_order()` ALSO composed the same text into `address_2` — so `get_formatted_shipping_address()` (= line 1 + line 2) rendered it twice. `address_2` now carries only the landmark (`Landmark: <value>`) when one was entered, and stays empty otherwise. Confirmed against the DB: orders 21–25 all stored `address_1 = address_2 = "147 Cashman Road"`.
+- **One-shot data migration normalises already-placed orders.** Pre-1.3.9 orders had the duplicated line 2; a guarded, idempotent migration (`FXW_Checkout_Handler::maybe_migrate_duplicated_address_2()`, run once on the next admin page load, flagged by the `fxw_migrated_address2_v139` option) rewrites line 2 to the new shape for orders our old code shaped — including the landmark-suffixed variant. Uses HPOS-safe `wc_get_orders()` + order setters only (no direct table writes).
+- **Free shipping now labels itself on the confirmation screen instead of showing a blank amount.** When the free-delivery threshold zeroed the cost (e.g. order #25, subtotal ₹500 ≥ ₹500 threshold), the shipping row rendered "FoodXpress Delivery" with no amount, reading as a broken order. The rate label now reads "FoodXpress Delivery (Free delivery)" when the threshold triggered, so the zero cost is obviously a discount.
+
 ## [1.3.8] - 2026-08-18
 
 ### Fixed ("No shipping options are available for this address." — found via WC log, not guessed)

@@ -50,6 +50,65 @@ class FXW_Checkout_Handler
         add_action('woocommerce_after_checkout_validation', array($this, 'validate_delivery_zone'), 20, 2);
         add_action('woocommerce_checkout_update_user_meta', array($this, 'save_customer_address'), 10, 2);
         add_action('woocommerce_checkout_create_order', array($this, 'save_delivery_details_to_order'), 10, 2);
+
+        // One-shot data migration (1.3.9): pre-1.3.9 orders duplicated the
+        // exact address into shipping address line 2, which the order
+        // confirmation, receipt and admin screens rendered twice. Run once
+        // on the next admin page load after the upgrade.
+        add_action('admin_init', array($this, 'maybe_migrate_duplicated_address_2'), 20);
+    }
+
+    /**
+     * Clear the duplicated shipping-address line 2 on orders placed
+     * before 1.3.9, normalising them to the new shape: line 2 is either
+     * "Landmark: <landmark>" (when a landmark was entered) or empty.
+     *
+     * Uses the HPOS-safe order CRUD (wc_get_orders + setters) — never a
+     * direct table write — and an option flag so it runs exactly once.
+     *
+     * @since 1.3.9
+     */
+    public function maybe_migrate_duplicated_address_2()
+    {
+        if (get_option('fxw_migrated_address2_v139')) {
+            return;
+        }
+        if (!function_exists('wc_get_orders')) {
+            return; // WooCommerce unavailable; try on the next admin hit.
+        }
+
+        $orders = wc_get_orders(array(
+            'limit' => -1,
+            'status' => 'any',
+            'meta_key' => '_fxw_delivery_address',
+            'return' => 'objects',
+        ));
+
+        foreach ($orders as $order) {
+            if (!is_a($order, 'WC_Order')) {
+                continue;
+            }
+            $details = trim((string) $order->get_meta('_fxw_address_details', true));
+            $landmark = trim((string) $order->get_meta('_fxw_landmark', true));
+            $current_line2 = (string) $order->get_shipping_address_2();
+
+            // Only touch the orders our old code shaped. Old line 2 was
+            // either the bare details (no landmark) or
+            // "details (Landmark: ...)" (with a landmark).
+            if ('' === $details || '' === $current_line2) {
+                continue;
+            }
+            $is_old_shape = ($details === $current_line2)
+                || (0 === strpos($current_line2, $details . ' ('));
+            if ($is_old_shape) {
+                $order->set_shipping_address_2(
+                    '' !== $landmark ? sprintf('%s: %s', __('Landmark', 'foodxpress'), $landmark) : ''
+                );
+                $order->save();
+            }
+        }
+
+        update_option('fxw_migrated_address2_v139', 1);
     }
 
 
@@ -150,15 +209,19 @@ class FXW_Checkout_Handler
         }
         if ('' !== $full_delivery_address) {
             $order->update_meta_data('_fxw_delivery_address', $full_delivery_address);
+        }
 
-            // Also store as the shipping-address second line so receipts and
-            // emails using get_formatted_shipping_address() surface the exact
-            // flat / house info. WC exposes only billing_*_address_2() and
-            // shipping_*_address_2() setters — there is no generic
-            // set_address_2() helper, and calling one would fatal on every
-            // block checkout order placement (regression caught 2026-08-18
-            // immediately after the v1.3.2 live-update hotfix; fixed 1.3.3).
-            $order->set_shipping_address_2($full_delivery_address);
+        // Shipping address line 2 should carry ONLY the landmark (the extra
+        // detail beyond the exact address). Since v1.3.0 the customer types
+        // the exact address into WooCommerce's own address_1 field (relabeled
+        // "Flat / Floor / Block / Society / Tower"), so writing the composed
+        // details into address_2 duplicated the street line on the order
+        // confirmation, the receipt and the order admin (both read
+        // get_formatted_shipping_address() = address_1 + address_2). Address
+        // line 2 stays empty unless a landmark was entered (caught
+        // 2026-08-18; fixed 1.3.9).
+        if ('' !== $landmark) {
+            $order->set_shipping_address_2(sprintf('%s: %s', __('Landmark', 'foodxpress'), $landmark));
         }
 
         // The checkout no longer renders WC address fields — default the

@@ -215,7 +215,12 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
                 'validate_callback' => function ($param, $request, $key) {
                     return is_numeric($param) && abs((float) $param) <= 90;
                 },
-                'sanitize_callback' => 'floatval',
+                // Closure form — bare 'floatval' is now a WP-internal
+                // callback that receives ($value, $request, $key) and
+                // crashes on PHP 8 (v1.2.17 — caught in runtime QA).
+                'sanitize_callback' => function ($param) {
+                    return (float) $param;
+                },
             ),
             'lng' => array(
                 'required' => true,
@@ -224,7 +229,9 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
                 'validate_callback' => function ($param, $request, $key) {
                     return is_numeric($param) && abs((float) $param) <= 180;
                 },
-                'sanitize_callback' => 'floatval',
+                'sanitize_callback' => function ($param) {
+                    return (float) $param;
+                },
             ),
         );
     }

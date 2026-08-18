@@ -4,6 +4,11 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.17] - 2026-08-18
+
+### Fixed (runtime QA on Local — WP 7.0.4, WC 11.0.1, PHP 8.2.29)
+- **REST validate-location no longer 500s on every page load.** The `lat` and `lng` `sanitize_callback` was set to the bare string `'floatval'`, which WP 6.x+ now resolves as a method-style callback and invokes with `($value, $request, $key)` — PHP 8 rejects the extra args and the WP REST `sanitize_params()` dispatcher throws `ArgumentCountError`, taking down every page that hits the REST layer (cart, checkout, my-account, all admin pages). Replaced both with explicit `function ($param) { return (float) $param; }` closures. Caught by probing `POST /wp-json/foodxpress/v1/checkout/validate-location` from a curl session; pre-fix the call returned a JSON-wrapped fatal; post-fix it returns the expected `configuration_error` (no Maps key yet) and the full page render is no longer blocked.
+
 ## [1.2.16] - 2026-08-18
 
 ### Fixed (full-flow audit cleanup pass — 16 minors, no blockers)

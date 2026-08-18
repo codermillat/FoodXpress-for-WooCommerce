@@ -83,18 +83,27 @@ class FXW_Core
 		$fxw_is_ajax = function_exists('wp_doing_ajax') ? wp_doing_ajax() : (defined('DOING_AJAX') && DOING_AJAX);
 		if (!is_admin() || $fxw_is_ajax) {
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-checkout.php';
+			// FXW_Shortcodes owns the fxw_print_receipt AJAX handler. admin-ajax
+			// requests report is_admin() === true, so without this exception the
+			// handler was never registered and the receipt buttons printed "0"
+			// (1.2.15). Its remaining hooks (shortcodes, enqueues, reorder) are
+			// no-ops on AJAX requests.
+			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-shortcodes.php';
 		}
 
 		// Frontend-only files
-		if (!is_admin()) {
-			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-shortcodes.php';
-		}
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-delivery-boy-view.php';
+
+		// Loaded on every request (not just is_admin()): the meta box "Print
+		// Receipt" button opens a FRONTEND link (?fxw_print_receipt=...), whose
+		// template_redirect handler lives here. Loaded only in the admin, the
+		// link landed on the homepage instead of the receipt (1.2.15). The
+		// admin-only hooks in this class are no-ops on frontend requests.
+		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-order-admin.php';
 
 		// Admin-only files
 		if (is_admin()) {
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings.php';
-			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-order-admin.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-dashboard.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-reporting.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-admin-bar.php';

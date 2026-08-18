@@ -136,6 +136,10 @@ class FXW_Checkout_Maps
             'map_id' => isset($options['fxw_google_maps_map_id']) ? trim((string) $options['fxw_google_maps_map_id']) : '',
             'translations' => array(
                 'calculating' => __('Calculating delivery fee...', 'foodxpress'),
+                // Success-toast labels (1.2.15): previously the toast reused
+                // the "calculating" string with the ellipsis stripped.
+                'delivery_fee_estimated' => __('Delivery fee:', 'foodxpress'),
+                'free_delivery' => __('Free delivery', 'foodxpress'),
                 'out_of_zone' => __('Sorry, we do not deliver to this location.', 'foodxpress'),
                 'error_generic' => __('An error occurred. Please try again.', 'foodxpress'),
                 'geolocation_unsupported' => __('Geolocation is not supported by your browser.', 'foodxpress'),

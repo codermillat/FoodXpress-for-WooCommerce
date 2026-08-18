@@ -3,7 +3,7 @@
  * Plugin Name:       FoodXpress for WooCommerce
  * Plugin URI:        https://github.com/codermillat/FoodXpress-for-WooCommerce
  * Description:       A complete delivery management system for single-restaurant WooCommerce stores.
- * Version:           1.2.14
+ * Version:           1.2.15
  * Author:            MD MILLAT HOSEN
  * Author URI:        https://millat.is-a.dev/
  * License:           GPL-3.0-or-later
@@ -24,7 +24,7 @@ if (!defined('ABSPATH')) {
 }
 
 if (!defined('FXW_VERSION')) {
-    define('FXW_VERSION', '1.2.14');
+    define('FXW_VERSION', '1.2.15');
 }
 if (!defined('FXW_PLUGIN_DIR')) {
     define('FXW_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -55,7 +55,13 @@ if (!function_exists('fxw_woocommerce_not_active_notice')) {
 add_action('before_woocommerce_init', function () {
     if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
         \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
-        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, true);
+        // The blocks integration registers its delivery fields through the
+        // Additional Checkout Fields API, which needs WooCommerce 8.9+. On
+        // older WC versions the fields cannot register, persist, or validate,
+        // so declaring blocks compatibility there would be false advertising
+        // (1.2.15).
+        $fxw_blocks_compat = defined('WC_VERSION') && version_compare(WC_VERSION, '8.9', '>=');
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', __FILE__, $fxw_blocks_compat);
     }
 });
 

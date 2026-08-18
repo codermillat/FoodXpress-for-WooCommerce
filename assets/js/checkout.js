@@ -258,15 +258,24 @@
 
                 if (res.ok && data.status === 'success') {
                     this.state.isValid = true;
-                    // Store-formatted price from the server (auto currency,
-                    // decimals, and symbol position); manual fallback only
-                    // if formatting was unavailable.
-                    const price = data.fee_formatted
-                        || `${fxw_checkout_params.currency_symbol || ''}${data.fee}`;
-                    this.notify(
-                        `${this.t('calculating').replace('...', '')} ${price} · ${data.distance_km} km · ${data.duration_text}`,
-                        'success'
-                    );
+                    const suffix = `${data.distance_km} km · ${data.duration_text}`;
+                    let message;
+                    if (parseFloat(data.fee) === 0) {
+                        // Free-delivery threshold met — say so instead of
+                        // showing a formatted 0 fee. The server applies the
+                        // threshold (it can see the cart subtotal as of
+                        // 1.2.15). Dedicated keys instead of reusing the
+                        // "calculating" label (1.2.15).
+                        message = `${this.t('free_delivery')} · ${suffix}`;
+                    } else {
+                        // Store-formatted price from the server (auto currency,
+                        // decimals, and symbol position); manual fallback only
+                        // if formatting was unavailable.
+                        const price = data.fee_formatted
+                            || `${fxw_checkout_params.currency_symbol || ''}${data.fee}`;
+                        message = `${this.t('delivery_fee_estimated')} ${price} · ${suffix}`;
+                    }
+                    this.notify(message, 'success');
                     $(document.body).trigger('update_checkout');
                 } else {
                     this.state.isValid = false;

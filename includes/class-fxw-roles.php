@@ -27,9 +27,14 @@ class FXW_Roles
     /**
      * Add the custom "Delivery Boy" role.
      *
-     * This role has limited capabilities, primarily to read orders.
-     * We grant `edit_posts` capability so they can access the WP admin
-     * to see their dedicated view, but further restrictions will apply.
+     * Deliberately minimal. `read` alone is what grants basic wp-admin
+     * access; `edit_posts` is NOT required for that and would needlessly
+     * let riders edit posts, so it is not granted (1.2.15). Delivery
+     * features are unlocked through the custom fxw_delivery_access
+     * capability instead. Only affects fresh installs — add_role() is
+     * skipped when the role already exists; the transient-gated
+     * ensure_delivery_role_cap() below keeps existing installs in sync
+     * for fxw_delivery_access.
      *
      * @since    1.0.0
      */
@@ -45,8 +50,7 @@ class FXW_Roles
             'delivery_boy',
             __('Delivery Boy', 'foodxpress'),
             array(
-                'read' => true,  // Core capability
-                'edit_posts' => true,  // Required to access the admin area at all
+                'read' => true,  // Core capability — grants basic wp-admin access on its own
                 'upload_files' => false,
                 'delete_posts' => false,
                 'fxw_delivery_access' => true,  // Custom capability for delivery access

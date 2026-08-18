@@ -125,6 +125,30 @@ class FXW_Pricing
 	 */
 	public function sanitize_pricing($sanitized, $input)
 	{
+		// Defensive: if the whole Pricing Rules section failed to post (e.g. a
+		// future regression prevents it from rendering), preserve the stored
+		// values instead of silently resetting them to defaults. When the
+		// section is present at least one of its fields posts.
+		$section_fields = array('fxw_fee_mode', 'fxw_fee_tiers', 'fxw_free_delivery_threshold', 'fxw_minimum_order');
+		$section_present = false;
+		foreach ($section_fields as $field) {
+			if (isset($input[$field])) {
+				$section_present = true;
+				break;
+			}
+		}
+		if (!$section_present) {
+			$existing = get_option('fxw_settings', array());
+			if (is_array($existing)) {
+				foreach ($section_fields as $field) {
+					if (isset($existing[$field])) {
+						$sanitized[$field] = $existing[$field];
+					}
+				}
+			}
+			return $sanitized;
+		}
+
 		$sanitized['fxw_fee_mode'] = (isset($input['fxw_fee_mode']) && 'tiers' === $input['fxw_fee_mode']) ? 'tiers' : 'perkm';
 		$sanitized['fxw_free_delivery_threshold'] = isset($input['fxw_free_delivery_threshold']) ? (float) $input['fxw_free_delivery_threshold'] : 0;
 		$sanitized['fxw_minimum_order'] = isset($input['fxw_minimum_order']) ? (float) $input['fxw_minimum_order'] : 0;

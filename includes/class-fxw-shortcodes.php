@@ -131,7 +131,21 @@ class FXW_Shortcodes
 			}
 
 			foreach ($order->get_items() as $item) {
-				WC()->cart->add_to_cart($item->get_product_id(), $item->get_quantity());
+				// Keep variable products as their exact variation: adding
+				// only the parent product_id silently drops variation items
+				// (and lands simple items as the parent), so re-orders were
+				// missing items (1.2.15).
+				$variation_id = $item->get_variation_id();
+				if ($variation_id) {
+					$variation_attributes = array();
+					$variation = wc_get_product($variation_id);
+					if ($variation && is_a($variation, 'WC_Product_Variation')) {
+						$variation_attributes = $variation->get_variation_attributes();
+					}
+					WC()->cart->add_to_cart($item->get_product_id(), $item->get_quantity(), $variation_id, $variation_attributes);
+				} else {
+					WC()->cart->add_to_cart($item->get_product_id(), $item->get_quantity());
+				}
 			}
 
 			wp_safe_redirect(wc_get_checkout_url());
@@ -339,7 +353,10 @@ class FXW_Shortcodes
 
 		$order = wc_get_order($order_id);
 
-		if (!$order || $order->get_billing_email() !== $billing_email) {
+		// Emails are case-insensitive by definition (RFC 5321) — WC stores
+		// them lowercased, but input may arrive in any case, so compare
+		// normalized forms instead of the raw strings (1.2.15).
+		if (!$order || strtolower($order->get_billing_email()) !== strtolower($billing_email)) {
 			echo '<p class="fxw-track-error">' . esc_html__('Invalid order details.', 'foodxpress') . '</p>';
 			return;
 		}

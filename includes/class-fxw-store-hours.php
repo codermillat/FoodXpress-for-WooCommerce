@@ -130,6 +130,25 @@ class FXW_Store_Hours
 	 */
 	public function sanitize_hours($sanitized, $input)
 	{
+		// Defensive: if the whole Opening Hours section failed to post (e.g. a
+		// future regression prevents it from rendering), preserve the stored
+		// values instead of silently disabling the schedule. When the section
+		// is present the time inputs always post, so their presence is the
+		// reliable signal (the enable checkbox alone can legitimately be
+		// absent when unchecked).
+		if (!isset($input['fxw_hours']) || !is_array($input['fxw_hours'])) {
+			$existing = get_option('fxw_settings', array());
+			if (is_array($existing)) {
+				if (isset($existing['fxw_hours_enabled'])) {
+					$sanitized['fxw_hours_enabled'] = $existing['fxw_hours_enabled'];
+				}
+				if (isset($existing['fxw_hours'])) {
+					$sanitized['fxw_hours'] = $existing['fxw_hours'];
+				}
+			}
+			return $sanitized;
+		}
+
 		$sanitized['fxw_hours_enabled'] = isset($input['fxw_hours_enabled']) ? 'yes' : 'no';
 
 		if (!isset($input['fxw_hours']) || !is_array($input['fxw_hours'])) {

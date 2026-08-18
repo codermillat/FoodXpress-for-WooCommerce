@@ -4,6 +4,22 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.15] - 2026-08-17
+
+### Fixed (full-flow audit — 3 blockers, 3 majors, cleanup pass)
+- **Checkout can now complete on default installs.** WooCommerce never initializes the session for custom REST routes (`is_request('frontend')` excludes REST requests), so the pinned coordinates from `validate-location` were written into a `null` session and lost — order placement always failed with "Please select your exact location on the map." The handler now bootstraps the session exactly the way WooCommerce's own Store API does (`wc_load_cart()` — session + customer + cart, restores any existing session from the cookie, saves on shutdown) and explicitly sets the session cookie for brand-new guest sessions. With the cart loaded, the REST fee estimate also sees the real subtotal, so **free-delivery-threshold pricing now applies to the toast**, not just the shipping method
+- **Pricing Rules and Opening Hours sections now render on the FoodXpress settings tab.** The `fxw_settings_register_extra_fields` action fired inside a field renderer mid-render — `do_settings_sections()` had already snapshotted the section list, so the sections were never output and every settings save silently reset pricing/hours to defaults. The action now fires at registration time (`admin_init`). The two sanitize callbacks additionally preserve stored values defensively when their section's fields fail to post
+- **Receipt printing works again on every path.** (1) The `fxw_print_receipt` AJAX handler lives in `FXW_Shortcodes`, which only loaded when `is_admin()` was false — but `admin-ajax.php` reports `is_admin() === true`, so the handler never registered and the buttons printed "0". The class now loads on AJAX requests too. (2) The meta-box "Print Receipt" button opens a frontend link, but its `template_redirect` handler lived in `FXW_Order_Admin`, which only loaded in the admin — the link opened the homepage. That class now loads on all requests (its admin hooks are no-ops on the frontend)
+- **Saved-address prefill now actually runs.** `load_saved_address()` was hooked to `wp_loaded`, where `is_checkout()` is always false (the main query is parsed later, at `wp`) — the body never executed. Moved to `wp`
+- **Honest feature-scope declaration:** the blocks integration relies on the Additional Checkout Fields API (WooCommerce 8.9+); `cart_checkout_blocks` compatibility is now declared version-aware instead of unconditionally true, so stores on WC 7.0–8.8 no longer get a false compatibility claim
+- **Delivery agents are now notified when an order is assigned to them.** All three assignment paths (dashboard form, dashboard AJAX, order-edit meta box) transition the order to `fxw-assigned`, so a single hook on that status sends the rider a `wp_mail` with the order number, delivery address, total, COD collection hint, and dashboard link; the send result is logged as an order note either way. Previously the three email classes were all customer-facing and assignments happened silently
+- **Re-order no longer drops variations** — variation items are re-added with their variation ID and attributes instead of the parent product only
+- **Track-order email check is now case-insensitive** (emails are case-insensitive by definition; WC stores them lowercased but input may arrive in any case)
+
+### Changed
+- New `delivery_boy` installs no longer grant `edit_posts` — `read` alone grants basic wp-admin access, and the capability was never needed (the incorrect "required to access the admin area" comment is corrected); existing installs are unaffected
+- Success toast after pinning a location uses dedicated labels ("Delivery fee: …" / "Free delivery") instead of reusing the "Calculating…" string with the ellipsis stripped
+
 ## [1.2.14] - 2026-08-17
 
 ### Fixed (currency is 100% WooCommerce-driven)

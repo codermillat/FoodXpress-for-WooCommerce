@@ -46,7 +46,10 @@ class FXW_Checkout
      */
     public function __construct()
     {
-        add_action('wp_loaded', array($this, 'load_saved_address'));
+        // Must run on 'wp', not 'wp_loaded': is_checkout() needs the main
+        // query parsed, which happens at 'wp' — at wp_loaded it was always
+        // false, so the saved-address prefill silently never ran (1.2.15).
+        add_action('wp', array($this, 'load_saved_address'));
         add_filter('woocommerce_checkout_fields', array($this, 'customize_checkout_fields'));
         add_action('woocommerce_before_checkout_billing_form', array($this, 'add_checkout_fields'));
         add_action('woocommerce_before_cart', array($this, 'render_store_closed_notice'));

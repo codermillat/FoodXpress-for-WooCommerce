@@ -251,6 +251,10 @@ class FXW_Settings
 			'fxw_receipt_branding_section',
 			array('id' => 'fxw_receipt_footer_message', 'default' => 'Thank You! Have a great day!')
 		);
+
+		// Sibling sections (Pricing Rules, Opening Hours) register here:
+		// do_settings_sections() snapshots sections, so mid-render never showed.
+		do_action('fxw_settings_register_extra_fields');
 	}
 
 	/** Describe the receipt branding section. */
@@ -389,8 +393,6 @@ class FXW_Settings
 		<input type="number" step="<?php echo esc_attr($step); ?>" name="fxw_settings[<?php echo esc_attr($id); ?>]"
 			value="<?php echo esc_attr($value); ?>" class="small-text">
 		<?php
-
-		do_action('fxw_settings_register_extra_fields');
 	}
 
 	/** Sanitize settings before saving. */

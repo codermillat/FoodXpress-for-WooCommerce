@@ -133,7 +133,32 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
             return new WP_Error('out_of_zone', __('Sorry, we do not deliver to your location.', 'foodxpress'), array('status' => 400));
         }
 
-        // Calculate Fee (estimate — honors configured tiers + threshold)
+        // WooCommerce does NOT initialize the cart/session for custom REST
+        // routes (its is_request('frontend') check excludes REST_REQUEST), so
+        // WC()->session is null here by default. The entire checkout flow
+        // depends on this request persisting the pinned coordinates to the
+        // session — validation reads them from there and placement always
+        // fails without them. Bootstrap the session exactly the way
+        // WooCommerce's own Store API does (CartController::load_cart()):
+        // wc_load_cart() initializes session + customer + cart, restores any
+        // existing session from the cookie, and registers save_data on
+        // shutdown. wc_load_cart() exists since WC 3.7; this plugin requires
+        // WC 7.0+, so it is always available.
+        if (!WC()->session && function_exists('wc_load_cart')) {
+            wc_load_cart();
+            // For a brand-new guest session the handler does not send the
+            // cookie automatically on REST requests (that only happens on
+            // frontend requests) — without it the data saved on shutdown
+            // would be unreachable from the customer's next request. Set it
+            // explicitly, mirroring what WC core does on the order-pay page.
+            if (WC()->session && method_exists(WC()->session, 'set_customer_session_cookie')) {
+                WC()->session->set_customer_session_cookie(true);
+            }
+        }
+
+        // Calculate Fee (estimate — honors configured tiers + threshold;
+        // with the session/cart loaded, the free-delivery threshold can see
+        // the real cart subtotal)
         $base_fee = isset($options['fxw_delivery_fee_base']) ? (float) $options['fxw_delivery_fee_base'] : 5;
         $fee_per_km = isset($options['fxw_delivery_fee_per_km']) ? (float) $options['fxw_delivery_fee_per_km'] : 1.5;
         $cost = $base_fee + ($distance_in_km * $fee_per_km);
@@ -147,9 +172,9 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
             }
         }
 
-        // Store in session for checkout (Critical for order processing).
-        // Note: REST requests from same-origin checkout page typically have WooCommerce session cookies.
-        // Cross-origin or stateless clients may not have WC()->session.
+        // Store in session for checkout (critical for order processing):
+        // the session is bootstrapped above, so these writes persist to the
+        // customer's checkout request via the cookie + shutdown save.
         if (WC()->session) {
             WC()->session->set('customer_lat', $lat);
             WC()->session->set('customer_lng', $lng);

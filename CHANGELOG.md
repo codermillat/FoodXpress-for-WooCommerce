@@ -4,6 +4,12 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.18] - 2026-08-18
+
+### Fixed (browser QA — blocks checkout fields + admin-bar state)
+- **Blocks-checkout FXW fields now register on WooCommerce 11.x.** The Additional Checkout Fields API (used by `FXW_Blocks_Checkout::register_fields`) was hooked on `woocommerce_init` since v1.2.9. WooCommerce 11.0+ changed the function so it requires `woocommerce_blocks_loaded` to have already fired — when called earlier, the function silently defers the registration to that later hook, which can miss the page render entirely. Switched the hook to `woocommerce_blocks_loaded` and verified the three fields (`foodxpress/address-details`, `foodxpress/landmark`, `foodxpress/delivery-instructions`) land in WC's `CheckoutFields::$additional_fields` store on WC 11.0.1. Caught during browser walkthrough of the blocks-checkout page; pre-fix the three fields were registered (function returned no exception) but never appeared on the page.
+- **Admin-bar Deliveries status now matches the rest of the UI.** `FXW_Admin_Bar` previously read the raw `fxw_is_open` option, so the bar could say "Deliveries: Open" while the schedule-aware `FXW_Checkout::is_store_open()` said closed (and vice versa). The bar now shows the effective `is_store_open()` value, and when closed it appends the next-reopen hint from `FXW_Store_Hours` so the admin sees *why* (e.g. "Deliveries: Closed (We reopen Sunday at 09:00.)"). The AJAX toggle response label is also schedule-aware.
+
 ## [1.2.17] - 2026-08-18
 
 ### Fixed (runtime QA on Local — WP 7.0.4, WC 11.0.1, PHP 8.2.29)

@@ -35,10 +35,21 @@ class FXW_Admin_Bar
 			return;
 		}
 
-		$options = get_option('fxw_settings');
-		$is_open = isset($options['fxw_is_open']) ? filter_var($options['fxw_is_open'], FILTER_VALIDATE_BOOLEAN) : true;
+		// Schedule-aware state — single source of truth shared with the
+		// classic + blocks checkout validators and the REST endpoints
+		// (v1.2.18). Without this, the toggle can show "Open" while the
+		// schedule says closed (or vice versa) and the admin / customer
+		// UIs disagree.
+		$is_open = class_exists('FXW_Checkout') ? FXW_Checkout::is_store_open() : true;
 
-		$title = $is_open ? __('Deliveries: Open', 'foodxpress') : __('Deliveries: Closed', 'foodxpress');
+		if ($is_open) {
+			$title = __('Deliveries: Open', 'foodxpress');
+		} else {
+			$hint = class_exists('FXW_Store_Hours') ? FXW_Store_Hours::reopen_hint() : '';
+			$title = '' !== $hint
+				? __('Deliveries: Closed', 'foodxpress') . ' (' . $hint . ')'
+				: __('Deliveries: Closed', 'foodxpress');
+		}
 		$href = '#';
 
 		$wp_admin_bar->add_node(array(
@@ -80,9 +91,16 @@ class FXW_Admin_Bar
 		$options['fxw_is_open'] = !$is_open;
 		update_option('fxw_settings', $options);
 
+		// Effective (schedule-aware) state after the toggle.
+		$effective = class_exists('FXW_Checkout') ? FXW_Checkout::is_store_open() : $options['fxw_is_open'];
+		$label = $effective
+			? __('Deliveries: Open', 'foodxpress')
+			: __('Deliveries: Closed', 'foodxpress')
+				. (class_exists('FXW_Store_Hours') && '' !== ($h = FXW_Store_Hours::reopen_hint()) ? ' (' . $h . ')' : '');
+
 		wp_send_json_success(array(
-			'is_open' => $options['fxw_is_open'],
-			'label' => $options['fxw_is_open'] ? __('Deliveries: Open', 'foodxpress') : __('Deliveries: Closed', 'foodxpress'),
+			'is_open' => $effective,
+			'label'   => $label,
 		));
 	}
 }

@@ -41,7 +41,13 @@ class FXW_Blocks_Checkout
 	 */
 	public function __construct()
 	{
-		add_action('woocommerce_init', array($this, 'register_fields'));
+		// Hook on woocommerce_blocks_loaded (or later) — WC 11+ requires
+		// the blocks runtime to be available before
+		// woocommerce_register_additional_checkout_field() will accept a
+		// call; woocommerce_init fires too early and the function defers
+		// the registration to woocommerce_blocks_loaded, which can miss
+		// the page render. v1.2.18.
+		add_action('woocommerce_blocks_loaded', array($this, 'register_fields'));
 		add_action('woocommerce_validate_additional_field', array($this, 'validate_address_details'), 10, 3);
 		add_filter('the_content', array($this, 'prepend_map_to_blocks_checkout'));
 		add_action('woocommerce_store_api_checkout_update_order_from_request', array($this, 'apply_delivery_data'), 10, 2);

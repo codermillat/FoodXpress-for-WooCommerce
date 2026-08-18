@@ -54,6 +54,13 @@ class FXW_Checkout
         add_action('woocommerce_before_checkout_billing_form', array($this, 'add_checkout_fields'));
         add_action('woocommerce_before_cart', array($this, 'render_store_closed_notice'));
         add_action('woocommerce_before_checkout_form', array($this, 'render_store_closed_notice'));
+        // Block-based cart/checkout: the classic action hooks above don't
+        // fire. Surface the same closed/minimum notices via the block
+        // content filter so the `woocommerce/store-notices` block (always
+        // present in WC cart/checkout templates) renders them on page load
+        // (1.2.16). Bounded to is_cart()/is_checkout() so we don't touch
+        // unrelated pages.
+        add_filter('render_block', array($this, 'maybe_prepend_notices_to_blocks'), 10, 2);
     }
 
     /**
@@ -114,6 +121,60 @@ class FXW_Checkout
             }
             wc_print_notice($message, 'error', array('fxw-store-closed'));
         }
+    }
+
+    /**
+     * Prepend FXW notices (closed store / minimum order) to the
+     * woocommerce/store-notices block on cart-block + checkout-block pages.
+     * Bounded to is_cart()/is_checkout() and to the specific block so we
+     * don't pollute other pages (1.2.16).
+     *
+     * @param string $block_content Rendered block HTML.
+     * @param array  $block         Parsed block (blockName + attrs).
+     * @return string
+     */
+    public function maybe_prepend_notices_to_blocks($block_content, $block)
+    {
+        if (!is_array($block) || empty($block['blockName'])) {
+            return $block_content;
+        }
+        if ('woocommerce/store-notices' !== $block['blockName']) {
+            return $block_content;
+        }
+        if (!function_exists('is_cart') || (!is_cart() && (!function_exists('is_checkout') || !is_checkout()))) {
+            return $block_content;
+        }
+        if (!function_exists('wc_print_notice') || !function_exists('wc_get_notices')) {
+            return $block_content;
+        }
+
+        // Capture printed notices, drain the queue so the block itself
+        // doesn't render duplicates.
+        $notices_html = '';
+        if (!self::is_store_open()) {
+            $message = __('We are currently closed for deliveries. You can browse and fill your cart — ordering will be available as soon as we reopen.', 'foodxpress');
+            if (class_exists('FXW_Store_Hours')) {
+                $hint = FXW_Store_Hours::reopen_hint();
+                if ('' !== $hint) {
+                    $message .= ' ' . $hint;
+                }
+            }
+            ob_start();
+            wc_print_notice($message, 'error', array('fxw-store-closed'));
+            $notices_html .= (string) ob_get_clean();
+            wc_clear_notices();
+        }
+        if (class_exists('FXW_Pricing')) {
+            $min_error = FXW_Pricing::minimum_order_error();
+            if (null !== $min_error) {
+                ob_start();
+                wc_print_notice($min_error, 'notice', array('fxw-minimum-order'));
+                $notices_html .= (string) ob_get_clean();
+                wc_clear_notices();
+            }
+        }
+
+        return $notices_html . $block_content;
     }
 
     /**

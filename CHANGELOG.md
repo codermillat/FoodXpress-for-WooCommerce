@@ -4,6 +4,22 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.16] - 2026-08-18
+
+### Fixed (full-flow audit cleanup pass — 16 minors, no blockers)
+- **REST schedule parity.** `validate_location` and the GET `/checkout/settings` endpoint now read store-open state through `FXW_Checkout::is_store_open()`, so the manual Open/Closed toggle AND `FXW_Store_Hours` are honored uniformly across classic checkout, blocks checkout, and the REST estimate
+- **No-API-key customer message.** When `fxw_google_maps_api_key` is empty, the shared zone-error returns a distinct "online ordering currently unavailable" message instead of telling customers to pin a location on a map that isn't rendered
+- **Unassign reverts status.** Both the dashboard form/AJAX unassign path and the order-edit "Re-assign" action now revert the order to `fxw-in-kitchen` (falling back to `processing` if the custom status isn't registered) so unassigned orders don't sit in `fxw-assigned` with no rider
+- **Agent transition enforcement.** Delivery agents can no longer jump straight from `fxw-assigned` to `completed` — both the AJAX handler and the form-POST `mark_delivered` require `fxw-picked-up` first
+- **wp-login.php redirect for riders.** Added a 3-param `login_redirect` filter (the 2-param binding is deprecated in WP 6.2+) so delivery boys who log in via wp-login land on their dashboard
+- **Track-order rate limit.** The public order-tracking form now rate-limits at 10 requests/minute per IP via `FXW_Rate_Limiter`, closing the brute-force window opened by sequential order IDs + email guessing
+- **Reorder feedback.** Re-order now surfaces per-item failures (e.g. variation since deleted) and a generic "items added" notice via `wc_add_notice` instead of failing silently
+- **Settings: explicit cap check + fractional radius + latlng range + uninstall opt-in.** Save handler now guards `manage_woocommerce` per-handler; delivery radius accepts fractional km (2.5, 3.7, etc.) via the new `step=0.1` input and a float sanitize (was `absint`); restaurant-coordinates save now validates ±90/±180 and surfaces a transient admin notice on bad input instead of silently keeping an out-of-range value; new `fxw_remove_on_uninstall` checkbox controls whether uninstall.php wipes the option, role, and saved delivery profiles
+- **Cart-block closed/minimum notices.** Block-based cart (and checkout) pages now show the same store-closed and minimum-order notices as the classic pages — rendered via a `render_block` filter on the `woocommerce/store-notices` block, bounded to `is_cart()`/`is_checkout()`
+- **Reporting site-timezone day boundary.** The dashboard "Today's Report" now uses a `>=... <...` date range anchored on the site's `wp_date` day, so non-UTC stores no longer get a report that drifts by ±1 day near midnight
+- **Dashboard `fxw-in-kitchen` whitelist.** Both dashboard status-update handlers (form + AJAX) now accept `fxw-in-kitchen` so admins can move an order into the kitchen state from the dashboard (previously only possible from the order-edit dropdown, never the deliveries dashboard)
+- **Dead code removed.** `admin-dashboard.js` (bound selectors that don't exist in the markup) replaced with a no-op stub that documents why; the orphan `fxw_address_unit` save branch and read in the order meta box deleted (the input was never rendered; legacy meta is preserved in WC's meta store)
+
 ## [1.2.15] - 2026-08-17
 
 ### Fixed (full-flow audit — 3 blockers, 3 majors, cleanup pass)

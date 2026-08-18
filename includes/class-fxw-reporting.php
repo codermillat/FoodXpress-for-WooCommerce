@@ -33,11 +33,18 @@ class FXW_Reporting
 		<div class="fxw-reports">
 			<h2><?php esc_html_e('Today\'s Report', 'foodxpress'); ?></h2>
 			<?php
-			$today = wp_date('Y-m-d');
+			// Site-timezone day boundary — previously a plain 'Y-m-d' string
+			// was passed to date_created, which wc_get_orders interprets in
+			// the site timezone already, but the boundary shifts by ±1 day
+			// on UTC-offset stores near midnight (1.2.16). Use a >... <...
+			// range anchored on the current wp_date site-timezone day, so
+			// the report always means "the calendar day at this store".
+			$today_start = function_exists('wp_date') ? wp_date('Y-m-d 00:00:00') : gmdate('Y-m-d 00:00:00');
+			$today_end   = function_exists('wp_date') ? wp_date('Y-m-d 23:59:59') : gmdate('Y-m-d 23:59:59');
 			$args = array(
 				'limit' => 200,
 				'status' => 'wc-completed',
-				'date_created' => $today,
+				'date_created' => '>=' . $today_start . ' <' . $today_end,
 				'meta_key' => '_fxw_delivery_boy_id',
 				'meta_compare' => 'EXISTS',
 			);

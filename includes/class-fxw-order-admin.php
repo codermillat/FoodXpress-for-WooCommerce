@@ -54,11 +54,15 @@ class FXW_Order_Admin
 				case 'reject':
 					$order->update_status('cancelled', __('Order rejected by admin.', 'foodxpress'));
 					break;
-				case 'reassign':
-					$order->delete_meta_data('_fxw_delivery_boy_id');
-					$order->save();
-					$order->add_order_note(__('Delivery boy has been unassigned.', 'foodxpress'));
-					break;
+case 'reassign':
+						// Reassign also drops the rider meta AND reverts
+						// the order status so it doesn't sit in fxw-assigned
+						// with no rider (1.2.16).
+						$order->delete_meta_data('_fxw_delivery_boy_id');
+						$revert_to = post_status_exists('wc-fxw-in-kitchen') ? 'fxw-in-kitchen' : 'processing';
+						$order->update_status($revert_to, __('Delivery boy has been unassigned — order returned to kitchen.', 'foodxpress'));
+						$order->save();
+						break;
 			}
 
 			wp_safe_redirect(remove_query_arg(array('fxw_action', '_wpnonce')));
@@ -197,8 +201,9 @@ class FXW_Order_Admin
 		$delivery_lng = $order->get_meta('_fxw_delivery_lng', true);
 		$delivery_distance = $order->get_meta('_fxw_delivery_distance', true);
 
-		// Fallback to old unit field for backward compatibility
-		$unit = $order->get_meta('_fxw_address_unit', true);
+		// (Legacy _fxw_address_unit read removed in 1.2.16 — the field was
+		// never rendered, and the live _fxw_address_details + _fxw_landmark
+		// fields cover the same need.)
 		?>
 		<?php if ($delivery_address): ?>
 			<div style="margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-left: 4px solid #0073aa;">
@@ -302,10 +307,8 @@ class FXW_Order_Admin
 			return;
 		}
 
-		// Save fxw_address_unit using WC CRUD (HPOS-safe)
-		if (isset($_POST['fxw_address_unit'])) {
-			$order->update_meta_data('_fxw_address_unit', sanitize_text_field(wp_unslash($_POST['fxw_address_unit'])));
-		}
+		// (fxw_address_unit save branch removed in 1.2.16 — the input was never
+// rendered in the meta box; legacy meta is preserved in WC meta store.)
 
 		if (isset($_POST['fxw_delivery_boy_id'])) {
 			$new_id = absint($_POST['fxw_delivery_boy_id']);

@@ -15,10 +15,7 @@ class FXW_Settings
 		/** Initialize the class and set its properties. */
 	public function __construct()
 	{
-		// Native tab under WooCommerce → Settings via documented hooks,
-		// gated by manage_woocommerce like every other WC settings tab
-		// (shop managers can configure delivery). Moved from a standalone
-		// manage_options page in 1.2.10.
+		// Native tab under WooCommerce → Settings; shop managers can configure delivery (1.2.10).
 		add_filter('woocommerce_settings_tabs_array', array($this, 'register_wc_settings_tab'), 50);
 		add_action('woocommerce_settings_foodxpress', array($this, 'render_wc_settings_tab'));
 		add_action('woocommerce_update_options_foodxpress', array($this, 'save_wc_settings_tab'));
@@ -40,10 +37,13 @@ class FXW_Settings
 		echo '</table>';
 	}
 
-	/** Save on WooCommerce tab save; WC verified nonce + capability. */
+	/** Save on WooCommerce tab save; explicit cap check + WC nonce both required (1.2.16). */
 	public function save_wc_settings_tab()
 	{
 		if (!isset($_POST['fxw_settings'])) {
+			return;
+		}
+		if (!current_user_can('manage_woocommerce')) {
 			return;
 		}
 		$input = (array) wc_clean(wp_unslash($_POST['fxw_settings']));
@@ -157,12 +157,14 @@ class FXW_Settings
 
 		add_settings_field(
 			'fxw_enable_extra_delivery_fee',
-			__('Enable Extra Delivery Fee (as Cart Fee)', 'foodxpress'),
+			__('Extra Cart Fee (alternative)', 'foodxpress'),
 			array($this, 'render_checkbox_field'),
 			'foodxpress-settings',
 			'fxw_delivery_fee_settings_section',
-			array('id' => 'fxw_enable_extra_delivery_fee', 'label' => __('Add delivery fee as a separate cart fee when FoodXpress shipping is not selected', 'foodxpress'))
+			array('id' => 'fxw_enable_extra_delivery_fee', 'label' => __('Add the delivery fee as a separate cart fee instead of only through the shipping method (skipped when FoodXpress shipping is chosen). Off by default.', 'foodxpress'))
 		);
+		// Uninstall opt-in (1.2.16).
+		add_settings_field('fxw_remove_on_uninstall', __('Remove Data on Uninstall', 'foodxpress'), array($this, 'render_checkbox_field'), 'foodxpress-settings', 'fxw_general_settings_section', array('id' => 'fxw_remove_on_uninstall', 'label' => __('Delete all FoodXpress data (settings, saved profiles, the delivery_boy role) on uninstall. Order meta is never deleted either way.', 'foodxpress')));
 
 		// Delivery Zone Settings Section
 		add_settings_section(
@@ -178,7 +180,7 @@ class FXW_Settings
 			array($this, 'render_number_field'),
 			'foodxpress-settings',
 			'fxw_delivery_zone_settings_section',
-			array('id' => 'fxw_delivery_zone_radius', 'default' => 10)
+			array('id' => 'fxw_delivery_zone_radius', 'default' => 10, 'step' => 0.1)
 		);
 
 		add_settings_field(
@@ -252,8 +254,7 @@ class FXW_Settings
 			array('id' => 'fxw_receipt_footer_message', 'default' => 'Thank You! Have a great day!')
 		);
 
-		// Sibling sections (Pricing Rules, Opening Hours) register here:
-		// do_settings_sections() snapshots sections, so mid-render never showed.
+		// Sibling sections (Pricing Rules, Opening Hours) register here — do_settings_sections() snapshots sections.
 		do_action('fxw_settings_register_extra_fields');
 	}
 
@@ -441,7 +442,9 @@ class FXW_Settings
 
 		// Delivery zone settings
 		if (isset($input['fxw_delivery_zone_radius'])) {
-			$sanitized['fxw_delivery_zone_radius'] = absint($input['fxw_delivery_zone_radius']);
+			// Fractional-km radii (1.2.16 — was clamped to int by absint).
+			$radius = (float) $input['fxw_delivery_zone_radius'];
+			$sanitized['fxw_delivery_zone_radius'] = $radius < 0 ? 0 : $radius;
 		}
 
 		if (isset($input['fxw_auto_set_assigned_status'])) {
@@ -456,7 +459,7 @@ class FXW_Settings
 			$sanitized['fxw_enable_extra_delivery_fee'] = 'no';
 		}
 
-		// Extra settings (e.g. opening hours) registered by other classes
+		// Extra settings (e.g. opening hours, uninstall opt-in) registered by other classes
 		$sanitized = apply_filters('fxw_sanitize_settings_extra', $sanitized, $input);
 
 		// Receipt branding settings
@@ -484,12 +487,9 @@ class FXW_Settings
 			$sanitized['fxw_receipt_footer_message'] = sanitize_text_field($input['fxw_receipt_footer_message']);
 		}
 
-		// Preserve settings not in this form (fxw_is_open, fxw_enable_extra_delivery_fee, fxw_auto_set_assigned_status, etc.)
-		$preserve_keys = array('fxw_is_open', 'fxw_enable_extra_delivery_fee', 'fxw_auto_set_assigned_status');
-		foreach ($preserve_keys as $key) {
-			if (isset($existing[$key]) && !isset($sanitized[$key])) {
-				$sanitized[$key] = $existing[$key];
-			}
+		// Preserve fxw_is_open (admin-bar toggle — not in this form).
+		if (isset($existing['fxw_is_open']) && !isset($sanitized['fxw_is_open'])) {
+			$sanitized['fxw_is_open'] = $existing['fxw_is_open'];
 		}
 
 		return $sanitized;

@@ -65,7 +65,10 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
         // Return only safe, public settings
         $data = array(
             'radius' => isset($options['fxw_delivery_zone_radius']) ? (float) $options['fxw_delivery_zone_radius'] : 10,
-            'is_open' => isset($options['fxw_is_open']) ? filter_var($options['fxw_is_open'], FILTER_VALIDATE_BOOLEAN) : true,
+            // Schedule-aware: respects both the manual Open/Closed toggle and
+            // the scheduled opening hours (FXW_Store_Hours) — single source of
+            // truth shared with classic + blocks checkout validation (1.2.16).
+            'is_open' => class_exists('FXW_Checkout') ? FXW_Checkout::is_store_open() : (isset($options['fxw_is_open']) ? filter_var($options['fxw_is_open'], FILTER_VALIDATE_BOOLEAN) : true),
             'messages' => array(
                 'out_of_zone' => __('Sorry, we do not deliver to this location.', 'foodxpress'),
                 'store_closed' => __('Sorry, we are currently closed for deliveries.', 'foodxpress'),
@@ -102,9 +105,9 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
 
         $options = get_option('fxw_settings');
 
-        // Check if store is open
-        $is_open = isset($options['fxw_is_open']) ? filter_var($options['fxw_is_open'], FILTER_VALIDATE_BOOLEAN) : true;
-        if (!$is_open) {
+        // Store open? Schedule-aware — single source of truth shared with the
+        // classic + blocks checkout validators and the GET settings endpoint.
+        if (class_exists('FXW_Checkout') && !FXW_Checkout::is_store_open()) {
             return new WP_Error('store_closed', __('Sorry, we are currently closed for deliveries.', 'foodxpress'), array('status' => 400));
         }
 

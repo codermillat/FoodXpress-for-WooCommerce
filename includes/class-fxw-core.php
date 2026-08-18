@@ -104,6 +104,7 @@ class FXW_Core
 		// Admin-only files
 		if (is_admin()) {
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings.php';
+			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings-extra.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-dashboard.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-reporting.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-admin-bar.php';

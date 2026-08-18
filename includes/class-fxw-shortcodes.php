@@ -130,26 +130,37 @@ class FXW_Shortcodes
 				wp_die(__('You are not authorized to reorder this order.', 'foodxpress'));
 			}
 
-			foreach ($order->get_items() as $item) {
-				// Keep variable products as their exact variation: adding
-				// only the parent product_id silently drops variation items
-				// (and lands simple items as the parent), so re-orders were
-				// missing items (1.2.15).
-				$variation_id = $item->get_variation_id();
-				if ($variation_id) {
-					$variation_attributes = array();
-					$variation = wc_get_product($variation_id);
-					if ($variation && is_a($variation, 'WC_Product_Variation')) {
-						$variation_attributes = $variation->get_variation_attributes();
-					}
-					WC()->cart->add_to_cart($item->get_product_id(), $item->get_quantity(), $variation_id, $variation_attributes);
-				} else {
-					WC()->cart->add_to_cart($item->get_product_id(), $item->get_quantity());
-				}
-			}
+foreach ($order->get_items() as $item) {
+                // Keep variable products as their exact variation: adding
+                // only the parent product_id silently drops variation items
+                // (and lands simple items as the parent), so re-orders were
+                // missing items (1.2.15).
+                $variation_id = $item->get_variation_id();
+                if ($variation_id) {
+                    $variation_attributes = array();
+                    $variation = wc_get_product($variation_id);
+                    if ($variation && is_a($variation, 'WC_Product_Variation')) {
+                        $variation_attributes = $variation->get_variation_attributes();
+                    }
+                    $added = WC()->cart->add_to_cart($item->get_product_id(), $item->get_quantity(), $variation_id, $variation_attributes);
+                } else {
+                    $added = WC()->cart->add_to_cart($item->get_product_id(), $item->get_quantity());
+                }
+                // Surface per-item failures instead of failing silently
+                // — common when a variation was deleted after the original
+                // order (1.2.16).
+                if (!$added && function_exists('wc_add_notice')) {
+                    /* translators: %s: product name */
+                    wc_add_notice(sprintf(__('Could not add "%s" to your cart. It may no longer be available.', 'foodxpress'), $item->get_name()), 'notice');
+                }
+            }
 
-			wp_safe_redirect(wc_get_checkout_url());
-			exit;
+            if (function_exists('wc_add_notice')) {
+                wc_add_notice(__('Items from your previous order have been added to the cart. Review and adjust before checkout.', 'foodxpress'), 'notice');
+            }
+
+            wp_safe_redirect(wc_get_checkout_url());
+            exit;
 		}
 	}
 
@@ -346,20 +357,32 @@ class FXW_Shortcodes
 	 *
 	 * @since   1.0.0
 	 */
-	private function track_order_status()
-	{
-		$order_id = isset($_POST['fxw_order_id']) ? intval($_POST['fxw_order_id']) : 0;
-		$billing_email = isset($_POST['fxw_billing_email']) ? sanitize_email($_POST['fxw_billing_email']) : '';
+private function track_order_status()
+    {
+        // Rate-limit public lookup: the order ID + email check is real
+        // security, but sequential IDs make it brute-forceable — cap
+        // attempts per IP like the validate-location endpoint does
+        // (1.2.16).
+        if (class_exists('FXW_Rate_Limiter')) {
+            $limit_check = FXW_Rate_Limiter::check_rate_limit('track_order_lookup', 10, MINUTE_IN_SECONDS);
+            if (is_wp_error($limit_check)) {
+                echo '<p class="fxw-track-error">' . esc_html__('Too many tracking attempts. Please try again in a few minutes.', 'foodxpress') . '</p>';
+                return;
+            }
+        }
 
-		$order = wc_get_order($order_id);
+        $order_id = isset($_POST['fxw_order_id']) ? intval($_POST['fxw_order_id']) : 0;
+        $billing_email = isset($_POST['fxw_billing_email']) ? sanitize_email($_POST['fxw_billing_email']) : '';
 
-		// Emails are case-insensitive by definition (RFC 5321) — WC stores
-		// them lowercased, but input may arrive in any case, so compare
-		// normalized forms instead of the raw strings (1.2.15).
-		if (!$order || strtolower($order->get_billing_email()) !== strtolower($billing_email)) {
-			echo '<p class="fxw-track-error">' . esc_html__('Invalid order details.', 'foodxpress') . '</p>';
-			return;
-		}
+        $order = wc_get_order($order_id);
+
+        // Emails are case-insensitive by definition (RFC 5321) — WC stores
+        // them lowercased, but input may arrive in any case, so compare
+        // normalized forms instead of the raw strings (1.2.15).
+        if (!$order || strtolower($order->get_billing_email()) !== strtolower($billing_email)) {
+            echo '<p class="fxw-track-error">' . esc_html__('Invalid order details.', 'foodxpress') . '</p>';
+            return;
+        }
 
 		echo '<div class="fxw-order-status-wrapper fxw-track-order-page">';
 		echo '<div class="fxw-order-status-header"><h3>' . sprintf(esc_html__('Order #%s', 'foodxpress'), esc_html($order->get_order_number())) . '</h3></div>';

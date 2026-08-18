@@ -214,6 +214,15 @@ class FXW_Checkout_Handler
     {
         $options = get_option('fxw_settings');
 
+        // No Maps API key configured: the map is silently absent, so the
+        // "select on the map above" copy would reference something the
+        // customer cannot see. Give them an actionable message instead
+        // (1.2.16).
+        $maps_key = isset($options['fxw_google_maps_api_key']) ? trim((string) $options['fxw_google_maps_api_key']) : '';
+        if ('' === $maps_key) {
+            return __('Online ordering is currently unavailable — the delivery map is not configured. Please contact the store.', 'foodxpress');
+        }
+
         if (!FXW_Checkout::is_store_open()) {
             return __('We are currently closed for deliveries. Please try again later.', 'foodxpress');
         }

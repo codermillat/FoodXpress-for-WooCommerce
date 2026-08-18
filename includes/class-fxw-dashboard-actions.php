@@ -75,8 +75,16 @@ class FXW_Dashboard_Actions
 
 			set_transient('fxw_admin_notice', sprintf(__('Order #%s successfully assigned to %s', 'foodxpress'), $order->get_order_number(), $delivery_boy_name), 30);
 		} else {
+			// Unassign: drop the rider meta AND revert the order to a
+			// pre-assignment status so it stops showing on the assigned
+			// rider's dashboard and doesn't get stuck in fxw-assigned with
+			// no rider (1.2.16). Choose between in-kitchen (the prior FXW
+			// step) and processing (the pre-FXW WC default) based on which
+			// custom status is registered; fall back to processing for
+			// safety.
 			$order->delete_meta_data('_fxw_delivery_boy_id');
-			$order->add_order_note(__('Delivery boy unassigned.', 'foodxpress'));
+			$revert_to = post_status_exists('wc-fxw-in-kitchen') ? 'fxw-in-kitchen' : 'processing';
+			$order->update_status($revert_to, __('Delivery boy unassigned — order returned to kitchen.', 'foodxpress'));
 			$order->save();
 
 			set_transient('fxw_admin_notice', sprintf(__('Order #%s unassigned from delivery boy', 'foodxpress'), $order->get_order_number()), 30);
@@ -116,7 +124,7 @@ class FXW_Dashboard_Actions
 			wp_die(__('Invalid order.', 'foodxpress'));
 		}
 
-		$valid_statuses = array('fxw-assigned', 'fxw-picked-up', 'completed', 'cancelled');
+		$valid_statuses = array('fxw-in-kitchen', 'fxw-assigned', 'fxw-picked-up', 'completed', 'cancelled');
 		if (in_array($new_status, $valid_statuses, true)) {
 			$order->update_status($new_status, __('Status updated from dashboard.', 'foodxpress'));
 		}
@@ -172,8 +180,11 @@ class FXW_Dashboard_Actions
 				'status_label' => wc_get_order_status_name('fxw-assigned'),
 			));
 		} else {
+			// Unassign: revert status so the order is not stuck in
+			// fxw-assigned with no rider (1.2.16).
 			$order->delete_meta_data('_fxw_delivery_boy_id');
-			$order->add_order_note(__('Delivery boy unassigned.', 'foodxpress'));
+			$revert_to = post_status_exists('wc-fxw-in-kitchen') ? 'fxw-in-kitchen' : 'processing';
+			$order->update_status($revert_to, __('Delivery boy unassigned — order returned to kitchen.', 'foodxpress'));
 			$order->save();
 
 			if (function_exists('wc_delete_shop_order_transients')) {
@@ -185,6 +196,8 @@ class FXW_Dashboard_Actions
 				'order_id' => $order_id,
 				'delivery_boy_id' => 0,
 				'delivery_boy_name' => '',
+				'new_status' => $revert_to,
+				'status_label' => wc_get_order_status_name($revert_to),
 			));
 		}
 	}
@@ -214,7 +227,7 @@ class FXW_Dashboard_Actions
 			wp_send_json_error(array('message' => __('Invalid order.', 'foodxpress')), 400);
 		}
 
-		$valid_statuses = array('fxw-assigned', 'fxw-picked-up', 'completed', 'cancelled');
+		$valid_statuses = array('fxw-in-kitchen', 'fxw-assigned', 'fxw-picked-up', 'completed', 'cancelled');
 		if (!in_array($new_status, $valid_statuses, true)) {
 			wp_send_json_error(array('message' => __('Invalid status.', 'foodxpress')), 400);
 		}

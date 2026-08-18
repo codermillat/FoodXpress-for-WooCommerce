@@ -4,6 +4,12 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.1] - 2026-08-18
+
+### Fixed (block-checkout Store API namespace — caught right after v1.3.0 ship)
+- **"There is no such namespace registered: foodxpress." banner is gone.** v1.3.0 introduced picker calls to `wc.blocksCheckout.extensionCartUpdate({ namespace: 'foodxpress', data: { lat, lng } })` on the block checkout. WooCommerce only ships valid namespaces for extensions that have registered a callback through the documented `woocommerce_store_api_register_update_callback(...)` API; without that registration the Store API rejects every call with the banner above and the block totals stay stale. `FXW_Blocks_Checkout::register_store_api_namespace()` now registers the namespace on `woocommerce_blocks_loaded` (the same hook v1.2.18 settled on for the WC 11+ blocks runtime). The callback (`store_api_update_callback`) bootstraps `WC()->session` if necessary, writes `customer_lat` / `customer_lng` from the posted data, and re-runs `WC()->cart->calculate_shipping()` + `calculate_totals()` so the FX Shipping Method re-reads the freshly stored coordinates. The classic-checkout path (`$(document.body).trigger('update_checkout')` for fragment refresh) is unchanged.
+- **Independent REST route (`POST /foodxpress/v1/checkout/cart-update`) kept for defense-in-depth.** Direct REST caller still works for any external code that doesn't go through the documented Store API extension surface.
+
 ## [1.3.0] - 2026-08-18
 
 ### Fixed (checkout UX — four regressions caught in browser walkthrough)

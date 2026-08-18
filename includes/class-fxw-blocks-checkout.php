@@ -65,6 +65,89 @@ class FXW_Blocks_Checkout
 		// renders the picker through its own billing-form hook).
 		add_filter('render_block_core/post-content', array($this, 'prepend_map_to_post_content'), 10, 2);
 		add_action('woocommerce_store_api_checkout_update_order_from_request', array($this, 'apply_delivery_data'), 10, 2);
+
+		// Register the `foodxpress` extension namespace with the Cart/Checkout
+		// Store API so client-side `extensionCartUpdate({ namespace: 'foodxpress',
+		// data: { lat, lng } })` does not throw "There is no such namespace
+		// registered: foodxpress." The callback persists the pinned coordinates
+		// to the WC session and re-runs shipping + totals so the Shipping
+		// Method re-reads the freshly stored coordinates. Without this
+		// registration, the picker still updates the toast via the REST
+		// `validate-location` route, but the block totals panel lags behind
+		// (regression surfaced on 2026-08-18 right after 1.3.0 ship — fixed
+		// here in the same dot-release). Hook runs on `woocommerce_blocks_loaded`
+		// because the function defers to that action in WC 11+ (v1.2.18).
+		add_action('woocommerce_blocks_loaded', array($this, 'register_store_api_namespace'));
+	}
+
+	/**
+	 * Register the `foodxpress` extension callback with the documented
+	 * Store API extension point.
+	 *
+	 * Called on `woocommerce_blocks_loaded` (loaded only on the WP frontend
+	 * on cart/checkout pages and when the blocks runtime is active). The
+	 * callback writes `customer_lat` / `customer_lng` to the WC session —
+	 * the FX Shipping Method reads these on its next `calculate_shipping`
+	 * pass — then re-runs shipping + totals so the block totals panel
+	 * re-renders with the new rate.
+	 *
+	 * @since 1.3.1
+	 */
+	public function register_store_api_namespace()
+	{
+		if (!function_exists('woocommerce_store_api_register_update_callback')) {
+			return;
+		}
+
+		woocommerce_store_api_register_update_callback(array(
+			'namespace' => 'foodxpress',
+			'callback'  => array($this, 'store_api_update_callback'),
+		));
+	}
+
+	/**
+	 * Callback executed when the Cart/Checkout block posts to
+	 * `/wc/store/cart/extensions` with `namespace=foodxpress`. Persists
+	 * the pin coordinates so the shipping method picks them up, and
+	 * triggers cart total recompute.
+	 *
+	 * @param array $data Data passed from `extensionCartUpdate` —
+	 *                    expects keys `lat` and `lng`.
+	 * @return void
+	 * @since 1.3.1
+	 */
+	public function store_api_update_callback($data)
+	{
+		// The Store API has already bootstrapped the cart + session via
+		// `wc_load_cart()` for its own routes, but the extension callback
+		// can run when the customer is anonymous and the session was never
+		// created for the current request. Guard so we don't fail silently
+		// — without the session we have nothing to persist into.
+		if (!WC()->session && function_exists('wc_load_cart')) {
+			wc_load_cart();
+			if (WC()->session && method_exists(WC()->session, 'set_customer_session_cookie')) {
+				WC()->session->set_customer_session_cookie(true);
+			}
+		}
+		if (!WC()->session) {
+			return;
+		}
+
+		$lat = isset($data['lat']) && is_numeric($data['lat']) ? (float) $data['lat'] : null;
+		$lng = isset($data['lng']) && is_numeric($data['lng']) ? (float) $data['lng'] : null;
+
+		if (null !== $lat && null !== $lng && abs($lat) <= 90 && abs($lng) <= 180) {
+			WC()->session->set('customer_lat', $lat);
+			WC()->session->set('customer_lng', $lng);
+		}
+
+		// Recompute shipping + totals so the FX Shipping Method re-reads
+		// the freshly-stored coordinates and the block totals panel
+		// reflects the new rate on its next render.
+		if (WC()->cart) {
+			WC()->cart->calculate_shipping();
+			WC()->cart->calculate_totals();
+		}
 	}
 
 	/**

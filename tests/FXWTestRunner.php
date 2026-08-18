@@ -218,6 +218,28 @@ class FXWTestRunner
             }
         }
 
+        // Bundled Leaflet integrity — these ship in the repo, so a
+        // tampered or re-pinned bundle should fail the suite loudly.
+        // Hashes pinned against the v1.3.8 bundle. Update deliberately
+        // when upgrading Leaflet.
+        $vendor_hashes = [
+            'assets/vendor/leaflet/leaflet.js'  => 'db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a',
+            'assets/vendor/leaflet/leaflet.css' => 'a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6',
+        ];
+        foreach ($vendor_hashes as $path => $expected_sha256) {
+            $full_path = $this->plugin_dir . '/' . $path;
+            if (!file_exists($full_path)) {
+                $this->fail("Vendor file missing for hash check: $path");
+                continue;
+            }
+            $actual = hash_file('sha256', $full_path);
+            if ($actual === $expected_sha256) {
+                $this->pass("Integrity: $path matches pinned SHA-256");
+            } else {
+                $this->fail("Integrity: $path SHA-256 changed (got $actual)");
+            }
+        }
+
         echo "\n";
     }
 

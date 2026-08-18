@@ -303,30 +303,21 @@
         // `update_checkout` event; the totals panel only refreshes when
         // the Store API tells it to via `extensionCartUpdate`. Classic
         // checkout ignores extensionCartUpdate — it rebuilds its
-        // fragments on `update_checkout`. Detect once on init, then
-        // route the trigger through whichever API is available (1.3.0).
-        _totalRefreshApi: null,
-
-        detectTotalRefreshApi: function () {
-            if (this._totalRefreshApi !== null) {
-                return this._totalRefreshApi;
-            }
-            if (typeof window.wc !== 'undefined'
-                && wc.blocksCheckout
-                && typeof wc.blocksCheckout.extensionCartUpdate === 'function'
-            ) {
-                this._totalRefreshApi = 'blocks';
-            } else {
-                this._totalRefreshApi = 'classic';
-            }
-            return this._totalRefreshApi;
+        // fragments on `update_checkout`. Sniff at call time, NOT init,
+        // because `wc.blocksCheckout` may not have been wired in yet when
+        // the picker boots — caching the result across calls would have
+        // us fall back to jQuery permanently on the block checkout
+        // (v1.3.1).
+        isBlocksCheckout: function () {
+            return typeof window.wc !== 'undefined'
+                && typeof window.wc.blocksCheckout !== 'undefined'
+                && typeof window.wc.blocksCheckout.extensionCartUpdate === 'function';
         },
 
         triggerTotalRefresh: function (lat, lng) {
-            const api = this.detectTotalRefreshApi();
-            if (api === 'blocks') {
+            if (this.isBlocksCheckout()) {
                 try {
-                    wc.blocksCheckout.extensionCartUpdate({
+                    window.wc.blocksCheckout.extensionCartUpdate({
                         namespace: 'foodxpress',
                         data: { lat, lng }
                     });

@@ -253,31 +253,20 @@
         // block checkout's React totals panel only refreshes when the
         // Store API is told via `extensionCartUpdate`; classic checkout
         // rebuilds its totals on the jQuery `update_checkout` event.
-        // We sniff once on init and route through whichever API is live
-        // — without this, the map's fee toast updates but the Order
-        // summary panel lags behind (1.3.0).
-        _totalRefreshApi: null,
-
-        detectTotalRefreshApi: function () {
-            if (this._totalRefreshApi !== null) {
-                return this._totalRefreshApi;
-            }
-            if (typeof window.wc !== 'undefined'
-                && wc.blocksCheckout
-                && typeof wc.blocksCheckout.extensionCartUpdate === 'function'
-            ) {
-                this._totalRefreshApi = 'blocks';
-            } else {
-                this._totalRefreshApi = 'classic';
-            }
-            return this._totalRefreshApi;
+        // We sniff at call time, NOT init, because `wc.blocksCheckout`
+        // may not have been wired in yet when the picker boots —
+        // caching the result would have us fall back to jQuery
+        // permanently on the block checkout (v1.3.1).
+        isBlocksCheckout: function () {
+            return typeof window.wc !== 'undefined'
+                && typeof window.wc.blocksCheckout !== 'undefined'
+                && typeof window.wc.blocksCheckout.extensionCartUpdate === 'function';
         },
 
         triggerTotalRefresh: function (lat, lng) {
-            const api = this.detectTotalRefreshApi();
-            if (api === 'blocks') {
+            if (this.isBlocksCheckout()) {
                 try {
-                    wc.blocksCheckout.extensionCartUpdate({
+                    window.wc.blocksCheckout.extensionCartUpdate({
                         namespace: 'foodxpress',
                         data: { lat, lng }
                     });

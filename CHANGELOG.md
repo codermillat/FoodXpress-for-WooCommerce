@@ -4,6 +4,11 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.2] - 2026-08-18
+
+### Fixed (block-checkout live total refresh — caught right after v1.3.1 ship)
+- **Pin drag → Order summary updates simultaneously with the toast on the block checkout.** v1.3.0 set the picker to call `wc.blocksCheckout.extensionCartUpdate(...)` on the block checkout, and v1.3.1 registered the server-side namespace; but the JS auto-detection ran once at init and cached the result. If `wc.blocksCheckout` was not wired in at init time (which is normal on block checkout pages until the bundles finish loading), the picker cached the fallback (`classic` → `$(document.body).trigger('update_checkout')`) and never switched back. The toast still updated via the parallel REST `/validate-location` route, so the user saw a fresh fee in the toast while the block Order summary retained the previous rate. The picker now sniffs `wc.blocksCheckout.extensionCartUpdate` on EVERY call (each pin drag), so the transition to the block path happens the instant the API becomes available. Same change in both `assets/js/checkout.js` and `assets/js/checkout-leaflet.js`.
+
 ## [1.3.1] - 2026-08-18
 
 ### Fixed (block-checkout Store API namespace — caught right after v1.3.0 ship)

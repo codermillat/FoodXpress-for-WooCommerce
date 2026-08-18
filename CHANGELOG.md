@@ -4,6 +4,12 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.8] - 2026-08-18
+
+### Fixed ("No shipping options are available for this address." — found via WC log, not guessed)
+- **The shipping-method gate now checks the `map` capability instead of a nonexistent `distance` capability.** v1.3.4 replaced the literal `fxw_google_maps_api_key` guard with `FXW_Map_Providers::supports( 'distance', $options )` — but `distance` is not a capability any provider registers (the registry lists `map`, `geocode`, `routing`), so `supports()` returned `false` for every OSM/Leaflet store and `calculate_shipping()` bailed **before every rate calculation**. Diagnosis path: the WC logger (`wp-content/uploads/wc-logs/foodxpress-*.log`) showed the last `calculate_shipping: adding rate` entry at 16:55 UTC — before the v1.3.4 deploy — and zero `calculate_shipping` entries of any kind afterwards, including the logged early returns, which narrowed the bail to the only unlogged return: the new capability gate. v1.3.5–v1.3.7 (zone auto-registration, frontend sync, `reset_shipping()`) were all correct but could not help while the method itself produced no rate.
+- **Every remaining early return in `calculate_shipping()` now logs to the `foodxpress` WC log source** (no configured provider, no session, no pinned location), so the next silent bail is one log check away instead of a seven-release guess.
+
 ## [1.3.7] - 2026-08-18
 
 ### Fixed (live Order summary refresh — final fix)

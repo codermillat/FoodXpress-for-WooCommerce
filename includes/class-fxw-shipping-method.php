@@ -80,23 +80,36 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 		public function calculate_shipping( $package = array() ) {
 			$options = get_option( 'fxw_settings' );
 
-			// Skip rate calculation when the active map provider cannot
-			// actually deliver a distance at all (no key, no provider
-			// configured). Provider-aware: Leaflet/OSM providers work
+			// Skip rate calculation only when no usable map provider is
+			// configured at all. Provider-aware: Leaflet/OSM providers work
 			// without `fxw_google_maps_api_key`, so requiring that key
-			// unconditionally is the cause of the "Order summary is stale
-			// on pin drag" bug — the shipping method bails, no rate is
-			// added, and the cart cannot update the line in the
-			// customer-facing summary panel (regression caught 2026-08-18
-			// immediately after the v1.3.2 live-update hotfix; fixed 1.3.4).
-			if ( class_exists( 'FXW_Map_Providers' ) && ! FXW_Map_Providers::supports( 'distance', $options ) ) {
+			// unconditionally bails every keyless install (v1.3.4 intent).
+			//
+			// IMPORTANT: the capability checked here must be one every
+			// configured provider actually lists. 'distance' is NOT a
+			// provider capability (the registry lists map/geocode/routing),
+			// so checking supports('distance') returned false for OSM and
+			// this method silently added no rate at all — the exact cause
+			// of "No shipping options are available for this address."
+			// after v1.3.4 (found 2026-08-18 via the WC log: the last
+			// "adding rate" entry predates the v1.3.4 deploy; fixed 1.3.8).
+			if ( class_exists( 'FXW_Map_Providers' ) && ! FXW_Map_Providers::supports( 'map', $options ) ) {
+				if ( function_exists( 'wc_get_logger' ) ) {
+					wc_get_logger()->info( 'calculate_shipping: no configured map provider — no rate', array( 'source' => 'foodxpress' ) );
+				}
 				return;
 			}
 			if ( ! class_exists( 'FXW_Map_Providers' ) && empty( $options['fxw_google_maps_api_key'] ) ) {
+				if ( function_exists( 'wc_get_logger' ) ) {
+					wc_get_logger()->info( 'calculate_shipping: no Google key (legacy path) — no rate', array( 'source' => 'foodxpress' ) );
+				}
 				return;
 			}
 
 			if ( ! WC()->session ) {
+				if ( function_exists( 'wc_get_logger' ) ) {
+					wc_get_logger()->info( 'calculate_shipping: no session — no rate', array( 'source' => 'foodxpress' ) );
+				}
 				return;
 			}
 
@@ -116,6 +129,9 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 			$customer_lng = WC()->session->get( 'customer_lng' );
 
 			if ( ! $customer_lat || ! $customer_lng ) {
+				if ( function_exists( 'wc_get_logger' ) ) {
+					wc_get_logger()->info( 'calculate_shipping: no pinned location yet — no rate', array( 'source' => 'foodxpress' ) );
+				}
 				return; // Can't calculate shipping without a pinned location
 			}
 

@@ -69,15 +69,36 @@ class FXW_Checkout_Address
 	 */
 	public static function store_base()
 	{
-		if (!function_exists('WC') || !WC()->countries) {
-			return array('country' => '', 'state' => '', 'city' => '', 'postcode' => '');
+		// Prefer WC()->countries when available (admin / late frontend
+		// requests); fall back to the raw option otherwise because some
+		// early hooks fire before WC_Countries is instantiated.
+		$country = '';
+		$state = '';
+		$city = '';
+		$postcode = '';
+		if (function_exists('WC') && WC() && WC()->countries) {
+			$country = (string) WC()->countries->get_base_country();
+			$state = (string) WC()->countries->get_base_state();
+			$city = (string) WC()->countries->get_base_city();
+			$postcode = (string) WC()->countries->get_base_postcode();
+		}
+		if ('' === $country) {
+			$raw = get_option('woocommerce_default_country', '');
+			// Stored as "COUNTRY:STATE" (e.g. "IN:UP") or just "COUNTRY".
+			if (is_string($raw) && '' !== $raw) {
+				$parts = explode(':', $raw, 2);
+				$country = $parts[0];
+				if (isset($parts[1])) {
+					$state = $parts[1];
+				}
+			}
 		}
 
 		return array(
-			'country' => (string) WC()->countries->get_base_country(),
-			'state' => (string) WC()->countries->get_base_state(),
-			'city' => (string) WC()->countries->get_base_city(),
-			'postcode' => (string) WC()->countries->get_base_postcode(),
+			'country' => $country,
+			'state' => $state,
+			'city' => $city,
+			'postcode' => $postcode,
 		);
 	}
 

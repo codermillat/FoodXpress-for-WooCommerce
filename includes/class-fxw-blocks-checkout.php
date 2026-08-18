@@ -145,6 +145,16 @@ class FXW_Blocks_Checkout
 		// the freshly-stored coordinates and the block totals panel
 		// reflects the new rate on its next render.
 		if (WC()->cart) {
+			// Drop any cached shipping packages so the FX Shipping Method's
+			// calculate_shipping() actually runs again — without this
+			// reset, WC's WC_Shipping keeps the previously-computed
+			// packages in memory and the cart totals panel returns the
+			// stale "No available delivery option" line even though the
+			// toast knows the new rate. Surface caught 2026-08-18 right
+			// after v1.3.6 landed; fixed v1.3.7.
+			if (WC()->shipping && method_exists(WC()->shipping, 'reset_shipping')) {
+				WC()->shipping->reset_shipping();
+			}
 			WC()->cart->calculate_shipping();
 			WC()->cart->calculate_totals();
 		}

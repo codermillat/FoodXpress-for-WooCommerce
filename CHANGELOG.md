@@ -4,6 +4,11 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.7] - 2026-08-18
+
+### Fixed (live Order summary refresh — final fix)
+- **`WC_Shipping::reset_shipping()` is now called inside the Store API extension callback before re-running shipping calculation.** The cart-extension callback written in v1.3.1 only called `WC()->cart->calculate_shipping()` + `calculate_totals()`. WC's `WC_Shipping` class caches per-package shipping state inside `$this->packages`; subsequent requests within the same Store API lifecycle skipped package recompute and returned the previous (no-rate) package state. With `reset_shipping()` clearing the package cache first, `calculate_shipping()` is forced to re-evaluate the zones against the freshly-set `customer_lat` / `customer_lng` session values, the FX Shipping Method's `calculate_shipping()` runs, and the Store API response carries the new rate — the block Order summary line now updates to "FoodXpress Delivery ₹X.XX" in lockstep with the toast on every pin drag.
+
 ## [1.3.6] - 2026-08-18
 
 ### Fixed (lazy zone registration fires on frontend too)

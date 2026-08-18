@@ -4,6 +4,11 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.5] - 2026-08-18
+
+### Fixed ("No available delivery option" — surfaced by the v1.3.4 provider-aware gate)
+- **FoodXpress Delivery is auto-enabled on every existing shipping zone on the next admin page load.** When v1.3.4 removed the hardcoded Google-key guard, the shipping method started actually running on Leaflet/OSM stores; for stores that never had the method enabled on a WC shipping zone, this surfaced the latent config gap as "No available delivery option" / "No shipping options are available for this address." because WC only calls a shipping method for packages belonging to a zone that has the method enabled. The shipping method's rate can never reach the Order summary until at least one matching zone has the method enabled. New `fxw_ensure_shipping_method_registered()` walks every existing shipping zone (named + WC's synthetic zone 0 "Rest of the world") and adds the `foodxpress_delivery` method idempotently — idempotent, no duplicates; existing zones created BEFORE the upgrade are covered; new zones the user adds afterwards still need the manual checkbox in WooCommerce → Settings → Shipping. Runs on activation (`fxw_activate`) and on the next admin page hit gated by a 6-hour transient (`fxw_zone_sync_done`) — no frontend cost, no cron cost, no REST cost. Admin can `delete_transient( 'fxw_zone_sync_done' )` to force a re-run.
+
 ## [1.3.4] - 2026-08-18
 
 ### Fixed (live Order summary refresh on the block checkout — final root cause)

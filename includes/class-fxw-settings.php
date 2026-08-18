@@ -155,14 +155,10 @@ class FXW_Settings
 			array('id' => 'fxw_delivery_fee_per_km', 'default' => 1.50, 'step' => 0.01)
 		);
 
-		add_settings_field(
-			'fxw_enable_extra_delivery_fee',
-			__('Extra Cart Fee (alternative)', 'foodxpress'),
-			array($this, 'render_checkbox_field'),
-			'foodxpress-settings',
-			'fxw_delivery_fee_settings_section',
-			array('id' => 'fxw_enable_extra_delivery_fee', 'label' => __('Add the delivery fee as a separate cart fee instead of only through the shipping method (skipped when FoodXpress shipping is chosen). Off by default.', 'foodxpress'))
-		);
+		// The "extra cart fee" option was removed in 1.3.0: it duplicated the
+		// shipping-method charge whenever a non-FoodXpress rate was selected,
+		// so customers paid the delivery cost twice. The Shipping Method API
+		// is now the single place the charge is added.
 		// Uninstall opt-in (1.2.16).
 		add_settings_field('fxw_remove_on_uninstall', __('Remove Data on Uninstall', 'foodxpress'), array($this, 'render_checkbox_field'), 'foodxpress-settings', 'fxw_general_settings_section', array('id' => 'fxw_remove_on_uninstall', 'label' => __('Delete all FoodXpress data (settings, saved profiles, the delivery_boy role) on uninstall. Order meta is never deleted either way.', 'foodxpress')));
 
@@ -453,11 +449,9 @@ class FXW_Settings
 			$sanitized['fxw_auto_set_assigned_status'] = 'no';
 		}
 
-		if (isset($input['fxw_enable_extra_delivery_fee'])) {
-			$sanitized['fxw_enable_extra_delivery_fee'] = 'yes';
-		} else {
-			$sanitized['fxw_enable_extra_delivery_fee'] = 'no';
-		}
+		// fxw_enable_extra_delivery_fee is intentionally NOT carried over
+		// (removed in 1.3.0 — it double-charged delivery). Dropping it here
+		// clears the stored value on the next save.
 
 		// Extra settings (e.g. opening hours, uninstall opt-in) registered by other classes
 		$sanitized = apply_filters('fxw_sanitize_settings_extra', $sanitized, $input);

@@ -74,12 +74,14 @@ build/
 .nuxt/
 .vite/
 
-# Local dev / TestSprite artifacts
+# Local dev / test artifacts
 testsprite_tests/
 testsprite_*.json
 test-results/
 playwright-report/
 playwright/.cache/
+# Browser binaries are per-machine; contributors run `npx playwright install`.
+# package.json + package-lock.json ARE committed so the harness is reproducible.
 
 # Coverage
 coverage/

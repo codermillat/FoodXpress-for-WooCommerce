@@ -147,6 +147,9 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 				WC()->session->set( 'fxw_distance_data', array(
 					'distance' => $distance_data['distance'],
 					'duration' => $distance_data['duration'],
+					// Carried through so the shipping label can mark a
+					// straight-line estimate honestly (1.3.0).
+					'estimated' => ! empty( $distance_data['estimated'] ),
 				) );
 			}
 

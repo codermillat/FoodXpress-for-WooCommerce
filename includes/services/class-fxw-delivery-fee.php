@@ -1,11 +1,22 @@
 <?php
 /**
- * Delivery Fee Service
+ * Delivery Fee Service — shipping label only.
  *
- * Owns the WooCommerce cart-fee and shipping-label hooks for the
- * FoodXpress delivery fee + ETA minutes display. Split out of
- * FXW_Checkout in 1.2.0 to keep the checkout orchestrator/handler
- * files lean and to give the fee logic a clear single home.
+ * The delivery charge itself belongs to FXW_Shipping_Method, which adds
+ * it through the documented Shipping Method API (`calculate_shipping()`
+ * + `add_rate()`). That is WooCommerce's single supported place for a
+ * per-order delivery cost, and it makes WooCommerce tax the charge with
+ * shipping tax rules rather than fee rules.
+ *
+ * Until 1.3.0 this class ALSO added the same charge as a cart fee on
+ * `woocommerce_cart_calculate_fees`. A guard was supposed to skip the
+ * fee whenever a FoodXpress shipping rate was selected, but on any store
+ * without a FoodXpress shipping zone another method wins (e.g. core Free
+ * shipping) and the guard never fires — so the customer was charged the
+ * delivery cost twice, once as shipping and once as a fee, with the two
+ * figures often disagreeing because they were computed at different
+ * moments. The cart-fee path is therefore removed entirely; this class
+ * now only appends the ETA to our own shipping label.
  *
  * @since      1.2.0
  * @package    FoodXpress
@@ -20,7 +31,6 @@ if (!defined('ABSPATH')) {
  * Class FXW_Delivery_Fee
  *
  * Backend concerns:
- *  - Hook: woocommerce_cart_calculate_fees — add per-order delivery fee
  *  - Filter: woocommerce_cart_shipping_method_full_label — append ETA minutes
  *
  * Self-registers at the bottom of the file; no external wiring required.
@@ -31,73 +41,13 @@ class FXW_Delivery_Fee
 {
 
     /**
-     * Register cart-fee + label hooks.
+     * Register the label hook.
      *
      * @since 1.2.0
      */
     public function __construct()
     {
-        add_action('woocommerce_cart_calculate_fees', array($this, 'add_delivery_fee'));
         add_filter('woocommerce_cart_shipping_method_full_label', array($this, 'append_eta_to_label'), 10, 2);
-    }
-
-    /**
-     * Add the delivery fee to the cart.
-     *
-     * @param   WC_Cart    $cart    The cart object.
-     * @since   1.0.0
-     */
-    public function add_delivery_fee($cart)
-    {
-        if (is_admin() && !defined('DOING_AJAX')) {
-            return;
-        }
-
-        $options = get_option('fxw_settings');
-        $enable_extra_fee = isset($options['fxw_enable_extra_delivery_fee']) ? in_array($options['fxw_enable_extra_delivery_fee'], array('yes', 'true', 1, '1'), true) : false;
-        if (!$enable_extra_fee) {
-            if (function_exists('wc_get_logger')) {
-                wc_get_logger()->debug('add_delivery_fee: disabled via settings', array('source' => 'foodxpress'));
-            }
-            return;
-        }
-
-        // Avoid double-charging: if our shipping method is chosen, skip adding a separate fee
-        $chosen = WC()->session ? WC()->session->get('chosen_shipping_methods') : array();
-        if (is_array($chosen)) {
-            foreach ($chosen as $method_id) {
-                if (is_string($method_id) && strpos($method_id, 'foodxpress_delivery') === 0) {
-                    if (function_exists('wc_get_logger')) {
-                        wc_get_logger()->debug('add_delivery_fee: skipping fee because FoodXpress shipping is chosen (' . $method_id . ')', array('source' => 'foodxpress'));
-                    }
-                    return;
-                }
-            }
-        }
-
-        $distance_data = WC()->session ? WC()->session->get('fxw_distance_data') : null;
-
-        if (!$distance_data) {
-            return;
-        }
-
-        $base_fee = isset($options['fxw_delivery_fee_base']) ? (float) $options['fxw_delivery_fee_base'] : 5;
-        $fee_per_km = isset($options['fxw_delivery_fee_per_km']) ? (float) $options['fxw_delivery_fee_per_km'] : 1.5;
-
-        if (!isset($distance_data['distance']) || !is_object($distance_data['distance']) || !isset($distance_data['distance']->value)) {
-            return;
-        }
-
-        $distance_in_km = $distance_data['distance']->value / 1000;
-        $delivery_fee = $base_fee + ($distance_in_km * $fee_per_km);
-        if (class_exists('FXW_Pricing')) {
-            $tier_fee = FXW_Pricing::fee_for_distance($distance_in_km, $options);
-            if (null !== $tier_fee && false !== $tier_fee) {
-                $delivery_fee = $tier_fee;
-            }
-        }
-
-        $cart->add_fee(__('Delivery Fee', 'foodxpress'), $delivery_fee);
     }
 
     /**
@@ -134,7 +84,14 @@ class FXW_Delivery_Fee
         $seconds = (int) $distance_data['duration']->value + ($prep_time * 60);
         $mins = max(1, (int) round($seconds / 60));
 
-        $eta_html = sprintf(' <small class="fxw-eta-label">%s</small>', esc_html(sprintf(__('ETA ~ %d mins', 'foodxpress'), $mins)));
+        // When the provider has no road routing the travel time was derived
+        // from a straight-line estimate, so the label must not read as a
+        // driven-route promise (1.3.0).
+        $text = !empty($distance_data['estimated'])
+            ? sprintf(__('ETA ~ %d mins (estimated)', 'foodxpress'), $mins)
+            : sprintf(__('ETA ~ %d mins', 'foodxpress'), $mins);
+
+        $eta_html = sprintf(' <small class="fxw-eta-label">%s</small>', esc_html($text));
         return $label . $eta_html;
     }
 }

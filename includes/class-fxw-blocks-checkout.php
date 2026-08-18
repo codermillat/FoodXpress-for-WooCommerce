@@ -52,13 +52,18 @@ class FXW_Blocks_Checkout
 		// the page render. v1.2.18.
 		add_action('woocommerce_blocks_loaded', array($this, 'register_fields'));
 		add_action('woocommerce_validate_additional_field', array($this, 'validate_address_details'), 10, 3);
-		// Prepend the picker to the Checkout block itself rather than to
-		// `the_content`: block themes render page content through
-		// core/post-content, which applies `the_content` outside the main
-		// loop, so an `in_the_loop()` guard silently dropped the map on
-		// every block theme. render_block runs wherever the block renders.
-		// v1.2.19.
-		add_filter('render_block', array($this, 'prepend_map_to_checkout_block'), 10, 2);
+		// Render the picker into the WRAPPER around the checkout block, never
+		// into the block's own output. WooCommerce's Checkout block hydrates
+		// by matching its server-rendered HTML; prepending anything inside
+		// that output made hydration bail silently and the checkout sat on
+		// its loading skeleton forever (regression in 1.2.19, fixed 1.3.0).
+		//
+		// core/post-content is the wrapper block through which block themes
+		// render page content, so appending after its inner content places
+		// the picker above the checkout without touching the checkout block
+		// itself. Classic themes never reach here (the classic checkout
+		// renders the picker through its own billing-form hook).
+		add_filter('render_block_core/post-content', array($this, 'prepend_map_to_post_content'), 10, 2);
 		add_action('woocommerce_store_api_checkout_update_order_from_request', array($this, 'apply_delivery_data'), 10, 2);
 	}
 
@@ -74,22 +79,16 @@ class FXW_Blocks_Checkout
 			return;
 		}
 
-		woocommerce_register_additional_checkout_field(array(
-			'id' => 'foodxpress/address-details',
-			'label' => __('House / Flat / Building No.', 'foodxpress'),
-			'location' => 'address',
-			'type' => 'text',
-			'required' => true,
-			'error_message' => __('Please enter your exact address (house / flat / building no.) so our delivery agent can find you.', 'foodxpress'),
-			'attributes' => array(
-				'placeholder' => __('e.g., Flat 4B, House 25, Tower A, Block 2', 'foodxpress'),
-				'autocomplete' => 'street-address',
-			),
-		));
-
+		// No custom address-detail field: WooCommerce's own `address_1` is
+		// relabelled to "Flat / Floor / Block / Society / Tower" by
+		// FXW_Checkout_Address instead. Registering a second field here put
+		// two address inputs on the block checkout, and the value would not
+		// have landed in the order's real address (1.3.0).
 		woocommerce_register_additional_checkout_field(array(
 			'id' => 'foodxpress/landmark',
-			'label' => __('Nearby Landmark (optional)', 'foodxpress'),
+			// The block checkout appends its own "(optional)" suffix to
+			// non-required fields, so the label must not repeat it.
+			'label' => __('Nearby Landmark', 'foodxpress'),
 			'location' => 'address',
 			'type' => 'text',
 			'required' => false,
@@ -111,23 +110,23 @@ class FXW_Blocks_Checkout
 	}
 
 	/**
-	 * Validate the required exact-address field on the block checkout.
-	 * Beyond the value itself, enforce the same delivery-zone rules as
-	 * classic checkout: pin present + inside the radius + store open.
+	 * Enforce the delivery-zone rules on the block checkout.
 	 *
-	 * @param WP_Error $errors     Errors object.
-	 * @param string   $field_key  Field key being validated.
+	 * The address text itself is now WooCommerce's own required
+	 * `address_1` field (relabelled by FXW_Checkout_Address), which core
+	 * validates. What core cannot know is whether a map pin was dropped
+	 * and whether it falls inside the delivery radius, so that check runs
+	 * here, keyed on the landmark field — the one FoodXpress field that is
+	 * always present on the address form.
+	 *
+	 * @param WP_Error $errors      Errors object.
+	 * @param string   $field_key   Field key being validated.
 	 * @param string   $field_value Posted value.
 	 * @since 1.2.9
 	 */
 	public function validate_address_details($errors, $field_key, $field_value)
 	{
-		if ('foodxpress/address-details' !== $field_key) {
-			return;
-		}
-
-		if (mb_strlen(trim((string) $field_value)) < 5) {
-			$errors->add('foodxpress_address_details', __('Please enter your exact address (house / flat / building no.) so our delivery agent can find you.', 'foodxpress'));
+		if ('foodxpress/landmark' !== $field_key) {
 			return;
 		}
 
@@ -138,21 +137,31 @@ class FXW_Blocks_Checkout
 	}
 
 	/**
-	 * Render the Step-1 map picker above the Checkout block.
+	 * Render the Step-1 map picker above the Checkout block on block themes.
 	 *
-	 * Hooked on `render_block` so it works in both classic and block
-	 * themes: block themes render page content through core/post-content,
-	 * which applies `the_content` outside the main loop, so the previous
-	 * `the_content` + `in_the_loop()` approach never fired there.
+	 * Hooked on `render_block_core/post-content` — the wrapper block through
+	 * which block themes render page content. Deliberately NOT hooked on the
+	 * checkout block itself: WooCommerce's Checkout block hydrates by
+	 * matching its server-rendered HTML, so injecting markup inside that
+	 * output makes hydration bail and the checkout never leaves its loading
+	 * skeleton (1.2.19 regression, fixed in 1.3.0). Writing into the
+	 * wrapper's content leaves the checkout block's own HTML byte-identical.
 	 *
-	 * @param string $block_content Rendered block HTML.
+	 * @param string $block_content Rendered wrapper HTML.
 	 * @param array  $block         Parsed block.
 	 * @return string
 	 * @since 1.2.9
 	 */
-	public function prepend_map_to_checkout_block($block_content, $block)
+	public function prepend_map_to_post_content($block_content, $block)
 	{
-		if (is_admin() || !isset($block['blockName']) || 'woocommerce/checkout' !== $block['blockName']) {
+		if (is_admin() || !function_exists('is_checkout') || !is_checkout()) {
+			return $block_content;
+		}
+
+		// Only when this page really renders the Checkout block; a store may
+		// use the classic shortcode instead, which renders its own picker.
+		$post = get_post();
+		if (!$post || !has_block('woocommerce/checkout', $post)) {
 			return $block_content;
 		}
 
@@ -173,12 +182,18 @@ class FXW_Blocks_Checkout
 		}
 
 		$options = get_option('fxw_settings');
-		$api_key = isset($options['fxw_google_maps_api_key']) ? trim((string) $options['fxw_google_maps_api_key']) : '';
-		if ('' === $api_key) {
-			return $prefix . $block_content; // map is useless without a key; admin sees the config warning
+		// Provider-aware since 1.3.0: a keyless provider (OpenStreetMap)
+		// renders the picker fine, so gate on real usability instead of on
+		// the presence of a Google key.
+		if (class_exists('FXW_Map_Providers') && FXW_Map_Providers::is_configured($options)) {
+			$prefix .= FXW_Checkout::render_location_picker(true);
 		}
 
-		return $prefix . FXW_Checkout::render_location_picker(true) . $block_content;
+		if ('' === $prefix) {
+			return $block_content;
+		}
+
+		return $prefix . $block_content;
 	}
 
 	/**
@@ -196,9 +211,16 @@ class FXW_Blocks_Checkout
 			return;
 		}
 
-		$details = $this->get_field_value($order, $request, 'foodxpress/address-details', 'billing');
+		// The address detail is WooCommerce's own address_1 (relabelled to
+		// "Flat / Floor / Block / Society / Tower"), not a custom field —
+		// read it from the order itself. Shipping first, billing as the
+		// fallback for "same address for billing" flows. (1.3.0)
+		$details = trim((string) $order->get_shipping_address_1());
 		if ('' === $details) {
-			return; // not a FoodXpress flow (fields not registered / not used)
+			$details = trim((string) $order->get_billing_address_1());
+		}
+		if ('' === $details) {
+			return; // no address to work with
 		}
 
 		$landmark = $this->get_field_value($order, $request, 'foodxpress/landmark', 'billing');

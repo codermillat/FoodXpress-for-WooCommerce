@@ -2,8 +2,19 @@
 if (!defined('ABSPATH')) {
 	exit;
 }
+
+require_once __DIR__ . '/class-fxw-map-providers.php';
+require_once __DIR__ . '/class-fxw-map-provider-client.php';
+
 /**
- * Handles all communication with the mapping service API.
+ * Handles all communication with the configured mapping provider.
+ *
+ * Owns caching, input normalisation and the public API used across the
+ * plugin; the per-provider HTTP shapes live in FXW_Map_Provider_Client.
+ * Any provider is usable — see FXW_Map_Providers — and when the active
+ * provider has no road routing, distance falls back to a straight-line
+ * estimate with the admin's road-correction factor so ordering never
+ * breaks. (Provider-agnostic since 1.3.0.)
  *
  * @since      1.0.0
  * @package    FoodXpress
@@ -13,23 +24,22 @@ class FXW_Mapping_Service
 {
 
 	/**
-	 * The API key for the mapping service.
+	 * Active provider definition, including its key.
 	 *
-	 * @since    1.0.0
+	 * @since    1.3.0
 	 * @access   private
-	 * @var      string    $api_key    The API key.
+	 * @var      array
 	 */
-	private $api_key;
+	private $provider;
 
 	/**
-	 * The base URL for the mapping service API.
+	 * Provider HTTP client.
 	 *
-	 * @since    1.0.0
+	 * @since    1.3.0
 	 * @access   private
-	 * @var      string    $base_url    The base URL.
+	 * @var      FXW_Map_Provider_Client
 	 */
-	private $base_url = 'https://maps.googleapis.com/maps/api/distancematrix/json';
-	private $geocode_url = 'https://maps.googleapis.com/maps/api/geocode/json';
+	private $client;
 
 	/**
 	 * Cache lifetime for geocoding results (addresses rarely move).
@@ -53,69 +63,65 @@ class FXW_Mapping_Service
 	public function __construct()
 	{
 		$options = get_option('fxw_settings');
-		// Server-side calls (Geocoding/Distance Matrix) prefer the dedicated
-		// server key so merchants can restrict the browser key by referrer.
-		$server_key = isset($options['fxw_google_maps_server_key']) ? trim((string) $options['fxw_google_maps_server_key']) : '';
-		if ('' !== $server_key) {
-			$this->api_key = $server_key;
-		} else {
-			$this->api_key = isset($options['fxw_google_maps_api_key']) ? $options['fxw_google_maps_api_key'] : '';
-		}
+
+		// Server-side calls prefer a dedicated server key where the
+		// provider offers one, so merchants can restrict the browser key
+		// by referrer (Google only in practice).
+		$this->provider = FXW_Map_Providers::active($options);
+		$this->provider['key'] = FXW_Map_Providers::key_for($this->provider['id'], $options, true);
+
+		$this->client = new FXW_Map_Provider_Client($this->provider);
 	}
 
 	/**
-	 * wp_remote_get with a single retry on transient failures (network
-	 * error or 5xx) — smooths brief Google API hiccups at checkout.
+	 * Is the active provider missing a key it requires?
 	 *
-	 * @param   string  $request_url    Full request URL.
-	 * @return  array|WP_Error          Response or error.
-	 * @since   1.2.12
+	 * @return bool
+	 * @since 1.3.0
 	 */
-	private function remote_get_with_retry($request_url)
+	private function key_missing()
 	{
-		$args = array(
-			'timeout' => 15,
-			'headers' => array(
-				'User-Agent' => 'FoodXpress/' . FXW_VERSION . ' WordPress/' . get_bloginfo('version'),
-			),
-		);
+		return !empty($this->provider['requires_key']) && '' === (string) $this->provider['key'];
+	}
 
-		$response = wp_remote_get($request_url, $args);
-
-		$transient_failure = is_wp_error($response)
-			|| (is_array($response) && isset($response['response']['code']) && (int) $response['response']['code'] >= 500);
-
-		if ($transient_failure) {
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->debug('Maps API transient failure — retrying once', array('source' => 'foodxpress'));
-			}
-			usleep(300000); // 300 ms
-			$response = wp_remote_get($request_url, $args);
-		}
-
-		return $response;
+	/**
+	 * @return WP_Error
+	 * @since 1.3.0
+	 */
+	private function key_missing_error()
+	{
+		return new WP_Error('api_key_missing', sprintf(
+			/* translators: %s: map provider name. */
+			__('%s requires an API key. Add one in WooCommerce → Settings → FoodXpress, or switch to OpenStreetMap which needs no key.', 'foodxpress'),
+			isset($this->provider['label']) ? $this->provider['label'] : __('The map provider', 'foodxpress')
+		));
 	}
 
 	/**
 	 * Get the distance between two points.
 	 *
-	 * @param   string  $origin         The origin address.
-	 * @param   string  $destination    The destination address.
-	 * @return  array|WP_Error          The distance and duration, or an error.
+	 * Uses the provider's road routing when available. When the provider
+	 * has none (or routing fails), returns a straight-line estimate scaled
+	 * by the admin's road-correction factor, flagged with
+	 * `['estimated' => true]` so callers can label the ETA honestly.
+	 *
+	 * @param   string|array  $origin         Origin coordinates or address.
+	 * @param   string|array  $destination    Destination coordinates or address.
+	 * @return  array|WP_Error                The distance and duration, or an error.
 	 * @since   1.0.0
 	 */
 	public function get_distance($origin, $destination)
 	{
-		if (empty($this->api_key)) {
-			return new WP_Error('api_key_missing', __('Google Maps API key is missing.', 'foodxpress'));
+		if ($this->key_missing()) {
+			return $this->key_missing_error();
 		}
 
-		$orig = $this->normalize_location($origin);
+		$orig = $this->to_coords($origin);
 		if (is_wp_error($orig)) {
 			return $orig;
 		}
 
-		$dest = $this->normalize_location($destination);
+		$dest = $this->to_coords($destination);
 		if (is_wp_error($dest)) {
 			return $dest;
 		}
@@ -123,87 +129,76 @@ class FXW_Mapping_Service
 		// Serve from cache when possible — calculate_shipping() runs on
 		// every cart/checkout render, so an uncached API call here burns
 		// quota and adds latency on each one.
-		$cache_key = 'fxw_dist_' . md5($this->location_hash($orig) . '|' . $this->location_hash($dest));
+		$cache_key = 'fxw_dist_' . md5(
+			$this->provider['id'] . '|' . $this->coord_hash($orig) . '|' . $this->coord_hash($dest)
+		);
 		$cached = get_transient($cache_key);
 		if (false !== $cached && is_array($cached) && isset($cached['distance'], $cached['duration'])) {
-			return $cached;
+			return $this->shape($cached);
 		}
 
-		$args = array(
-			'origins' => $orig,
-			'destinations' => $dest,
-			'units' => 'metric',
-			'mode' => 'driving',
-			'key' => $this->api_key,
-		);
+		$result = $this->client->route($orig, $dest);
 
-		$request_url = add_query_arg($args, $this->base_url);
+		if (is_wp_error($result)) {
+			$code = $result->get_error_code();
 
-		$response = $this->remote_get_with_retry($request_url);
-
-		if (is_wp_error($response)) {
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->error('Distance API request failed: ' . $response->get_error_message(), array('source' => 'foodxpress'));
+			// Routing genuinely unavailable → estimate rather than block
+			// the order. A hard provider error still estimates, but is
+			// logged so the operator can see the provider is failing.
+			if ('routing_unsupported' !== $code && function_exists('wc_get_logger')) {
+				wc_get_logger()->warning(
+					'Routing failed (' . $code . '), using straight-line estimate: ' . $result->get_error_message(),
+					array('source' => 'foodxpress')
+				);
 			}
-			return new WP_Error('delivery_service_error', __('Unable to calculate delivery distance. Please try again or contact support.', 'foodxpress'));
+
+			$result = FXW_Map_Provider_Client::haversine($orig, $dest, FXW_Map_Providers::road_factor());
 		}
-
-		$response_code = wp_remote_retrieve_response_code($response);
-		if ($response_code !== 200) {
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->error(sprintf('Distance API returned HTTP %d', $response_code), array('source' => 'foodxpress'));
-			}
-			return new WP_Error('delivery_service_error', __('Delivery service temporarily unavailable. Please try again later.', 'foodxpress'));
-		}
-
-		$body = wp_remote_retrieve_body($response);
-		$data = json_decode($body);
-
-		if (empty($data) || !isset($data->status)) {
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->error('Distance API returned invalid response', array('source' => 'foodxpress'));
-			}
-			return new WP_Error('delivery_service_error', __('Unable to calculate delivery distance. Please try again.', 'foodxpress'));
-		}
-
-		if ('OK' !== $data->status) {
-			$api_message = isset($data->error_message) ? $data->error_message : 'Unknown API error';
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->error('Distance API status not OK: ' . $api_message, array('source' => 'foodxpress'));
-			}
-			return new WP_Error('delivery_service_error', __('Unable to calculate delivery distance for your location.', 'foodxpress'));
-		}
-
-		if (empty($data->rows[0]->elements[0])) {
-			return new WP_Error('no_results', __('Could not calculate distance.', 'foodxpress'));
-		}
-
-		$element = $data->rows[0]->elements[0];
-
-		if (!isset($element->status) || 'OK' !== $element->status) {
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->warning('Distance API element status: ' . ($element->status ?? 'UNKNOWN'), array('source' => 'foodxpress'));
-			}
-			return new WP_Error('no_results', __('Could not calculate distance.', 'foodxpress'));
-		}
-
-		$result = array(
-			'distance' => $element->distance, // In meters
-			'duration' => $element->duration, // In seconds
-		);
 
 		set_transient($cache_key, $result, self::DISTANCE_CACHE_TTL);
 
-		return $result;
+		return $this->shape($result);
 	}
 
 	/**
-	 * Get the coordinates for an address.
+	 * Convert an internal distance array into the object shape the rest of
+	 * the plugin expects (`->value` / `->text`, mirroring the historical
+	 * Google Distance Matrix element).
 	 *
-	 * @param   string  $address    The address.
-	 * @return  array|WP_Error      The coordinates, or an error.
-	 * @since   1.0.0
+	 * @param array $result array('distance'=>metres,'duration'=>seconds).
+	 * @return array
+	 * @since 1.3.0
 	 */
+	private function shape($result)
+	{
+		$metres = (int) $result['distance'];
+		$seconds = (int) $result['duration'];
+		$estimated = !empty($result['estimated']);
+
+		$km = $metres / 1000;
+		$mins = (int) max(1, round($seconds / 60));
+
+		return array(
+			'distance' => (object) array(
+				'value' => $metres,
+				'text' => sprintf(
+					/* translators: %s: distance in kilometres. */
+					__('%s km', 'foodxpress'),
+					number_format_i18n($km, ($km < 10 ? 1 : 0))
+				),
+			),
+			'duration' => (object) array(
+				'value' => $seconds,
+				'text' => sprintf(
+					/* translators: %d: duration in minutes. */
+					_n('%d min', '%d mins', $mins, 'foodxpress'),
+					$mins
+				),
+			),
+			'estimated' => $estimated,
+		);
+	}
+
 	/**
 	 * Resolve the restaurant's coordinates from plugin settings.
 	 *
@@ -249,114 +244,89 @@ class FXW_Mapping_Service
 	}
 
 	/**
-	 * Produce a stable cache identity for a normalized location.
+	 * Produce a stable cache identity for a coordinate pair.
 	 *
-	 * Coordinates are rounded to 4 decimals (~11 m) so the same drop on the
-	 * map reuses the cached result across page loads; addresses are
-	 * lowercased and trimmed.
+	 * Rounded to 4 decimals (~11 m) so the same drop on the map reuses the
+	 * cached result across page loads.
 	 *
-	 * @param   string  $normalized    Output of normalize_location().
+	 * @param   array  $coords    array('lat'=>float,'lng'=>float).
 	 * @return  string
 	 * @since   1.2.1
 	 */
-	private function location_hash($normalized)
+	private function coord_hash($coords)
 	{
-		if (preg_match('/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/', $normalized, $m)) {
-			return round((float) $m[1], 4) . ',' . round((float) $m[2], 4);
-		}
-		return strtolower(trim($normalized));
+		return round((float) $coords['lat'], 4) . ',' . round((float) $coords['lng'], 4);
 	}
 
 	/**
-	 * Normalize a location value into a "lat,lng" string or pass-through address.
+	 * Normalize any accepted location value into a coordinate pair,
+	 * geocoding an address when necessary.
 	 *
-	 * @param mixed $value Array with ['lat'=>..,'lng'=>..] or string ("lat,lng" or address)
-	 * @return string|WP_Error
+	 * @param mixed $value array('lat','lng'), "lat,lng" string, or address.
+	 * @return array|WP_Error array('lat'=>float,'lng'=>float).
+	 * @since 1.3.0
 	 */
-	private function normalize_location($value)
+	private function to_coords($value)
 	{
 		if (is_array($value)) {
-			$lat = isset($value['lat']) ? (float) $value['lat'] : null;
-			$lng = isset($value['lng']) ? (float) $value['lng'] : null;
-			if (null === $lat || null === $lng) {
+			if (!isset($value['lat'], $value['lng'])) {
 				return new WP_Error('invalid_location', __('Invalid location array. Expected lat,lng.', 'foodxpress'));
 			}
-			return $lat . ',' . $lng;
+			return array('lat' => (float) $value['lat'], 'lng' => (float) $value['lng']);
 		}
 
-		if (is_string($value)) {
-			$value = trim($value);
-			// Already looks like "lat,lng"?
-			if (preg_match('/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/', $value)) {
-				$parts = array_map('trim', explode(',', $value));
-				return (float) $parts[0] . ',' . (float) $parts[1];
-			}
-			return $value; // Treat as address string
+		if (!is_string($value)) {
+			return new WP_Error('invalid_location', __('Invalid location type.', 'foodxpress'));
 		}
 
-		return new WP_Error('invalid_location', __('Invalid location type.', 'foodxpress'));
+		$value = trim($value);
+
+		if (preg_match('/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/', $value, $m)) {
+			return array('lat' => (float) $m[1], 'lng' => (float) $m[2]);
+		}
+
+		$coords = $this->get_coords($value);
+		if (is_wp_error($coords)) {
+			return $coords;
+		}
+
+		return array('lat' => (float) $coords->lat, 'lng' => (float) $coords->lng);
 	}
 
+	/**
+	 * Get the coordinates for an address.
+	 *
+	 * @param   string  $address    The address.
+	 * @return  object|WP_Error     Object with ->lat and ->lng, or an error.
+	 * @since   1.0.0
+	 */
 	public function get_coords($address)
 	{
-		if (empty($this->api_key)) {
-			return new WP_Error('api_key_missing', __('Google Maps API key is missing.', 'foodxpress'));
+		if ($this->key_missing()) {
+			return $this->key_missing_error();
 		}
 
-		$cache_key = 'fxw_geo_' . md5(strtolower(trim($address)));
+		if (!in_array('geocode', (array) $this->provider['capabilities'], true)) {
+			return new WP_Error('geocoding_unsupported', __('The configured map provider cannot look up addresses.', 'foodxpress'));
+		}
+
+		$cache_key = 'fxw_geo_' . md5($this->provider['id'] . '|' . strtolower(trim($address)));
 		$cached = get_transient($cache_key);
 		if (false !== $cached && is_object($cached) && isset($cached->lat, $cached->lng)) {
 			return $cached;
 		}
 
-		$request_url = add_query_arg(
-			array(
-				'address' => $address, // add_query_arg will URL-encode; avoid double-encoding
-				'key' => $this->api_key,
-			),
-			$this->geocode_url
-		);
+		$location = $this->client->geocode($address);
 
-		$response = $this->remote_get_with_retry($request_url);
-
-		if (is_wp_error($response)) {
+		if (is_wp_error($location)) {
 			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->error('Geocoding API request failed: ' . $response->get_error_message(), array('source' => 'foodxpress'));
+				wc_get_logger()->error(
+					'Geocoding failed (' . $this->provider['id'] . '): ' . $location->get_error_message(),
+					array('source' => 'foodxpress')
+				);
 			}
-			return new WP_Error('geocoding_service_error', __('Unable to find location. Please try a different address.', 'foodxpress'));
+			return $location;
 		}
-
-		$response_code = wp_remote_retrieve_response_code($response);
-		if ($response_code !== 200) {
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->error(sprintf('Geocoding API returned HTTP %d', $response_code), array('source' => 'foodxpress'));
-			}
-			return new WP_Error('geocoding_service_error', __('Location service temporarily unavailable. Please try again later.', 'foodxpress'));
-		}
-
-		$body = wp_remote_retrieve_body($response);
-		$data = json_decode($body);
-
-		if (empty($data) || !isset($data->status)) {
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->error('Geocoding API returned invalid response', array('source' => 'foodxpress'));
-			}
-			return new WP_Error('geocoding_service_error', __('Unable to find location. Please try again.', 'foodxpress'));
-		}
-
-		if ('OK' !== $data->status) {
-			$api_message = isset($data->error_message) ? $data->error_message : 'Unknown geocoding error';
-			if (function_exists('wc_get_logger')) {
-				wc_get_logger()->error('Geocoding API status not OK: ' . $api_message, array('source' => 'foodxpress'));
-			}
-			return new WP_Error('geocoding_service_error', __('Unable to find the specified address. Please check and try again.', 'foodxpress'));
-		}
-
-		if (empty($data->results) || !isset($data->results[0]->geometry->location)) {
-			return new WP_Error('geocoding_service_error', __('No location found for the specified address.', 'foodxpress'));
-		}
-
-		$location = $data->results[0]->geometry->location;
 
 		set_transient($cache_key, $location, self::GEOCODE_CACHE_TTL);
 

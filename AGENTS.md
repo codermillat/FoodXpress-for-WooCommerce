@@ -8,12 +8,12 @@
 ## 0. TL;DR
 
 - **Project:** FoodXpress for WooCommerce — a delivery-management plugin for single-restaurant WooCommerce stores
-- **Current version:** **v1.2.19** (2026-08-18 — v1.2.2–1.2.16: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration, config health warning, region-neutral defaults, full-flow audit fixes (REST session bootstrap, settings sections render, receipt printing, saved-address hook, blocks compat, agent email), 16-minor cleanup pass (REST schedule parity, no-API-key message, unassign status revert, agent transition enforcement, wp-login redirect, track-order rate limit, reorder feedback, settings harden, cart-block notices, reporting TZ, dashboard `fxw-in-kitchen` whitelist, dead-code removal); **v1.2.17: runtime QA** — fixed REST `sanitize_callback='floatval'` bug (WP 6.x+ treats it as a method-style callback, PHP 8 fatal `ArgumentCountError` on every page load that touches the REST layer); **v1.2.18: runtime QA on Local WP** — blocks-checkout fields now register (`register_fields` moved from `woocommerce_init` to `woocommerce_blocks_loaded`, required by WC 11.0+); **v1.2.19: browser QA** — map picker now renders on block themes (`the_content` + `in_the_loop()` never fired under core/post-content → moved to `render_block` on `woocommerce/checkout`), and `is_store_open()` moved to `FXW_Store_Hours` (loaded every request) because `FXW_Checkout` is frontend/AJAX-only, so the admin bar disagreed with the storefront; repo public, GPL-3.0-or-later. See CHANGELOG.md)
+- **Current version:** **v1.3.0** (2026-08-18 — v1.2.2–1.2.19: Zomato/Swiggy-style checkout, coordinates-only fee engine + saved-address defaults, WC-compat hardening, dead-code cleanup, privacy integration, config health warning, region-neutral defaults, full-flow audit fixes (REST session bootstrap, settings sections render, receipt printing, saved-address hook, blocks compat, agent email), 16-minor cleanup pass (REST schedule parity, no-API-key message, unassign status revert, agent transition enforcement, wp-login redirect, track-order rate limit, reorder feedback, settings harden, cart-block notices, reporting TZ, dashboard `fxw-in-kitchen` whitelist, dead-code removal), REST `floatval` callback PHP 8 fatal fix, blocks-checkout `register_fields` moved to `woocommerce_blocks_loaded` for WC 11.0+, map picker on block themes via `render_block` on `woocommerce/checkout`, `is_store_open()` moved to `FXW_Store_Hours` (loaded every request), Leaflet fallback (no API key required). **v1.3.0: checkout UX cleanup — four regressions caught in browser walkthrough** — double-charging removed (Shipping Method API is now the sole charge site), country/state/city/postcode hidden + relabelled address field (single combined "Flat / Floor / Block / Society / Tower"), live Order summary refresh on pin drag (extensionCartUpdate on block, update_checkout on classic, cart-update REST route), landmark label dedup, removed obsolete `fxw_enable_extra_delivery_fee` settings field. Repo public, GPL-3.0-or-later. See CHANGELOG.md)
 - **In progress:** **Phase 1** of an 8-phase backport — porting 17 premium features from two archived sibling repos (`RestroReach` and `restaurant-delivery-manager`, both archived on GitHub but not deleted)
 - **User profile:** Freelance web developer. The plugin is a **general open-source release for everyone** (GPL-3.0-or-later) — not tied to any specific restaurant or client. It is the **primary project**; everything else on the machine is secondary.
 - **Repo location:** `~/Desktop/FoodXpress-for-WooCommerce/` (moved here from `~/.minimax-agent/projects/repo-merge-analysis/fx/` on 2026-08-17 so non-Mavis tools can access it directly)
 - **Remote:** `https://github.com/codermillat/FoodXpress-for-WooCommerce` (public since v1.2.1, GPL-3.0-or-later)
-- **Test runner:** `php tests/FXWTestRunner.php` → must report **118/118 pass** before any commit
+- **Test runner:** `php tests/FXWTestRunner.php` → must report **136/136 pass** before any commit
 
 ---
 
@@ -98,6 +98,7 @@ FoodXpress-for-WooCommerce/
 │   ├── class-fxw-blocks-checkout.php ← blocks-checkout fields + map + order persistence (v1.2.9)
 │   ├── class-fxw-store-hours.php     ← scheduled opening hours (v1.2.12)
 │   ├── class-fxw-pricing.php          ← fee tiers / free threshold / minimum order (v1.2.13)
+│   ├── class-fxw-checkout-address.php ← hide country/state/city/postcode + relabel address_1 (v1.3.0)
 │   ├── class-fxw-config.php        ← constants (FXW_Config::DEFAULT_DELIVERY_RADIUS, etc.)
 │   ├── api/
 │   │   └── class-fxw-rest-checkout-controller.php  ← REST pattern reference
@@ -144,6 +145,7 @@ FoodXpress-for-WooCommerce/
 | `FXW_Blocks_Checkout` | Blocks-checkout support: Additional Checkout Fields + map via the_content + Store API order persistence. | ✓ |
 | `FXW_Store_Hours` | Optional per-day opening schedule feeding `FXW_Checkout::is_store_open()`. | ✓ |
 | `FXW_Pricing` | Admin-configurable fee tiers, free-delivery threshold, minimum order (settings extension + statics used by the rate/validation/REST paths). | ✓ |
+| `FXW_Checkout_Address` | Hides WooCommerce's country/state/city/postcode fields on both classic and block checkouts (`woocommerce_get_country_locale`), relabels `address_1` to the single combined "Flat / Floor / Block / Society / Tower" field, fills hidden fields from the store base on order persistence (`woocommerce_checkout_update_order_meta`, `woocommerce_store_api_checkout_update_order_from_request`). | ✓ |
 | `FXW_Dashboard_Render` / `FXW_Dashboard_Actions` | Dashboard page rendering / write handlers (v1.2.9 split). | ✓ |
 | `FXW_Config` | Constants only. No instance. | n/a |
 | `FXW_REST_Checkout_Controller` | Reference REST controller — follow this pattern for Phase 1+ REST endpoints. | n/a (registered by FXW_Core) |

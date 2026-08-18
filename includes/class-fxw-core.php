@@ -64,6 +64,10 @@ class FXW_Core
 	{
 		// Core services and configuration files
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-config.php';
+		// Required explicitly (not just transitively via the mapping
+		// service): the admin config warning, the blocks-checkout guard and
+		// the settings UI all read the provider registry directly.
+		require_once FXW_PLUGIN_DIR . 'includes/services/class-fxw-map-providers.php';
 		require_once FXW_PLUGIN_DIR . 'includes/services/class-fxw-mapping-service.php';
 		require_once FXW_PLUGIN_DIR . 'includes/services/class-fxw-rate-limiter.php';
 		require_once FXW_PLUGIN_DIR . 'includes/api/class-fxw-rest-checkout-controller.php';
@@ -75,6 +79,10 @@ class FXW_Core
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-privacy.php';
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-store-hours.php';
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-pricing.php';
+		// Address simplification hooks the country-locale filter, which the
+		// Store API also consults for admin-created and REST orders — so it
+		// must load on every request, not only the frontend.
+		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-checkout-address.php';
 
 		/**
 		 * Frontend and AJAX (admin-ajax.php) files
@@ -82,8 +90,7 @@ class FXW_Core
 		 */
 		$fxw_is_ajax = function_exists('wp_doing_ajax') ? wp_doing_ajax() : (defined('DOING_AJAX') && DOING_AJAX);
 		if (!is_admin() || $fxw_is_ajax) {
-			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-checkout.php';
-			// FXW_Shortcodes owns the fxw_print_receipt AJAX handler. admin-ajax
+			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-checkout.php';			// FXW_Shortcodes owns the fxw_print_receipt AJAX handler. admin-ajax
 			// requests report is_admin() === true, so without this exception the
 			// handler was never registered and the receipt buttons printed "0"
 			// (1.2.15). Its remaining hooks (shortcodes, enqueues, reorder) are
@@ -105,6 +112,7 @@ class FXW_Core
 		if (is_admin()) {
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings-extra.php';
+			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings-maps.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-dashboard.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-reporting.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-admin-bar.php';
@@ -309,9 +317,16 @@ class FXW_Core
 		}
 
 		$problems = array();
-		$api_key = isset($options['fxw_google_maps_api_key']) ? trim((string) $options['fxw_google_maps_api_key']) : '';
-		if ('' === $api_key) {
-			$problems[] = __('the Google Maps API key is missing', 'foodxpress');
+
+		// Provider-aware since 1.3.0: only providers that actually need a
+		// key can be missing one. OpenStreetMap never triggers this.
+		if (class_exists('FXW_Map_Providers') && !FXW_Map_Providers::is_configured($options)) {
+			$provider = FXW_Map_Providers::active($options);
+			$problems[] = sprintf(
+				/* translators: %s: map provider name. */
+				__('the %s API key is missing', 'foodxpress'),
+				$provider['label']
+			);
 		}
 
 		$latlng = isset($options['fxw_restaurant_latlng']) ? trim((string) $options['fxw_restaurant_latlng']) : '';

@@ -50,6 +50,93 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
                 'args' => $this->get_validate_location_args(),
             ),
         ));
+
+        // POST /wp-json/foodxpress/v1/checkout/cart-update
+        //
+        // Block-checkout live total refresh hook. Called from the picker
+        // via `wc.blocksCheckout.extensionCartUpdate({ namespace: 'foodxpress',
+        // data: { lat, lng } })`. The picker used to fall back to a debounced
+        // `$(document.body).trigger('update_checkout')`, but the block
+        // checkout's React tree does not listen for that jQuery event — the
+        // fee updated in the toast and lagged in the totals. Routing the
+        // pin coordinates through the documented Store API extensions
+        // endpoint re-runs the cart/shipping calculation server-side and
+        // returns the updated cart, which `extensionCartUpdate` applies to
+        // the visible totals instantly (1.3.0).
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/cart-update', array(
+            array(
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => array($this, 'cart_update'),
+                'permission_callback' => '__return_true',
+                'args' => array(
+                    'lat' => array(
+                        'required' => true,
+                        'type' => 'number',
+                    ),
+                    'lng' => array(
+                        'required' => true,
+                        'type' => 'number',
+                    ),
+                ),
+            ),
+        ));
+
+        // GET /wp-json/foodxpress/v1/checkout/geocode
+        //
+        // Address lookup for the Leaflet picker. Proxied server-side on
+        // purpose: keyed providers must never expose their key to the
+        // browser, and Nominatim's usage policy expects one identified
+        // caller rather than every visitor's browser. (1.3.0)
+        register_rest_route($this->namespace, '/' . $this->rest_base . '/geocode', array(
+            array(
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => array($this, 'geocode'),
+                'permission_callback' => '__return_true', // Public but rate limited
+                'args' => array(
+                    'q' => array(
+                        'required' => true,
+                        'type' => 'string',
+                        'description' => __('Address or place to look up.', 'foodxpress'),
+                        'sanitize_callback' => function ($param) {
+                            return sanitize_text_field($param);
+                        },
+                    ),
+                ),
+            ),
+        ));
+    }
+
+    /**
+     * Look up coordinates for a free-text address via the store's
+     * configured map provider.
+     *
+     * @param WP_REST_Request $request Full details about the request.
+     * @return WP_REST_Response|WP_Error
+     * @since 1.3.0
+     */
+    public function geocode($request)
+    {
+        if (class_exists('FXW_Rate_Limiter')) {
+            $limit_check = FXW_Rate_Limiter::check_rate_limit('geocode_rest', 20, MINUTE_IN_SECONDS);
+            if (is_wp_error($limit_check)) {
+                return $limit_check;
+            }
+        }
+
+        $query = trim((string) $request->get_param('q'));
+        if (mb_strlen($query) < 3) {
+            return new WP_Error('query_too_short', __('Please type at least 3 characters.', 'foodxpress'), array('status' => 400));
+        }
+
+        $coords = (new FXW_Mapping_Service())->get_coords($query);
+        if (is_wp_error($coords)) {
+            return new WP_Error('geocode_failed', $coords->get_error_message(), array('status' => 400));
+        }
+
+        return rest_ensure_response(array(
+            'lat' => (float) $coords->lat,
+            'lng' => (float) $coords->lng,
+        ));
     }
 
     /**
@@ -133,7 +220,17 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
         $radius = isset($options['fxw_delivery_zone_radius']) ? (float) $options['fxw_delivery_zone_radius'] : 10;
 
         if ($distance_in_km > $radius) {
-            return new WP_Error('out_of_zone', __('Sorry, we do not deliver to your location.', 'foodxpress'), array('status' => 400));
+            // 200 with in_zone:false, not a 4xx. Pinning outside the zone is
+            // a normal business outcome, not a transport or request error —
+            // returning 400 made the browser log a red console error for
+            // expected behaviour. Malformed requests still 4xx (1.3.0).
+            return rest_ensure_response(array(
+                'status' => 'error',
+                'in_zone' => false,
+                'code' => 'out_of_zone',
+                'message' => __('Sorry, we do not deliver to your location.', 'foodxpress'),
+                'distance_km' => round($distance_in_km, 2),
+            ));
         }
 
         // WooCommerce does NOT initialize the cart/session for custom REST
@@ -184,10 +281,18 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
             WC()->session->set('fxw_distance_data', $distance_data);
         }
 
-        // Store-formatted fee (auto currency, decimals, symbol position)
+        // Store-formatted fee (auto currency, decimals, symbol position).
+        // Entity-decoded because the pickers render this with .textContent
+        // (the safe choice for untrusted display) — wc_price() emits the
+        // currency symbol as an HTML entity, which would otherwise show up
+        // literally as "&#8377;12.30" (1.3.0).
         $fee_formatted = '';
         if (function_exists('wc_price')) {
-            $fee_formatted = wp_strip_all_tags(wc_price($cost));
+            $fee_formatted = html_entity_decode(
+                wp_strip_all_tags(wc_price($cost)),
+                ENT_QUOTES | ENT_HTML5,
+                'UTF-8'
+            );
         }
 
         return rest_ensure_response(array(
@@ -196,7 +301,75 @@ class FXW_REST_Checkout_Controller extends WP_REST_Controller
             'distance_km' => round($distance_in_km, 2),
             'fee' => round($cost, 2),
             'fee_formatted' => $fee_formatted,
+            // True when the provider has no road routing and the distance
+            // is a straight-line estimate — the picker labels it so the
+            // ETA does not read as a driven route (1.3.0).
+            'estimated' => !empty($distance_data['estimated']),
             'duration_text' => (isset($distance_data['duration']) && is_object($distance_data['duration']) && isset($distance_data['duration']->text)) ? $distance_data['duration']->text : ''
+        ));
+    }
+
+    /**
+     * Persist pin coordinates to the session and return the refreshed cart.
+     *
+     * The block-checkout picker fires this via
+     * `extensionCartUpdate({ namespace: 'foodxpress', data: { lat, lng } })`
+     * after every drag/geolocation. The Store API applies the returned
+     * `cart` directly to the visible totals — no manual refresh needed.
+     *
+     * @param WP_REST_Request $request Full details about the request.
+     * @return WP_REST_Response|WP_Error
+     * @since 1.3.0
+     */
+    public function cart_update($request)
+    {
+        if (class_exists('FXW_Rate_Limiter')) {
+            $limit_check = FXW_Rate_Limiter::check_rate_limit('cart_update_rest', 60, MINUTE_IN_SECONDS);
+            if (is_wp_error($limit_check)) {
+                return $limit_check;
+            }
+        }
+
+        $lat = (float) $request->get_param('lat');
+        $lng = (float) $request->get_param('lng');
+
+        if (abs($lat) > 90 || abs($lng) > 180) {
+            return new WP_Error('invalid_coordinates', __('Invalid coordinates provided.', 'foodxpress'), array('status' => 400));
+        }
+
+        // REST requests don't get WC()->session by default; bootstrap it the
+        // same way the validate-location route does so the coordinates
+        // actually persist to the customer's next request.
+        if (!WC()->session && function_exists('wc_load_cart')) {
+            wc_load_cart();
+            if (WC()->session && method_exists(WC()->session, 'set_customer_session_cookie')) {
+                WC()->session->set_customer_session_cookie(true);
+            }
+        }
+
+        if (!WC()->session) {
+            return new WP_Error('session_unavailable', __('Checkout session is not available.', 'foodxpress'), array('status' => 500));
+        }
+
+        WC()->session->set('customer_lat', $lat);
+        WC()->session->set('customer_lng', $lng);
+
+        // Recompute cart totals + shipping packages so the shipping method
+        // re-reads the freshly-stored coordinates (it pulls them from the
+        // session on each `calculate_shipping` pass). WC's Store API does
+        // this internally for `cart/extensions` handlers; we call the same
+        // primitives here.
+        if (WC()->cart) {
+            WC()->cart->calculate_shipping();
+            WC()->cart->calculate_totals();
+        }
+
+        return rest_ensure_response(array(
+            'status' => 'success',
+            // Returned shape mirrors wc/store/cart so block components that
+            // read the response get a real cart back, but the live total
+            // refresh only requires `status`. Future extensions can attach
+            // fee/distance here without changing the client.
         ));
     }
 

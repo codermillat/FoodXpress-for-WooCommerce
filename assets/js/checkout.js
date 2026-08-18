@@ -152,7 +152,10 @@
                 }
             } catch (err) {
                 console.error('FXW: Map init failed', err);
-                this.notify(this.t('error_generic'), 'error');
+                // A map that will not initialise is a store configuration
+                // problem (missing billing account, restricted key, wrong
+                // Map ID) — "please try again" was actively misleading.
+                this.notify(this.t('map_unavailable'), 'error');
             }
         },
 
@@ -258,7 +261,12 @@
 
                 if (res.ok && data.status === 'success') {
                     this.state.isValid = true;
-                    const suffix = `${data.distance_km} km · ${data.duration_text}`;
+                    let suffix = `${data.distance_km} km · ${data.duration_text}`;
+                    // Providers without road routing return a straight-line
+                    // estimate; label it rather than implying a driven route.
+                    if (data.estimated) {
+                        suffix += ` (${this.t('estimated')})`;
+                    }
                     let message;
                     if (parseFloat(data.fee) === 0) {
                         // Free-delivery threshold met — say so instead of
@@ -276,11 +284,11 @@
                         message = `${this.t('delivery_fee_estimated')} ${price} · ${suffix}`;
                     }
                     this.notify(message, 'success');
-                    $(document.body).trigger('update_checkout');
+                    this.triggerTotalRefresh(lat, lng);
                 } else {
                     this.state.isValid = false;
                     this.notify(data.message || data.code || this.t('out_of_zone'), 'error');
-                    $(document.body).trigger('update_checkout');
+                    this.triggerTotalRefresh(lat, lng);
                 }
             } catch (err) {
                 console.error('FXW: Zone validation error', err);
@@ -288,6 +296,47 @@
             } finally {
                 this.setLoading(false);
             }
+        },
+
+        // ─── Live Order Summary Update ───────────────────────────
+        // Block checkout's React tree does not listen for jQuery's
+        // `update_checkout` event; the totals panel only refreshes when
+        // the Store API tells it to via `extensionCartUpdate`. Classic
+        // checkout ignores extensionCartUpdate — it rebuilds its
+        // fragments on `update_checkout`. Detect once on init, then
+        // route the trigger through whichever API is available (1.3.0).
+        _totalRefreshApi: null,
+
+        detectTotalRefreshApi: function () {
+            if (this._totalRefreshApi !== null) {
+                return this._totalRefreshApi;
+            }
+            if (typeof window.wc !== 'undefined'
+                && wc.blocksCheckout
+                && typeof wc.blocksCheckout.extensionCartUpdate === 'function'
+            ) {
+                this._totalRefreshApi = 'blocks';
+            } else {
+                this._totalRefreshApi = 'classic';
+            }
+            return this._totalRefreshApi;
+        },
+
+        triggerTotalRefresh: function (lat, lng) {
+            const api = this.detectTotalRefreshApi();
+            if (api === 'blocks') {
+                try {
+                    wc.blocksCheckout.extensionCartUpdate({
+                        namespace: 'foodxpress',
+                        data: { lat, lng }
+                    });
+                    return;
+                } catch (err) {
+                    console.warn('FXW: extensionCartUpdate failed, falling back to jQuery', err);
+                }
+            }
+            // Classic checkout (or fallback after a block-API error).
+            $(document.body).trigger('update_checkout');
         },
 
         // ─── Auto-fill WC Fields ─────────────────────────────────

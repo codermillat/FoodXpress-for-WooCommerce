@@ -79,9 +79,20 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 		 */
 		public function calculate_shipping( $package = array() ) {
 			$options = get_option( 'fxw_settings' );
-			$api_key = isset( $options['fxw_google_maps_api_key'] ) ? $options['fxw_google_maps_api_key'] : '';
 
-			if ( empty( $api_key ) ) {
+			// Skip rate calculation when the active map provider cannot
+			// actually deliver a distance at all (no key, no provider
+			// configured). Provider-aware: Leaflet/OSM providers work
+			// without `fxw_google_maps_api_key`, so requiring that key
+			// unconditionally is the cause of the "Order summary is stale
+			// on pin drag" bug — the shipping method bails, no rate is
+			// added, and the cart cannot update the line in the
+			// customer-facing summary panel (regression caught 2026-08-18
+			// immediately after the v1.3.2 live-update hotfix; fixed 1.3.4).
+			if ( class_exists( 'FXW_Map_Providers' ) && ! FXW_Map_Providers::supports( 'distance', $options ) ) {
+				return;
+			}
+			if ( ! class_exists( 'FXW_Map_Providers' ) && empty( $options['fxw_google_maps_api_key'] ) ) {
 				return;
 			}
 

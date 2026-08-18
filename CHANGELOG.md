@@ -4,6 +4,12 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.4] - 2026-08-18
+
+### Fixed (live Order summary refresh on the block checkout — final root cause)
+- **`FoodXpress Delivery ₹X.XX` now updates simultaneously with the toast on every pin drag.** `FXW_Shipping_Method::calculate_shipping()` checked `if ( empty( $api_key ) ) return;` against `fxw_google_maps_api_key` unconditionally. With a Leaflet/OSM provider (no Google key required, the case for every Local install that does not have a paid Google account), the method bailed before `add_rate()`, and the Store API rebuilt the cart's shipping panel from a stale session-set package — so the toast updated from `/validate-location` while the Order summary stayed on the previous pin's rate. The shipping method now uses the provider-aware gate `FXW_Map_Providers::supports( 'distance', $options )`, which is true whenever the active map provider can compute distances (Leaflet/OSM work without keys; Google requires the setting). Without this gate the block-checkout Order summary line would have stayed stale no matter what the picker did server-side.
+- **Behavior preserved on stores with no configured provider** — `supports()` returns false when there is no provider at all, so the shipping method bails in the same way as before (no rate is added). Fix only widens the gate for providers that don't require a key.
+
 ## [1.3.3] - 2026-08-18
 
 ### Fixed (block-checkout 500 critical error — fatal on every Place Order)

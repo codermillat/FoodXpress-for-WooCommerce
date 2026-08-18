@@ -3,7 +3,7 @@
  * Plugin Name:       FoodXpress for WooCommerce
  * Plugin URI:        https://github.com/codermillat/FoodXpress-for-WooCommerce
  * Description:       A complete delivery management system for single-restaurant WooCommerce stores.
- * Version:           1.3.5
+ * Version:           1.3.6
  * Author:            MD MILLAT HOSEN
  * Author URI:        https://millat.is-a.dev/
  * License:           GPL-3.0-or-later
@@ -24,7 +24,7 @@ if (!defined('ABSPATH')) {
 }
 
 if (!defined('FXW_VERSION')) {
-    define('FXW_VERSION', '1.3.5');
+    define('FXW_VERSION', '1.3.6');
 }
 if (!defined('FXW_PLUGIN_DIR')) {
     define('FXW_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -213,21 +213,25 @@ if (!function_exists('fxw_ensure_shipping_method_registered')) {
 }
 
 /**
- * Run the zone auto-registration once when an admin first visits a
- * WP/WC admin page after the upgrade. Gated by a `fxw_zone_sync_done`
- * transient so it never runs more than once per installation (and
- * never on the frontend, never on REST requests, never on cron). The
- * admin can clear the transient to re-run.
+ * Run the zone auto-registration lazily — fires on the next request
+ * after the activation, whether the request comes from the WP admin
+ * (`admin_init`) or from the frontend (`init`, including cart /
+ * checkout / Store API requests). Gated by a 6-hour transient so the
+ * actual work happens at most once per that window. Excluded: AJAX
+ * requests, REST requests, WP-CRON — none of those need the sync, and
+ * registering zones inside a Store API request would slow checkout
+ * shipping calculation. WC_Shipping_Zone::add_shipping_method is
+ * idempotent so re-running is safe even before the transient flips.
  *
  * @since 1.3.5
+ * @since 1.3.6 also fires on frontend `init` because stores that hit
+ *                checkout BEFORE any admin visit were never seeing the
+ *                sync run (admin_init never fired for them).
  */
-if (!function_exists('fxw_maybe_sync_shipping_zones_admin')) {
-    function fxw_maybe_sync_shipping_zones_admin()
+if (!function_exists('fxw_maybe_sync_shipping_zones')) {
+    function fxw_maybe_sync_shipping_zones()
     {
-        if (!is_admin() || get_transient('fxw_zone_sync_done')) {
-            return;
-        }
-        if (!current_user_can('manage_woocommerce')) {
+        if (get_transient('fxw_zone_sync_done')) {
             return;
         }
         if (defined('DOING_AJAX') && DOING_AJAX) {
@@ -242,13 +246,12 @@ if (!function_exists('fxw_maybe_sync_shipping_zones_admin')) {
         if (!class_exists('WC_Shipping_Zone')) {
             return;
         }
-        // 6 hours is a safe re-run window — admin can also resync
-        // manually by deleting the transient.
         fxw_ensure_shipping_method_registered();
         set_transient('fxw_zone_sync_done', 1, 6 * HOUR_IN_SECONDS);
     }
 }
-add_action('admin_init', 'fxw_maybe_sync_shipping_zones_admin');
+add_action('admin_init', 'fxw_maybe_sync_shipping_zones');
+add_action('init', 'fxw_maybe_sync_shipping_zones', 5); // before FXW_Checkout / Shipping add their hooks
 
 /**
  * Clean up rewrite rules on deactivation.

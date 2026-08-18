@@ -4,6 +4,11 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.6] - 2026-08-18
+
+### Fixed (lazy zone registration fires on frontend too)
+- **`foodxpress_delivery` is enabled on existing shipping zones even on stores that have never visited `/wp-admin/`.** v1.3.5 hooked the one-shot zone sync onto `admin_init` only. Stores whose first post-upgrade request is a frontend checkout page (anonymous customer or kiosk-style deployment) never reach `admin_init`, so the sync never fires and the user still sees "No available delivery option" in the Order summary. The sync now also runs on frontend `init` (priority 5, before FXW's own hooks register). Same 6-hour transient gate so the work happens at most once per window. AJAX, REST, WP-CRON, and CLI requests still skip the sync — the underlying zone mutation is idempotent and runs cheaply. This closes the last gap from the v1.3.4 → v1.3.5 chain.
+
 ## [1.3.5] - 2026-08-18
 
 ### Fixed ("No available delivery option" — surfaced by the v1.3.4 provider-aware gate)

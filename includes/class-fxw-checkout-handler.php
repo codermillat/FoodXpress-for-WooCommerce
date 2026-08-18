@@ -151,9 +151,13 @@ class FXW_Checkout_Handler
         if ('' !== $full_delivery_address) {
             $order->update_meta_data('_fxw_delivery_address', $full_delivery_address);
 
-            // Also store as the address second line so receipts/emails using
-            // get_formatted_shipping_address() show the exact flat/house info.
-            $order->set_address_2($full_delivery_address);
+            // Also store as the shipping-address second line so receipts and
+            // emails using get_formatted_shipping_address() surface the exact
+            // flat / house info. WC exposes only billing_*_address_2() and
+            // shipping_*_address_2() setters — there is no generic
+            // set_address_2() helper, and calling one would fatal on every
+            // block checkout order placement (regression caught 2026-08-18
+            // immediately after the v1.3.2 live-update hotfix; fixed 1.3.3).
             $order->set_shipping_address_2($full_delivery_address);
         }
 

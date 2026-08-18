@@ -4,6 +4,11 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.3] - 2026-08-18
+
+### Fixed (block-checkout 500 critical error — fatal on every Place Order)
+- **Block checkout now reaches the payment gateway instead of throwing "There has been a critical error on this website."** `FXW_Checkout_Handler::apply_delivery_data_to_order()` called a non-existent `$order->set_address_2(...)` while persisting the composed delivery address; WC exposes only the typed `set_billing_address_2()` / `set_shipping_address_2()` setters, so the call threw `Call to undefined method WC_Order::set_address_2()` on every block checkout POST to `/wp-json/wc/store/v1/checkout`. The `set_shipping_address_2(...)` call directly below the bad line already stored the value where it belongs (receipts + emails surface the full delivery line via `get_formatted_shipping_address()`); the unreachable generic call was harmless dead code in the WC 11 era because previous code paths never reached the line for block orders. With v1.3.x now hooking block-checkout persistence, the bad call fired and blocked every order. Removed; the shipping line below remains.
+
 ## [1.3.2] - 2026-08-18
 
 ### Fixed (block-checkout live total refresh — caught right after v1.3.1 ship)

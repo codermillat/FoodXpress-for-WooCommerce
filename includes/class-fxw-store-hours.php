@@ -178,6 +178,39 @@ class FXW_Store_Hours
 	}
 
 	/**
+	 * Is the store accepting delivery orders right now? Canonical
+	 * implementation of the manual Open/Closed toggle combined with the
+	 * optional schedule.
+	 *
+	 * This lives here rather than in FXW_Checkout because FXW_Core only
+	 * loads the checkout classes on frontend/AJAX requests, so admin-side
+	 * callers (the admin bar) could not reach it and silently fell back to
+	 * "open" while the customer-facing pages said closed. FXW_Store_Hours
+	 * is loaded on every request. `FXW_Checkout::is_store_open()` delegates
+	 * here, so both names stay valid. v1.2.19.
+	 *
+	 * @return bool
+	 * @since 1.2.19
+	 */
+	public static function is_store_open()
+	{
+		$options = get_option('fxw_settings');
+		$is_open = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : true;
+
+		if (is_bool($is_open)) {
+			$manual_open = $is_open;
+		} else {
+			$manual_open = in_array($is_open, array('yes', 'true', '1', 1), true);
+		}
+
+		if (!$manual_open) {
+			return false; // manual toggle: closed NOW
+		}
+
+		return self::is_open_now();
+	}
+
+	/**
 	 * Is "now" within the configured opening hours? Returns true when the
 	 * schedule is disabled. Supports overnight spans (e.g. 18:00 – 02:00).
 	 *

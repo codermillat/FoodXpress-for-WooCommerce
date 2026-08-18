@@ -37,10 +37,11 @@ class FXW_Admin_Bar
 
 		// Schedule-aware state — single source of truth shared with the
 		// classic + blocks checkout validators and the REST endpoints
-		// (v1.2.18). Without this, the toggle can show "Open" while the
-		// schedule says closed (or vice versa) and the admin / customer
-		// UIs disagree.
-		$is_open = class_exists('FXW_Checkout') ? FXW_Checkout::is_store_open() : true;
+		// (v1.2.18). Read it from FXW_Store_Hours, not FXW_Checkout:
+		// FXW_Core only loads the checkout classes on frontend/AJAX
+		// requests, so in the admin the FXW_Checkout branch never ran and
+		// the bar always said "Open" (v1.2.19).
+		$is_open = class_exists('FXW_Store_Hours') ? FXW_Store_Hours::is_store_open() : true;
 
 		if ($is_open) {
 			$title = __('Deliveries: Open', 'foodxpress');
@@ -92,7 +93,7 @@ class FXW_Admin_Bar
 		update_option('fxw_settings', $options);
 
 		// Effective (schedule-aware) state after the toggle.
-		$effective = class_exists('FXW_Checkout') ? FXW_Checkout::is_store_open() : $options['fxw_is_open'];
+		$effective = class_exists('FXW_Store_Hours') ? FXW_Store_Hours::is_store_open() : $options['fxw_is_open'];
 		$label = $effective
 			? __('Deliveries: Open', 'foodxpress')
 			: __('Deliveries: Closed', 'foodxpress')

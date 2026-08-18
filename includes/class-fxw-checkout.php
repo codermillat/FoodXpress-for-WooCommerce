@@ -64,35 +64,24 @@ class FXW_Checkout
     }
 
     /**
-     * Is the store accepting delivery orders right now? Single shared
-     * source of truth for the admin-bar "Deliveries: Open/Closed"
-     * switch (the option value is a boolean written by FXW_Admin_Bar).
+     * Is the store accepting delivery orders right now? Kept as the
+     * checkout-facing name; the implementation lives in FXW_Store_Hours,
+     * which is loaded on every request (this class is not loaded in the
+     * admin, so admin callers must use FXW_Store_Hours directly).
      *
      * @return bool
      * @since 1.2.11
      */
     public static function is_store_open()
     {
+        if (class_exists('FXW_Store_Hours')) {
+            return FXW_Store_Hours::is_store_open();
+        }
+
         $options = get_option('fxw_settings');
         $is_open = isset($options['fxw_is_open']) ? $options['fxw_is_open'] : true;
 
-        if (is_bool($is_open)) {
-            $manual_open = $is_open;
-        } else {
-            $manual_open = in_array($is_open, array('yes', 'true', '1', 1), true);
-        }
-
-        if (!$manual_open) {
-            return false; // manual toggle: closed NOW
-        }
-
-        // Scheduled opening hours (optional) additionally pause ordering
-        // outside configured hours.
-        if (class_exists('FXW_Store_Hours')) {
-            return FXW_Store_Hours::is_open_now();
-        }
-
-        return true;
+        return is_bool($is_open) ? $is_open : in_array($is_open, array('yes', 'true', '1', 1), true);
     }
 
     /**

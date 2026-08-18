@@ -10,10 +10,13 @@
  *    validated through `woocommerce_validate_additional_field`, which
  *    also enforces the map pin + delivery radius via the shared
  *    `FXW_Checkout_Handler::get_zone_error()` check.
- *  - `the_content`: renders the same Step-1 map picker above the
+ *  - `render_block`: renders the same Step-1 map picker above the
  *    Checkout block (markup shared with classic checkout via
  *    `FXW_Checkout::render_location_picker()`; checkout.js boots on
  *    the #fxw-map element, so both checkouts behave identically).
+ *    Hooking the block itself rather than `the_content` keeps this
+ *    working in block themes, where page content renders through
+ *    core/post-content outside the main loop.
  *  - `woocommerce_store_api_checkout_update_order_from_request`:
  *    applies the shared `apply_delivery_data_to_order()` persistence
  *    to block orders, mirroring classic-checkout order meta exactly,
@@ -49,7 +52,13 @@ class FXW_Blocks_Checkout
 		// the page render. v1.2.18.
 		add_action('woocommerce_blocks_loaded', array($this, 'register_fields'));
 		add_action('woocommerce_validate_additional_field', array($this, 'validate_address_details'), 10, 3);
-		add_filter('the_content', array($this, 'prepend_map_to_blocks_checkout'));
+		// Prepend the picker to the Checkout block itself rather than to
+		// `the_content`: block themes render page content through
+		// core/post-content, which applies `the_content` outside the main
+		// loop, so an `in_the_loop()` guard silently dropped the map on
+		// every block theme. render_block runs wherever the block renders.
+		// v1.2.19.
+		add_filter('render_block', array($this, 'prepend_map_to_checkout_block'), 10, 2);
 		add_action('woocommerce_store_api_checkout_update_order_from_request', array($this, 'apply_delivery_data'), 10, 2);
 	}
 
@@ -129,23 +138,22 @@ class FXW_Blocks_Checkout
 	}
 
 	/**
-	 * Render the Step-1 map picker above the Checkout block. The classic
-	 * checkout renders the picker through its own billing-form hook, so
-	 * this only fires on pages whose content contains the block.
+	 * Render the Step-1 map picker above the Checkout block.
 	 *
-	 * @param string $content Page content.
+	 * Hooked on `render_block` so it works in both classic and block
+	 * themes: block themes render page content through core/post-content,
+	 * which applies `the_content` outside the main loop, so the previous
+	 * `the_content` + `in_the_loop()` approach never fired there.
+	 *
+	 * @param string $block_content Rendered block HTML.
+	 * @param array  $block         Parsed block.
 	 * @return string
 	 * @since 1.2.9
 	 */
-	public function prepend_map_to_blocks_checkout($content)
+	public function prepend_map_to_checkout_block($block_content, $block)
 	{
-		if (is_admin() || !is_page() || !in_the_loop() || !did_action('wp_enqueue_scripts')) {
-			return $content;
-		}
-
-		$post = get_post();
-		if (!$post || !has_block('woocommerce/checkout', $post)) {
-			return $content;
+		if (is_admin() || !isset($block['blockName']) || 'woocommerce/checkout' !== $block['blockName']) {
+			return $block_content;
 		}
 
 		$prefix = '';
@@ -167,10 +175,10 @@ class FXW_Blocks_Checkout
 		$options = get_option('fxw_settings');
 		$api_key = isset($options['fxw_google_maps_api_key']) ? trim((string) $options['fxw_google_maps_api_key']) : '';
 		if ('' === $api_key) {
-			return $prefix . $content; // map is useless without a key; admin sees the config warning
+			return $prefix . $block_content; // map is useless without a key; admin sees the config warning
 		}
 
-		return $prefix . FXW_Checkout::render_location_picker(true) . $content;
+		return $prefix . FXW_Checkout::render_location_picker(true) . $block_content;
 	}
 
 	/**

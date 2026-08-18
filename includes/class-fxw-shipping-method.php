@@ -89,8 +89,11 @@ if ( ! class_exists( 'FXW_Shipping_Method' ) ) {
 				return;
 			}
 
-			// The Open/Closed switch controls order placement (no rate when closed)
-			if ( ! FXW_Checkout::is_store_open() ) {
+			// The Open/Closed switch controls order placement (no rate when
+			// closed). Read via FXW_Store_Hours: it is loaded on every
+			// request, while the checkout classes are frontend/AJAX only —
+			// admin-created orders also calculate rates (v1.2.19).
+			if ( class_exists( 'FXW_Store_Hours' ) && ! FXW_Store_Hours::is_store_open() ) {
 				if ( function_exists( 'wc_get_logger' ) ) {
 					wc_get_logger()->info( 'calculate_shipping: store closed (fxw_is_open=false)', array( 'source' => 'foodxpress' ) );
 				}

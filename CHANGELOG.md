@@ -4,6 +4,12 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.19] - 2026-08-18
+
+### Fixed (browser QA — map picker on block themes + store-state source of truth)
+- **The map location picker now renders on the block checkout in block themes.** `FXW_Blocks_Checkout` prepended the Step-1 picker via a `the_content` filter guarded by `in_the_loop()`. Block themes render page content through the core `post-content` block, which applies `the_content` outside the main loop, so the guard rejected every request and the picker silently never appeared — customers saw WooCommerce's stock address fields with no way to pin their location. Moved the injection to `render_block` targeting `woocommerce/checkout`, which fires wherever the block renders regardless of theme type. Verified on a block theme (Kiosko): `#fxw-map`, the search input, the "Use My Location" button and the hidden `fxw_lat`/`fxw_lng` inputs are all present in the checkout HTML, and the cart page is unaffected.
+- **Store open/closed state is now consistent between the admin bar and the storefront.** `is_store_open()` lived on `FXW_Checkout`, but `FXW_Core` only loads the checkout classes on frontend and AJAX requests — so in `wp-admin` the class-existence check failed and the admin bar fell back to "Deliveries: Open" while the cart and checkout correctly showed the closed notice. The canonical implementation moved to `FXW_Store_Hours::is_store_open()` (loaded on every request); `FXW_Checkout::is_store_open()` now delegates to it, so both names remain valid for existing callers. The admin bar and the shipping method read the new location.
+
 ## [1.2.18] - 2026-08-18
 
 ### Fixed (browser QA — blocks checkout fields + admin-bar state)

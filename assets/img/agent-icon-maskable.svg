@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FoodXpress Agent app icon (maskable)">
+  <rect width="512" height="512" fill="#E85D04"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" transform="translate(56 56) scale(0.78)">
+    <path d="M136 300h-8a44 44 0 1 0 44 44h4"/>
+    <circle cx="336" cy="344" r="44"/>
+    <path d="M292 344H172"/>
+    <path d="M380 344h12a28 28 0 0 0 28-28v-60l-48-56h-56v144"/>
+    <path d="M316 200v-44a20 20 0 0 1 20-20h40"/>
+  </g>
+  <g fill="#FFFFFF" transform="translate(56 56) scale(0.78)">
+    <rect x="156" y="164" width="120" height="88" rx="14"/>
+    <rect x="188" y="140" width="56" height="40" rx="10"/>
+  </g>
+</svg>

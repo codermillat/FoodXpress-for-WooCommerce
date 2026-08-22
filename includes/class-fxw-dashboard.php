@@ -19,6 +19,7 @@ if (!defined('ABSPATH')) {
 
 require_once __DIR__ . '/class-fxw-dashboard-render.php';
 require_once __DIR__ . '/class-fxw-dashboard-actions.php';
+require_once __DIR__ . '/class-fxw-dashboard-agents.php';
 
 class FXW_Dashboard
 {

@@ -1,6 +1,13 @@
 <?php
 /**
- * Delivery Dashboard Template
+ * Delivery Agent Dashboard — installable PWA shell.
+ *
+ * Native-app presentation: fixed app header with agent identity and the
+ * cash-on-delivery collection summary, a bottom tab bar, 48px action
+ * buttons, safe-area padding, service-worker offline support, and a
+ * heartbeat that reloads the dashboard whenever an order is assigned or a
+ * status changes. `fxw_render_order_card()` must stay defined ABOVE the
+ * render loop — conditionally-defined PHP functions are not hoisted.
  *
  * @package FoodXpress
  */
@@ -14,136 +21,150 @@ if (!is_user_logged_in() || !current_user_can('fxw_delivery_access')) {
     wp_redirect(home_url());
     exit;
 }
-?>
-<!DOCTYPE html>
-<html <?php language_attributes(); ?>>
 
-<head>
-    <meta charset="<?php bloginfo('charset'); ?>">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#E85D04">
-    <meta name="mobile-web-app-capable" content="yes">
-    <?php wp_head(); ?>
-</head>
+/**
+ * One inline SVG icon for the agent interface (no emoji, no icon font).
+ *
+ * @param string $name Icon key: person|phone|home|ruler|card|cash|note|pin|box|flag|bell|clock.
+ * @return string SVG markup (aria-hidden).
+ * @since 1.4.0
+ */
+if (!function_exists('fxw_agent_icon')) {
+    function fxw_agent_icon($name)
+    {
+        $paths = array(
+            'person' => '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-8 1.7-8 5v2h16v-2c0-3.3-4.7-5-8-5Z"/>',
+            'phone' => '<path d="M6.6 10.8a15.6 15.6 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.2 1.2.4 2.6.6 3.9.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.4c.6 0 1 .4 1 1 0 1.3.2 2.7.6 3.9.1.4 0 .8-.2 1.1l-2.2 2.8Z"/>',
+            'home' => '<path d="M12 3.2 3 11h2.4v9h5.1v-5.4h3v5.4h5.1v-9H21L12 3.2Z"/>',
+            'ruler' => '<path d="M3.8 15.2 15.2 3.8a1 1 0 0 1 1.4 0l3.6 3.6a1 1 0 0 1 0 1.4L8.8 20.2a1 1 0 0 1-1.4 0l-3.6-3.6a1 1 0 0 1 0-1.4Zm3.6 1.4 1.4-1.4-1.1-1.1 1.4-1.4 1.1 1.1 1.4-1.4-1.1-1.1 1.4-1.4 1.1 1.1 1.4-1.4-1.1-1.1 1.4-1.4 3.3 3.3L7.4 19.7l-1.1-1.1Z"/>',
+            'card' => '<path d="M4 5h16a1 1 0 0 1 1 1v3H3V6a1 1 0 0 1 1-1Zm-1 6h18v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-7Zm3 3v2h5v-2H6Z"/>',
+            'cash' => '<path d="M3 6h18v12H3V6Zm9 2.5A3.5 3.5 0 1 0 12 15.5 3.5 3.5 0 0 0 12 8.5ZM5 8v2h2V8H5Zm12 6v2h2v-2h-2Z"/>',
+            'note' => '<path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V8h4.5L14 3.5ZM7 12h10v1.6H7V12Zm0 3.4h10V17H7v-1.6Z"/>',
+            'pin' => '<path d="M12 2a7 7 0 0 1 7 7c0 5.2-7 13-7 13S5 14.2 5 9a7 7 0 0 1 7-7Zm0 9.6A2.6 2.6 0 1 0 12 6.4a2.6 2.6 0 0 0 0 5.2Z"/>',
+            'box' => '<path d="M12 2 3 6.5v11L12 22l9-4.5v-11L12 2Zm0 2.3 6.3 3.2L12 10.7 5.7 7.5 12 4.3Zm-7 4.9 6 3v7.2l-6-3V9.2Zm8 10.2v-7.2l6-3v7.2l-6 3Z"/>',
+            'flag' => '<path d="M5 3v18h2v-7h10.6l-2.2-4 2.2-4H7V3H5Z"/>',
+            'bell' => '<path d="M12 22a2.3 2.3 0 0 0 2.3-2.3H9.7A2.3 2.3 0 0 0 12 22Zm7-5.4v-1l-1.7-1.7v-4A5.5 5.5 0 0 0 13 4.6V3.5a1 1 0 0 0-2 0v1.1a5.5 5.5 0 0 0-4.3 5.3v4L5 15.6v1h14Z"/>',
+            'clock' => '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 10.6 4 2.3-1 1.7-5-2.9V6h2v6.6Z"/>',
+        );
 
-<body <?php body_class('fxw-delivery-dashboard-page'); ?>>
-    <?php
-    $delivery_boy_id = get_current_user_id();
-    $new_orders = wc_get_orders(array(
-        'limit' => 50,
-        'meta_key' => '_fxw_delivery_boy_id',
-        'meta_value' => $delivery_boy_id,
-        'status' => 'fxw-assigned',
-    ));
-    $picked_up_orders = wc_get_orders(array(
-        'limit' => 50,
-        'meta_key' => '_fxw_delivery_boy_id',
-        'meta_value' => $delivery_boy_id,
-        'status' => 'fxw-picked-up',
-    ));
-    ?>
-    <div class="fxw-app-dashboard">
-        <header class="fxw-app-header">
-            <h1><?php esc_html_e('My Deliveries', 'foodxpress'); ?></h1>
-        </header>
+        if (!isset($paths[$name])) {
+            return '';
+        }
 
-        <div class="fxw-tabs" role="tablist" aria-label="<?php esc_attr_e('Delivery status filters', 'foodxpress'); ?>">
-            <button type="button" id="tab-new-orders" class="fxw-tab-link active" role="tab" aria-selected="true"
-                aria-controls="new-orders" data-fxw-tab="new-orders"><?php esc_html_e('New', 'foodxpress'); ?>
-                (<?php echo count($new_orders); ?>)</button>
-            <button type="button" id="tab-in-progress" class="fxw-tab-link" role="tab" aria-selected="false"
-                aria-controls="in-progress" data-fxw-tab="in-progress"><?php esc_html_e('In Progress', 'foodxpress'); ?>
-                (<?php echo count($picked_up_orders); ?>)</button>
-        </div>
+        return '<svg class="fxw-svg-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
+    }
+}
 
-        <main class="fxw-app-main">
-            <div id="new-orders" class="fxw-tab-content active" role="tabpanel" aria-labelledby="tab-new-orders">
-                <?php if ($new_orders): ?>
-                    <?php foreach ($new_orders as $order): ?>
-                        <?php fxw_render_order_card($order); ?>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="fxw-no-orders">
-                        <p><?php esc_html_e('No new deliveries assigned.', 'foodxpress'); ?></p>
-                    </div>
-                <?php endif; ?>
-            </div>
+/**
+ * Render one agent order card.
+ *
+ * @param WC_Order $order Order assigned to the current agent.
+ * @param array    $args  Optional flags: 'history' renders the compact
+ *                        delivered view (no status buttons, delivered date
+ *                        and collected amount shown instead).
+ * @since 1.0.0
+ */
+if (!function_exists('fxw_render_order_card')) {
+    function fxw_render_order_card($order, $args = array())
+    {
+        $history = !empty($args['history']);
+        $shipping_address = $order->get_formatted_shipping_address();
 
-            <div id="in-progress" class="fxw-tab-content" role="tabpanel" aria-labelledby="tab-in-progress">
-                <?php if ($picked_up_orders): ?>
-                    <?php foreach ($picked_up_orders as $order): ?>
-                        <?php fxw_render_order_card($order); ?>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="fxw-no-orders">
-                        <p><?php esc_html_e('No deliveries in progress.', 'foodxpress'); ?></p>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </main>
-    </div>
+        // Get new delivery details
+        $delivery_address = $order->get_meta('_fxw_delivery_address', true);
+        $delivery_lat = $order->get_meta('_fxw_delivery_lat', true);
+        $delivery_lng = $order->get_meta('_fxw_delivery_lng', true);
+        $delivery_distance = $order->get_meta('_fxw_delivery_distance', true);
 
-    <?php
-    if (!function_exists('fxw_render_order_card')) {
-        function fxw_render_order_card($order)
-        {
-            $shipping_address = $order->get_formatted_shipping_address();
+        // Fallback to old unit field for backward compatibility
+        $unit = $order->get_meta('_fxw_address_unit', true);
+        $status = $order->get_status();
+        $is_cod = 'cod' === $order->get_payment_method();
 
-            // Get new delivery details
-            $delivery_address = $order->get_meta('_fxw_delivery_address', true);
-            $delivery_lat = $order->get_meta('_fxw_delivery_lat', true);
-            $delivery_lng = $order->get_meta('_fxw_delivery_lng', true);
-            $delivery_distance = $order->get_meta('_fxw_delivery_distance', true);
+        // Delivery instructions ONLY for the agent. The checkout "order
+        // note" (customer_note) is a kitchen note — the manager/admin reads
+        // it on the order screen and passes it to the kitchen; it must not
+        // reach the delivery agent's phone.
+        $instructions = trim((string) $order->get_meta('_fxw_delivery_instructions', true));
 
-            // Fallback to old unit field for backward compatibility
-            $unit = $order->get_meta('_fxw_address_unit', true);
-            $status = $order->get_status();
-            ?>
-            <div class="fxw-order-card">
+        $completed = $order->get_date_completed();
+        ?>
+            <div class="fxw-order-card <?php echo $is_cod ? 'fxw-order-card--cod' : ''; ?> <?php echo $history ? 'fxw-order-card--history' : ''; ?>">
                 <div class="fxw-card-header">
-                    <h3><?php printf(esc_html__('Order #%s', 'foodxpress'), esc_html($order->get_order_number())); ?></h3>
+                    <h3>
+                        <?php printf(esc_html__('Order #%s', 'foodxpress'), esc_html($order->get_order_number())); ?>
+                        <?php if ($history && $completed): ?>
+                            <span class="fxw-card-header__date">
+                                <?php echo esc_html($completed->date_i18n(get_option('date_format') . ' ' . get_option('time_format'))); ?>
+                            </span>
+                        <?php endif; ?>
+                    </h3>
                     <span
                         class="fxw-status-badge status-<?php echo esc_attr($status); ?>"><?php echo esc_html(wc_get_order_status_name($status)); ?></span>
                 </div>
+                <?php if ($is_cod): ?>
+                    <div class="fxw-cod-strip <?php echo $history ? 'fxw-cod-strip--settled' : ''; ?>" role="status">
+                        <?php echo fxw_agent_icon('cash'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                        <span class="fxw-cod-strip__label"><?php echo $history ? esc_html__('Collected on delivery', 'foodxpress') : esc_html__('Collect on delivery', 'foodxpress'); ?></span>
+                        <span class="fxw-cod-strip__amount"><?php echo wp_kses_post($order->get_formatted_order_total()); ?></span>
+                        <span class="fxw-cod-strip__method"><?php echo esc_html($order->get_payment_method_title()); ?></span>
+                    </div>
+                <?php else: ?>
+                    <div class="fxw-prepaid-strip" role="status">
+                        <?php echo fxw_agent_icon('card'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                        <span class="fxw-prepaid-strip__label">
+                            <?php
+                            $fxw_method_title = $order->get_payment_method_title();
+                            if ('' !== $fxw_method_title) {
+                                // translators: %s = payment method title, e.g. "Direct bank transfer".
+                                printf(esc_html__('Prepaid — %s. Nothing to collect.', 'foodxpress'), esc_html($fxw_method_title));
+                            } else {
+                                esc_html_e('Prepaid. Nothing to collect.', 'foodxpress');
+                            }
+                            ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
                 <div class="fxw-card-body">
                     <div class="fxw-card-section">
-                        <p><span
-                                class="fxw-icon">&#128100;</span><strong><?php esc_html_e('Customer:', 'foodxpress'); ?></strong>
+                        <p><?php echo fxw_agent_icon('person'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                            <strong><?php esc_html_e('Customer:', 'foodxpress'); ?></strong>
                             <?php echo esc_html($order->get_formatted_billing_full_name()); ?></p>
-                        <p><span class="fxw-icon">&#128222;</span><strong><?php esc_html_e('Phone:', 'foodxpress'); ?></strong>
-                            <a
+                        <p><?php echo fxw_agent_icon('phone'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                            <strong><?php esc_html_e('Phone:', 'foodxpress'); ?></strong>
+                            <a class="fxw-call-link"
                                 href="tel:<?php echo esc_attr($order->get_billing_phone()); ?>"><?php echo esc_html($order->get_billing_phone()); ?></a>
                         </p>
 
                         <?php if ($delivery_address): ?>
-                            <p><span
-                                    class="fxw-icon">&#127968;</span><strong><?php esc_html_e('Delivery Address:', 'foodxpress'); ?></strong>
+                            <p><?php echo fxw_agent_icon('home'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                                <strong><?php esc_html_e('Delivery Address:', 'foodxpress'); ?></strong>
                                 <?php echo esc_html($delivery_address); ?></p>
                             <?php if ($delivery_distance): ?>
-                                <p><span
-                                        class="fxw-icon">&#128207;</span><strong><?php esc_html_e('Distance:', 'foodxpress'); ?></strong>
+                                <p><?php echo fxw_agent_icon('ruler'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                                    <strong><?php esc_html_e('Distance:', 'foodxpress'); ?></strong>
                                     <?php echo esc_html($delivery_distance); ?> km</p>
                             <?php endif; ?>
                         <?php else: ?>
-                            <p><span
-                                    class="fxw-icon">&#127968;</span><strong><?php esc_html_e('Address:', 'foodxpress'); ?></strong>
+                            <p><?php echo fxw_agent_icon('home'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                                <strong><?php esc_html_e('Address:', 'foodxpress'); ?></strong>
                                 <?php echo wp_kses_post($shipping_address); ?></p>
                             <?php if ($unit): ?>
-                                <p><span class="fxw-icon">&#128190;</span><strong><?php esc_html_e('Unit:', 'foodxpress'); ?></strong>
+                                <p><?php echo fxw_agent_icon('box'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                                    <strong><?php esc_html_e('Unit:', 'foodxpress'); ?></strong>
                                     <?php echo esc_html($unit); ?></p>
                             <?php endif; ?>
                         <?php endif; ?>
                     </div>
-                    <div class="fxw-card-section">
-                        <p><span
-                                class="fxw-icon">&#128179;</span><strong><?php esc_html_e('Payment:', 'foodxpress'); ?></strong>
-                            <?php echo esc_html($order->get_payment_method_title()); ?></p>
-                        <?php if ('cod' === $order->get_payment_method()): ?>
-                            <p class="fxw-collect-amount"><span
-                                    class="fxw-icon">&#128181;</span><strong><?php esc_html_e('Collect:', 'foodxpress'); ?></strong>
-                                <?php echo wp_kses_post($order->get_formatted_order_total()); ?></p>
-                        <?php endif; ?>
-                    </div>
+                    <?php if ($instructions): ?>
+                        <div class="fxw-customer-note">
+                            <div class="fxw-customer-note__title">
+                                <?php echo fxw_agent_icon('note'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                                <?php esc_html_e('Delivery instructions', 'foodxpress'); ?>
+                            </div>
+                            <p class="fxw-customer-note__line"><?php echo esc_html($instructions); ?></p>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="fxw-card-footer">
                     <?php
@@ -165,29 +186,245 @@ if (!is_user_logged_in() || !current_user_can('fxw_delivery_access')) {
                         $map_class = 'fxw-button-map-fallback';
                     }
                     ?>
-                    <a href="<?php echo esc_url($map_url); ?>" target="_blank"
-                        class="fxw-button fxw-button-map <?php echo esc_attr($map_class); ?>"><span
-                            class="fxw-icon">&#128205;</span><?php echo esc_html($map_label); ?></a>
-                    <?php if ('fxw-assigned' === $status): ?>
+                    <a href="<?php echo esc_url($map_url); ?>" target="_blank" rel="noopener noreferrer"
+                        class="fxw-button fxw-button-map <?php echo esc_attr($map_class); ?>">
+                        <?php echo fxw_agent_icon('pin'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                        <?php echo esc_html($map_label); ?></a>
+                    <a href="tel:<?php echo esc_attr($order->get_billing_phone()); ?>"
+                        class="fxw-button fxw-button-call" aria-label="<?php echo esc_attr__('Call customer', 'foodxpress'); ?>">
+                        <?php echo fxw_agent_icon('phone'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                        <span class="fxw-button-call__label"><?php esc_html_e('Call', 'foodxpress'); ?></span></a>
+                    <?php if (!$history && 'fxw-assigned' === $status): ?>
                         <button type="button" class="fxw-button fxw-button-pickup fxw-action-btn"
                             data-action="fxw_update_delivery_status" data-status="fxw-picked-up"
                             data-order-id="<?php echo esc_attr($order->get_id()); ?>"
                             data-nonce="<?php echo esc_attr(wp_create_nonce('fxw_delivery_action')); ?>">
-                            <span class="fxw-icon">&#128230;</span><?php esc_html_e('Mark Picked Up', 'foodxpress'); ?>
+                            <?php echo fxw_agent_icon('box'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                            <?php esc_html_e('Mark Picked Up', 'foodxpress'); ?>
                         </button>
                     <?php endif; ?>
-                    <?php if ('fxw-picked-up' === $status): ?>
+                    <?php if (!$history && 'fxw-picked-up' === $status): ?>
                         <button type="button" class="fxw-button fxw-button-deliver fxw-action-btn"
                             data-action="fxw_update_delivery_status" data-status="completed"
                             data-order-id="<?php echo esc_attr($order->get_id()); ?>"
                             data-nonce="<?php echo esc_attr(wp_create_nonce('fxw_delivery_action')); ?>">
-                            <span class="fxw-icon">&#127937;</span><?php esc_html_e('Mark Delivered', 'foodxpress'); ?>
+                            <?php echo fxw_agent_icon('flag'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                            <?php esc_html_e('Mark Delivered', 'foodxpress'); ?>
                         </button>
                     <?php endif; ?>
                 </div>
             </div>
         <?php }
-    } // end function_exists guard ?>
+} // end function_exists guard
+
+$fxw_agent = wp_get_current_user();
+$fxw_state = FXW_Delivery_Boy_View::build_dashboard_state(get_current_user_id());
+$fxw_cash = FXW_Agent_Cash::get_agent_cash_summary(get_current_user_id());
+$fxw_delivery_boy_id = get_current_user_id();
+$new_orders = wc_get_orders(array(
+    'limit' => 50,
+    'meta_key' => '_fxw_delivery_boy_id',
+    'meta_value' => $fxw_delivery_boy_id,
+    'status' => 'fxw-assigned',
+));
+$picked_up_orders = wc_get_orders(array(
+    'limit' => 50,
+    'meta_key' => '_fxw_delivery_boy_id',
+    'meta_value' => $fxw_delivery_boy_id,
+    'status' => 'fxw-picked-up',
+));
+$delivered_orders = wc_get_orders(array(
+    'limit' => 50,
+    'meta_key' => '_fxw_delivery_boy_id',
+    'meta_value' => $fxw_delivery_boy_id,
+    'status' => array('completed'),
+    'orderby' => 'date',
+    'order' => 'DESC',
+));
+?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+
+<head>
+    <meta charset="<?php bloginfo('charset'); ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#E85D04">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="<?php echo esc_url(add_query_arg('fxw_agent_manifest', '1', home_url('/'))); ?>">
+    <link rel="apple-touch-icon" href="<?php echo esc_url(FXW_PLUGIN_URL . 'assets/img/agent-icon.svg'); ?>">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="<?php esc_attr_e('FX Agent', 'foodxpress'); ?>">
+    <?php wp_head(); ?>
+</head>
+
+<body <?php body_class('fxw-delivery-dashboard-page'); ?>>
+    <div class="fxw-app-dashboard"
+        data-fxw-state="<?php echo esc_attr($fxw_state['signature']); ?>"
+        data-fxw-counts="<?php echo esc_attr(wp_json_encode($fxw_state['counts'])); ?>">
+        <header class="fxw-app-header">
+            <div class="fxw-app-header__row">
+                <div class="fxw-app-header__brand">
+                    <span class="fxw-app-header__logo" aria-hidden="true">
+                        <?php echo fxw_agent_icon('box'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                    </span>
+                    <div class="fxw-app-header__titles">
+                        <h1><?php esc_html_e('FoodXpress Agent', 'foodxpress'); ?></h1>
+                        <p class="fxw-app-header__agent">
+                            <?php echo esc_html($fxw_agent->display_name); ?>
+                            <span class="fxw-app-header__dot" aria-hidden="true"></span>
+                            <span class="fxw-app-header__date"><?php echo esc_html(date_i18n(get_option('date_format'))); ?></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="fxw-agent-stats" role="status">
+                <div class="fxw-agent-stats__item">
+                    <span class="fxw-agent-stats__value"><?php echo absint($fxw_state['today']['delivered']); ?></span>
+                    <span class="fxw-agent-stats__label"><?php esc_html_e('Delivered today', 'foodxpress'); ?></span>
+                </div>
+                <div class="fxw-agent-stats__item">
+                    <span class="fxw-agent-stats__value"><?php echo absint($fxw_state['today']['active']); ?></span>
+                    <span class="fxw-agent-stats__label"><?php esc_html_e('Active now', 'foodxpress'); ?></span>
+                </div>
+                <div class="fxw-agent-stats__item">
+                    <span class="fxw-agent-stats__value"><?php echo wp_kses_post(wc_price($fxw_state['today']['collected'], array('currency' => get_woocommerce_currency()))); ?></span>
+                    <span class="fxw-agent-stats__label"><?php esc_html_e('Collected today', 'foodxpress'); ?></span>
+                </div>
+                <div class="fxw-agent-stats__item fxw-agent-stats__item--due">
+                    <span class="fxw-agent-stats__value"><?php echo wp_kses_post(wc_price($fxw_cash['unsettled'], array('currency' => get_woocommerce_currency()))); ?></span>
+                    <span class="fxw-agent-stats__label"><?php esc_html_e('To hand over', 'foodxpress'); ?></span>
+                </div>
+                <div class="fxw-agent-stats__item">
+                    <span class="fxw-agent-stats__value"><?php echo absint($fxw_state['counts']['delivered']); ?></span>
+                    <span class="fxw-agent-stats__label"><?php esc_html_e('All-time delivered', 'foodxpress'); ?></span>
+                </div>
+            </div>
+            <?php if ($fxw_cash['pending']): ?>
+                <div class="fxw-settle-bar fxw-settle-bar--pending" role="status">
+                    <span class="fxw-settle-bar__text">
+                        <?php
+                        // translators: 1: formatted amount.
+                        printf(esc_html__('Hand-over of %1$s sent — waiting for manager approval.', 'foodxpress'),
+                            wp_kses_post(wc_price($fxw_cash['pending']['amount'], array('currency' => get_woocommerce_currency())))
+                        );
+                        ?>
+                    </span>
+                </div>
+            <?php elseif ($fxw_cash['unsettled'] > 0): ?>
+                <div class="fxw-settle-bar">
+                    <span class="fxw-settle-bar__text">
+                        <?php
+                        // translators: %s = formatted amount.
+                        printf(esc_html__('You are holding %s of the store\'s cash.', 'foodxpress'),
+                            wp_kses_post(wc_price($fxw_cash['unsettled'], array('currency' => get_woocommerce_currency())))
+                        );
+                        ?>
+                    </span>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <?php wp_nonce_field('fxw_settle_cash_' . get_current_user_id()); ?>
+                        <input type="hidden" name="action" value="fxw_settle_agent_cash" />
+                        <input type="hidden" name="agent_id" value="<?php echo esc_attr(get_current_user_id()); ?>" />
+                        <button type="submit" class="fxw-button fxw-settle-btn" data-fxw-settle-amount="<?php echo esc_attr(wp_strip_all_tags(wc_price($fxw_cash['unsettled']))); ?>">
+                            <?php echo fxw_agent_icon('cash'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                            <?php esc_html_e('Request hand-over', 'foodxpress'); ?>
+                        </button>
+                    </form>
+                </div>
+            <?php elseif ($fxw_cash['last_accepted']): ?>
+                <p class="fxw-settle-last">
+                    <?php
+                    $reviewer = get_user_by('id', absint($fxw_cash['last_accepted']['reviewed_by']));
+                    // translators: 1: formatted amount, 2: date/time, 3: approver name.
+                    printf(esc_html__('Last hand-over: %1$s on %2$s, approved by %3$s. All settled.', 'foodxpress'),
+                        wp_kses_post(wc_price($fxw_cash['last_accepted']['amount'], array('currency' => get_woocommerce_currency()))),
+                        esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), (int) $fxw_cash['last_accepted']['reviewed_at'])),
+                        esc_html($reviewer ? $reviewer->display_name : __('manager', 'foodxpress'))
+                    );
+                    ?>
+                </p>
+            <?php endif; ?>
+            <?php if ($fxw_state['cod']['count'] > 0): ?>
+                <div class="fxw-cod-summary" role="status">
+                    <?php echo fxw_agent_icon('cash'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                    <span class="fxw-cod-summary__text">
+                        <?php
+                        // translators: 1 = formatted amount, 2 = number of orders.
+                        printf(esc_html__('Cash to collect: %1$s across %2$s COD order(s)', 'foodxpress'),
+                            wp_kses_post(wc_price($fxw_state['cod']['total'], array('currency' => get_woocommerce_currency()))),
+                            absint($fxw_state['cod']['count'])
+                        );
+                        ?>
+                    </span>
+                </div>
+            <?php endif; ?>
+        </header>
+
+        <main class="fxw-app-main">
+            <div id="new-orders" class="fxw-tab-content active" role="tabpanel" aria-labelledby="tab-new-orders">
+                <?php if ($new_orders): ?>
+                    <?php foreach ($new_orders as $order): ?>
+                        <?php fxw_render_order_card($order); ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="fxw-no-orders">
+                        <?php echo fxw_agent_icon('box'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                        <p><?php esc_html_e('No new deliveries assigned.', 'foodxpress'); ?></p>
+                        <p class="fxw-no-orders__hint"><?php esc_html_e('New orders appear here automatically — leave the app open.', 'foodxpress'); ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div id="in-progress" class="fxw-tab-content" role="tabpanel" aria-labelledby="tab-in-progress">
+                <?php if ($picked_up_orders): ?>
+                    <?php foreach ($picked_up_orders as $order): ?>
+                        <?php fxw_render_order_card($order); ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="fxw-no-orders">
+                        <?php echo fxw_agent_icon('clock'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                        <p><?php esc_html_e('No deliveries in progress.', 'foodxpress'); ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div id="delivered" class="fxw-tab-content" role="tabpanel" aria-labelledby="tab-delivered">
+                <?php if ($delivered_orders): ?>
+                    <?php foreach ($delivered_orders as $order): ?>
+                        <?php fxw_render_order_card($order, array('history' => true)); ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="fxw-no-orders">
+                        <?php echo fxw_agent_icon('flag'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                        <p><?php esc_html_e('No delivered orders yet.', 'foodxpress'); ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </main>
+
+        <nav class="fxw-tabbar" role="tablist" aria-label="<?php esc_attr_e('Delivery status filters', 'foodxpress'); ?>">
+            <button type="button" id="tab-new-orders" class="fxw-tab-link active" role="tab" aria-selected="true"
+                aria-controls="new-orders" data-fxw-tab="new-orders">
+                <?php echo fxw_agent_icon('box'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                <span class="fxw-tabbar__label"><?php esc_html_e('New', 'foodxpress'); ?></span>
+                <span class="fxw-tabbar__count"><?php echo count($new_orders); ?></span>
+            </button>
+            <button type="button" id="tab-in-progress" class="fxw-tab-link" role="tab" aria-selected="false"
+                aria-controls="in-progress" data-fxw-tab="in-progress">
+                <?php echo fxw_agent_icon('clock'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                <span class="fxw-tabbar__label"><?php esc_html_e('In Progress', 'foodxpress'); ?></span>
+                <span class="fxw-tabbar__count"><?php echo count($picked_up_orders); ?></span>
+            </button>
+            <button type="button" id="tab-delivered" class="fxw-tab-link" role="tab" aria-selected="false"
+                aria-controls="delivered" data-fxw-tab="delivered">
+                <?php echo fxw_agent_icon('flag'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?>
+                <span class="fxw-tabbar__label"><?php esc_html_e('Delivered', 'foodxpress'); ?></span>
+                <span class="fxw-tabbar__count"><?php echo count($delivered_orders); ?></span>
+            </button>
+        </nav>
+
+        <div id="fxw-toast" class="fxw-toast" role="status" aria-live="polite" hidden></div>
+    </div>
 
     <?php wp_footer(); ?>
 </body>

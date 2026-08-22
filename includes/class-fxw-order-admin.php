@@ -59,7 +59,7 @@ case 'reassign':
 						// the order status so it doesn't sit in fxw-assigned
 						// with no rider (1.2.16).
 						$order->delete_meta_data('_fxw_delivery_boy_id');
-						$revert_to = post_status_exists('wc-fxw-in-kitchen') ? 'fxw-in-kitchen' : 'processing';
+						$revert_to = get_post_status_object('wc-fxw-in-kitchen') ? 'fxw-in-kitchen' : 'processing';
 						$order->update_status($revert_to, __('Delivery boy has been unassigned — order returned to kitchen.', 'foodxpress'));
 						$order->save();
 						break;

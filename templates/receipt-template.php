@@ -29,6 +29,49 @@ $payment_method = $order->get_payment_method_title();
 $order_total = $order->get_total();
 $currency_symbol = get_woocommerce_currency_symbol($order->get_currency());
 
+/**
+ * Expand a state/province code to its full name for the printed address
+ * (WC stores the code, e.g. "UP", while bills should read "Uttar Pradesh").
+ *
+ * @param string $state State code stored on the order.
+ * @param string $country Country code stored on the order.
+ * @return string Full state name, or the raw value when unknown.
+ */
+if (!function_exists('fxw_receipt_state_name')) {
+    function fxw_receipt_state_name($state, $country)
+    {
+        if ($state && function_exists('WC') && WC()->countries) {
+            $states = WC()->countries->get_states($country);
+            if (is_array($states) && isset($states[$state])) {
+                return $states[$state];
+            }
+        }
+        return $state;
+    }
+}
+
+// Compose the delivery address with explicit ", " separators. WC's formatted
+// address drops its separators when city/postcode are empty (FXW hides those
+// fields at checkout), which rendered as "USE NAMEGammaUttar Pradesh".
+$delivery_address_parts = array_filter(array(
+    $order->get_shipping_address_1(),
+    $order->get_shipping_address_2(),
+    $order->get_shipping_city(),
+    fxw_receipt_state_name($order->get_shipping_state(), $order->get_shipping_country()),
+    $order->get_shipping_postcode(),
+));
+$delivery_address_line = implode(', ', $delivery_address_parts);
+if ('' === $delivery_address_line && $shipping_address) {
+    $delivery_address_line = str_replace(
+        array('<br>', '<br/>', '<br />'),
+        ', ',
+        wp_strip_all_tags($shipping_address)
+    );
+}
+
+// Items subtotal before discounts (drives the bill breakdown below).
+$items_subtotal = 0.0;
+
 // Get delivery boy info
 $delivery_boy_id = $order->get_meta('_fxw_delivery_boy_id');
 $delivery_boy = $delivery_boy_id ? get_user_by('id', $delivery_boy_id) : null;
@@ -189,8 +232,10 @@ $unit = $order->get_meta('_fxw_address_unit');
 
         .item-qty-price {
             text-align: right;
-            min-width: 80px;
+            min-width: 90px;
+            margin-left: 10px;
             font-size: 12px;
+            white-space: nowrap;
         }
 
         .item-total {
@@ -318,10 +363,6 @@ $unit = $order->get_meta('_fxw_address_unit');
                 <span><?php esc_html_e('Date:', 'foodxpress'); ?></span>
                 <span><?php echo $order_date ? esc_html($order_date->format('j M Y g:i A')) : esc_html__('N/A', 'foodxpress'); ?></span>
             </div>
-            <div class="bill-row">
-                <span><?php esc_html_e('Status:', 'foodxpress'); ?></span>
-                <span><?php echo esc_html(wc_get_order_status_name($order->get_status())); ?></span>
-            </div>
             <?php if ($delivery_boy): ?>
                 <div class="bill-row">
                     <span><?php esc_html_e('Delivery By:', 'foodxpress'); ?></span>
@@ -340,7 +381,7 @@ $unit = $order->get_meta('_fxw_address_unit');
                 <?php endif; ?>
                 <br>
                 <div><strong><?php esc_html_e('Delivery Address:', 'foodxpress'); ?></strong></div>
-                <div><?php echo esc_html(str_replace(array('<br>', '<br/>', '<br />'), ', ', wp_strip_all_tags($shipping_address))); ?></div>
+                <div><?php echo esc_html($delivery_address_line); ?></div>
                 <?php if ($unit): ?>
                     <div><?php printf(esc_html__('Unit/Flat: %s', 'foodxpress'), esc_html($unit)); ?></div>
                 <?php endif; ?>
@@ -354,10 +395,10 @@ $unit = $order->get_meta('_fxw_address_unit');
 
             <?php foreach ($order->get_items() as $item_id => $item): ?>
                 <?php
-                $product = $item->get_product();
-                $item_total = $order->get_formatted_line_total($item);
                 $quantity = $item->get_quantity();
-                $unit_price = $quantity > 0 ? $item->get_total() / $quantity : 0;
+                $unit_price = $quantity > 0 ? (float) $item->get_total() / $quantity : 0;
+                $line_total = wc_price($item->get_total(), array('currency' => $order->get_currency()));
+                $items_subtotal += method_exists($item, 'get_subtotal') ? (float) $item->get_subtotal() : (float) $item->get_total();
                 ?>
                 <div class="item-row">
                     <div style="flex: 1;">
@@ -374,15 +415,15 @@ $unit = $order->get_meta('_fxw_address_unit');
                             echo '<div class="item-meta">' . esc_html(wp_strip_all_tags($item_meta)) . '</div>';
                         }
                         ?>
-                        <div class="item-qty-price">
-                            <?php printf(
-                                esc_html__('%d × %s', 'foodxpress'),
-                                $quantity,
-                                wp_kses_post(wc_price($unit_price, array('currency' => $order->get_currency())))
-                            ); ?>
-                        </div>
                     </div>
-                    <div class="item-total"><?php echo wp_kses_post($item_total); ?></div>
+                    <div class="item-qty-price">
+                        <div><?php printf(
+                            esc_html__('%d × %s', 'foodxpress'),
+                            $quantity,
+                            wp_kses_post(wc_price($unit_price, array('currency' => $order->get_currency())))
+                        ); ?></div>
+                        <div class="item-total"><?php echo wp_kses_post($line_total); ?></div>
+                    </div>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -391,14 +432,14 @@ $unit = $order->get_meta('_fxw_address_unit');
         <div class="bill-totals">
             <div class="total-row">
                 <span><?php esc_html_e('Subtotal:', 'foodxpress'); ?></span>
-                <span><?php echo wp_kses_post($order->get_subtotal_to_display()); ?></span>
+                <span><?php echo wp_kses_post(wc_price($items_subtotal, array('currency' => $order->get_currency()))); ?></span>
             </div>
 
             <?php foreach ($order->get_order_item_totals() as $key => $total): ?>
-                <?php if ('order_total' === $key)
-                    continue; // Skip total, we'll show it separately ?>
+                <?php if (in_array($key, array('order_total', 'payment_method', 'cart_subtotal'), true))
+                    continue; // Subtotal shown above; total + payment shown below ?>
                 <div class="total-row">
-                    <span><?php echo esc_html($total['label']); ?></span>
+                    <span><?php echo esc_html('shipping' === $key ? __('Delivery Fee:', 'foodxpress') : $total['label']); ?></span>
                     <span><?php echo wp_kses_post($total['value']); ?></span>
                 </div>
             <?php endforeach; ?>

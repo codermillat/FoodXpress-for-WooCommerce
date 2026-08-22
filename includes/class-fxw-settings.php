@@ -67,39 +67,6 @@ class FXW_Settings
 		);
 
 		add_settings_field(
-			'fxw_google_maps_api_key',
-			__('Google Maps API Key', 'foodxpress'),
-			array($this, 'render_text_field'),
-			'foodxpress-settings',
-			'fxw_general_settings_section',
-			array('id' => 'fxw_google_maps_api_key')
-		);
-
-		add_settings_field(
-			'fxw_google_maps_server_key',
-			__('Google Maps Server Key (optional)', 'foodxpress'),
-			array($this, 'render_text_field'),
-			'foodxpress-settings',
-			'fxw_general_settings_section',
-			array(
-				'id' => 'fxw_google_maps_server_key',
-				'description' => __('Optional separate key for Geocoding/Distance Matrix — lets you restrict the main key to your site domain and this one to your server IP. Falls back to the main key when empty.', 'foodxpress')
-			)
-		);
-
-		add_settings_field(
-			'fxw_google_maps_map_id',
-			__('Google Maps Map ID (optional)', 'foodxpress'),
-			array($this, 'render_text_field'),
-			'foodxpress-settings',
-			'fxw_general_settings_section',
-			array(
-				'id' => 'fxw_google_maps_map_id',
-				'description' => __('Optional Map ID from your Cloud Console (enables Advanced Markers). Leave empty to use classic markers — works with any API key.', 'foodxpress')
-			)
-		);
-
-		add_settings_field(
 			'fxw_restaurant_address',
 			__('Restaurant Address', 'foodxpress'),
 			array($this, 'render_text_field'),
@@ -123,42 +90,29 @@ class FXW_Settings
 		add_settings_field(
 			'fxw_preparation_time',
 			__('Default Preparation Time (minutes)', 'foodxpress'),
-			array($this, 'render_number_field'),
+			array($this, 'render_prep_time_field'),
 			'foodxpress-settings',
 			'fxw_general_settings_section',
-			array('id' => 'fxw_preparation_time', 'default' => 20)
+			array(
+				'id' => 'fxw_preparation_time',
+				'default' => 20,
+				'description' => __('How long your kitchen needs to prepare a typical order. FoodXpress adds this to travel time to show customers an estimated arrival, e.g. 20 min cooking + 15 min ride = “Arrives in ~35 minutes”. Most restaurants keep 15–30.', 'foodxpress'),
+			)
 		);
+
+		// Google Maps key fields moved to the Map Provider section (1.4.0)
+		// so every provider-related field lives together under the
+		// provider dropdown.
+		do_action('fxw_settings_register_google_fields');
 
 		// Delivery Fee Settings Section
-		add_settings_section(
-			'fxw_delivery_fee_settings_section',
-			__('Delivery Fee Settings', 'foodxpress'),
-			null,
-			'foodxpress-settings'
-		);
-
-		add_settings_field(
-			'fxw_delivery_fee_base',
-			__('Base Fee', 'foodxpress'),
-			array($this, 'render_number_field'),
-			'foodxpress-settings',
-			'fxw_delivery_fee_settings_section',
-			array('id' => 'fxw_delivery_fee_base', 'default' => 5.00, 'step' => 0.01)
-		);
-
-		add_settings_field(
-			'fxw_delivery_fee_per_km',
-			__('Fee Per Kilometer', 'foodxpress'),
-			array($this, 'render_number_field'),
-			'foodxpress-settings',
-			'fxw_delivery_fee_settings_section',
-			array('id' => 'fxw_delivery_fee_per_km', 'default' => 1.50, 'step' => 0.01)
-		);
-
-		// The "extra cart fee" option was removed in 1.3.0: it duplicated the
-		// shipping-method charge whenever a non-FoodXpress rate was selected,
-		// so customers paid the delivery cost twice. The Shipping Method API
-		// is now the single place the charge is added.
+		// Base fee + per-km rows moved to FXW_Pricing (1.4.0) so the fee
+		// structure choice controls their visibility in one place. The
+		// section header itself is registered by FXW_Pricing.
+		// (The "extra cart fee" option was removed in 1.3.0: it duplicated
+		// the shipping-method charge whenever a non-FoodXpress rate was
+		// selected, so customers paid the delivery cost twice. The Shipping
+		// Method API is now the single place the charge is added.)
 		// Uninstall opt-in (1.2.16).
 		add_settings_field('fxw_remove_on_uninstall', __('Remove Data on Uninstall', 'foodxpress'), array($this, 'render_checkbox_field'), 'foodxpress-settings', 'fxw_general_settings_section', array('id' => 'fxw_remove_on_uninstall', 'label' => __('Delete all FoodXpress data (settings, saved profiles, the delivery_boy role) on uninstall. Order meta is never deleted either way.', 'foodxpress')));
 
@@ -270,12 +224,40 @@ class FXW_Settings
 		$default = isset($args['default']) ? $args['default'] : '';
 		$value = isset($options[$id]) ? $options[$id] : $default;
 		$description = isset($args['description']) ? $args['description'] : '';
+		$dep = isset($args['show_when']) ? ' data-fxw-show-when="' . esc_attr($args['show_when']) . '"' : '';
 		?>
 		<input type="text" name="fxw_settings[<?php echo esc_attr($id); ?>]" value="<?php echo esc_attr($value); ?>"
-			class="regular-text">
+			class="regular-text"<?php echo $dep; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static attribute template ?>>
 		<?php if ($description) : ?>
 			<p class="description"><?php echo esc_html($description); ?></p>
 		<?php endif;
+	}
+
+	/**
+	 * Render an API-key field: password-masked with a show/hide toggle,
+	 * optionally bound to a controlling choice via `show_when`.
+	 *
+	 * @since 1.4.0
+	 */
+	public function render_key_field($args)
+	{
+		$options = get_option('fxw_settings');
+		$id = $args['id'];
+		$value = isset($options[$id]) ? $options[$id] : '';
+		$description = isset($args['description']) ? $args['description'] : '';
+		$dep = isset($args['show_when']) ? ' data-fxw-show-when="' . esc_attr($args['show_when']) . '"' : '';
+		?>
+		<div class="fxw-key-wrap"<?php echo $dep; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static attribute template ?>>
+			<input type="password" name="fxw_settings[<?php echo esc_attr($id); ?>]" value="<?php echo esc_attr($value); ?>"
+				class="regular-text fxw-key-input" autocomplete="new-password">
+			<button type="button" class="button fxw-key-toggle"
+				data-show="<?php esc_attr_e('Show', 'foodxpress'); ?>"
+				data-hide="<?php esc_attr_e('Hide', 'foodxpress'); ?>"><?php esc_html_e('Show', 'foodxpress'); ?></button>
+			<?php if ($description) : ?>
+				<p class="description"><?php echo esc_html($description); ?></p>
+			<?php endif; ?>
+		</div>
+		<?php
 	}
 
 	/** Render a textarea field. */
@@ -390,6 +372,29 @@ class FXW_Settings
 		<input type="number" step="<?php echo esc_attr($step); ?>" name="fxw_settings[<?php echo esc_attr($id); ?>]"
 			value="<?php echo esc_attr($value); ?>" class="small-text">
 		<?php
+	}
+
+	/**
+	 * Number field with a plain-language description.
+	 *
+	 * Used for settings a non-technical store owner must understand at a
+	 * glance (e.g. Default Preparation Time).
+	 *
+	 * @since 1.4.0
+	 */
+	public function render_prep_time_field($args)
+	{
+		$options = get_option('fxw_settings');
+		$id = $args['id'];
+		$default = isset($args['default']) ? $args['default'] : '';
+		$value = isset($options[$id]) ? $options[$id] : $default;
+		$description = isset($args['description']) ? $args['description'] : '';
+		?>
+		<input type="number" min="0" step="1" name="fxw_settings[<?php echo esc_attr($id); ?>]"
+			value="<?php echo esc_attr($value); ?>" class="small-text"> <?php esc_html_e('minutes', 'foodxpress'); ?>
+		<?php if ($description) : ?>
+			<p class="description"><?php echo esc_html($description); ?></p>
+		<?php endif;
 	}
 
 	/** Sanitize settings before saving. */

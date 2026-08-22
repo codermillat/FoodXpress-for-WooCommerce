@@ -46,11 +46,65 @@
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Main layout: dashboard, orders, etc. */
+/* Main layout: dashboard, orders, etc.
+   The .woocommerce wrapper is laid out with CSS grid (not float) so the
+   nav-sidebar + content split survives block themes (kiosko, twentytwentyfive,
+   etc.) that set display: flex/grid on .entry-content and would otherwise
+   collapse the float. `!important` is used to beat the WC blocks stylesheet,
+   which also sets `.woocommerce { display: block; }` and on some themes
+   `.entry-content { display: flex }` collapses the child grid into a single
+   flex item.
+   Default mobile-app layout: nav is a horizontal scrollable row at the
+   top, content flows full-width below. On wider viewports (>=900px) the
+   layout switches to a left sidebar + right content split. */
 .woocommerce-account.fxw-my-account-styled .woocommerce {
 	background: var(--fxw-account-bg);
-	padding: 1.25em;
+	padding: 0.75em;
 	border-radius: var(--fxw-account-radius);
+	display: grid !important;
+	grid-template-columns: minmax(0, 1fr) !important;
+	grid-template-areas:
+		"nav"
+		"content" !important;
+	gap: 0.75em;
+	align-items: start;
+	box-sizing: border-box;
+}
+
+/* WC renders the notices wrapper as a sibling of nav + content; let it
+   span the full width so the sidebar + content pairing isn't disturbed
+   when an order notice or coupon notice is present. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-notices-wrapper {
+	grid-column: 1 / -1;
+}
+
+/* On wide viewports (>=900px) the layout flips to a left sidebar + right
+   content split. The sidebar is 200px wide so the content area stays
+   usable on the 600–800px containers that block themes like kiosko
+   produce. */
+@media (min-width: 900px) {
+	.woocommerce-account.fxw-my-account-styled .woocommerce {
+		grid-template-columns: 200px minmax(0, 1fr) !important;
+		grid-template-areas:
+			"nav content" !important;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation {
+		grid-area: nav !important;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content {
+		grid-area: content !important;
+	}
+}
+
+/* On narrow viewports the nav is a fixed bottom tab bar (handled
+   below in the icon-only @media block). The grid is reset so the
+   nav no longer takes up a grid row at the top — content fills the
+   full vertical space. The `position: fixed` set in the icon-only
+   block removes the nav from the grid flow entirely. */
+@media (max-width: 899px) {
+	.woocommerce-account.fxw-my-account-styled .woocommerce {
+		grid-template-areas: "content" !important;
+	}
 }
 
 /* Page title */
@@ -63,11 +117,16 @@
 	margin-bottom: 1em;
 }
 
-/* Navigation - horizontal card-style on mobile, sidebar on desktop */
+/* Navigation — mobile-app pattern.
+   On narrow viewports the nav is a horizontal scrollable row of compact
+   pills (icon + label) at the top of the page. On wide viewports
+   (>=900px) it becomes a vertical sidebar on the left. Nav items are
+   deliberately compact (36–40px tall) so the rail reads as navigation,
+   not as a stack of card buttons. */
 .woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation {
-	float: none;
-	width: 100%;
-	margin-bottom: 1.5em;
+	width: auto;
+	margin-bottom: 0;
+	min-width: 0;
 }
 
 .woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul {
@@ -75,36 +134,161 @@
 	margin: 0;
 	padding: 0;
 	display: flex;
-	flex-wrap: wrap;
+	flex-direction: row;
+	flex-wrap: nowrap;
 	gap: 0.5em;
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: thin;
 	-webkit-overflow-scrolling: touch;
-}
-
-@media (min-width: 768px) {
-	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul {
-		flex-direction: column;
-	}
 }
 
 .woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li {
 	margin: 0;
 	padding: 0;
+	flex: 0 0 auto;
+	width: auto;
 }
 
+/* Compact nav link — icon-only on mobile (native-app tab bar feel),
+   icon + label on wider viewports. Padding is tighter (6px vertical,
+   10px horizontal, 32px left for the icon) so the items fit cleanly
+   without the label wrapping. */
 .woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a {
 	display: flex;
 	align-items: center;
-	padding: 14px 18px;
-	min-height: 48px;
+	justify-content: center;
+	padding: 10px 12px;
+	min-height: 44px;
+	min-width: 52px;
 	background: var(--fxw-account-card);
 	border: 1px solid var(--fxw-account-border);
-	border-radius: var(--fxw-account-radius-sm);
+	border-radius: var(--fxw-dash-radius-sm, 10px);
 	font-weight: 600;
-	font-size: 0.95em;
+	font-size: 0.85em;
 	color: var(--fxw-account-text);
 	text-decoration: none;
 	transition: all 0.2s ease;
 	box-shadow: var(--fxw-account-shadow);
+	line-height: 1.3;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	justify-content: flex-start;
+	padding-left: 32px;
+}
+
+/* On mobile: hide the nav labels, show only the icon. The icon is a
+   CSS `mask-image` so it stays the same size regardless of text. The
+   link becomes a compact square button (~60×52px) so 5 items fit
+   without horizontal scroll on a 300px+ viewport. Native-app feel:
+   square touch target, larger icon, centred.
+
+   The whole nav is also `position: fixed` at the bottom of the
+   viewport so it acts like a native mobile-app bottom tab bar —
+   always visible, doesn't take up scrollable content space, gives
+   the dashboard room to fit in a single viewport on a phone.
+
+   To completely suppress the WC default text node inside the <a>
+   (which the block theme can re-render with its own font-size and
+   ignore our `font-size: 0`), we render the text as a `::after`
+   pseudo-element with `aria-label` content, and use `line-height:
+   0; height: 0` to collapse the actual text node. */
+@media (max-width: 899px) {
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation {
+		position: fixed !important;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 100;
+		background: var(--fxw-account-card);
+		border-top: 1px solid var(--fxw-account-border);
+		box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+		padding: 6px 8px env(safe-area-inset-bottom, 6px);
+		margin: 0;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul {
+		gap: 0.3em;
+		overflow-x: visible;
+		max-width: 540px;
+		margin: 0 auto;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+	/* The link is a fixed-size square. The text content is killed
+	   via line-height: 0 + height: 0 (the text node is direct child
+	   of <a> with no wrapping element, so this collapses it). The
+	   ::before pseudo-element holds the icon, positioned at center. */
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a {
+		padding: 0 !important;
+		min-width: 0 !important;
+		min-height: 0 !important;
+		height: 52px !important;
+		width: 100% !important;
+		justify-content: center !important;
+		align-items: center !important;
+		display: flex !important;
+		/* Hide the WC text node: collapse the line box to 0 height,
+		   and clip anything that escapes. */
+		font-size: 0 !important;
+		line-height: 0 !important;
+		color: transparent !important;
+		text-indent: -9999px !important;
+		overflow: hidden !important;
+		border-radius: 10px;
+		position: relative;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a::before {
+		content: "" !important;
+		display: inline-block !important;
+		position: absolute !important;
+		left: 50% !important;
+		top: 50% !important;
+		transform: translate(-50%, -50%) !important;
+		width: 24px;
+		height: 24px;
+		margin: 0 !important;
+		text-indent: 0 !important;
+		font-size: 16px !important;
+		line-height: 1 !important;
+		/* The icon mask uses currentColor for fill. We set the link
+		   text color to transparent (to hide the WC label), so we
+		   must explicitly set the icon color here so the mask
+		   renders. */
+		color: var(--fxw-account-text) !important;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.is-active a::before {
+		color: #fff !important;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a:hover::before {
+		color: var(--fxw-account-primary) !important;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a * {
+		display: none !important;
+	}
+
+	/* Add bottom padding to the page so the fixed nav doesn't
+	   cover the last line of content (the .woocommerce wrapper
+	   becomes the last visible block above the fixed bar). */
+	.woocommerce-account.fxw-my-account-styled .woocommerce {
+		padding-bottom: 76px; /* nav (60px) + breathing room (16px) */
+	}
+}
+
+/* On wide viewports switch the nav back to a vertical sidebar layout
+   so the page reads like a conventional account dashboard. */
+@media (min-width: 900px) {
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul {
+		flex-direction: column;
+		flex-wrap: nowrap;
+		gap: 0.4em;
+		overflow: visible;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li {
+		width: 100%;
+	}
 }
 
 .woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a:hover {
@@ -121,34 +305,13 @@
 
 /* Content area */
 .woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content {
-	float: none;
-	width: 100%;
-	padding: 1.5em;
+	width: auto;
+	min-width: 0;
+	padding: 1em;
 	background: var(--fxw-account-card);
 	border-radius: var(--fxw-account-radius);
 	border: 1px solid var(--fxw-account-border);
 	box-shadow: var(--fxw-account-shadow);
-}
-
-@media (min-width: 768px) {
-	.woocommerce-account.fxw-my-account-styled .woocommerce::after {
-		content: "";
-		display: table;
-		clear: both;
-	}
-
-	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation {
-		float: left;
-		width: 260px;
-		margin-right: 2em;
-		margin-bottom: 0;
-	}
-
-	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content {
-		float: left;
-		width: calc(100% - 280px);
-		min-width: 0;
-	}
 }
 
 /* Dashboard welcome */
@@ -216,11 +379,44 @@
 	color: #fff !important;
 }
 
-/* Re-order and View buttons on orders list */
-.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell .button {
-	min-height: 40px;
-	padding: 8px 16px;
-	font-size: 0.9em;
+/* Re-order and View buttons on orders list — keep these compact
+   pill-style (NOT the big orange CTA button that the .button base
+   style sets). The orders table renders a .woocommerce-button .button
+   pair that should match the rest of the dashboard's secondary
+   actions: outlined pill, ~36px tall, narrow padding. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell .button,
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders .button,
+.woocommerce-account.fxw-my-account-styled .woocommerce-button.button,
+.woocommerce-account.fxw-my-account-styled a.button.view,
+.woocommerce-account.fxw-my-account-styled a.button.pay,
+.woocommerce-account.fxw-my-account-styled a.button.cancel,
+.woocommerce-account.fxw-my-account-styled a.button.reorder {
+	display: inline-flex !important;
+	align-items: center;
+	justify-content: center;
+	min-height: 32px !important;
+	max-width: 130px !important;
+	width: auto !important;
+	padding: 4px 14px !important;
+	background: transparent !important;
+	color: var(--fxw-account-primary) !important;
+	border: 1.5px solid var(--fxw-account-primary) !important;
+	border-radius: 999px !important;
+	font-size: 0.82em;
+	font-weight: 600;
+	text-decoration: none !important;
+	align-self: flex-start;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell .button:hover,
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders .button:hover,
+.woocommerce-account.fxw-my-account-styled .woocommerce-button.button:hover,
+.woocommerce-account.fxw-my-account-styled a.button.view:hover,
+.woocommerce-account.fxw-my-account-styled a.button.pay:hover,
+.woocommerce-account.fxw-my-account-styled a.button.cancel:hover,
+.woocommerce-account.fxw-my-account-styled a.button.reorder:hover {
+	background: var(--fxw-account-primary) !important;
+	color: #fff !important;
 }
 
 /* Form inputs */
@@ -229,12 +425,14 @@
 .woocommerce-account.fxw-my-account-styled input[type="password"],
 .woocommerce-account.fxw-my-account-styled input[type="tel"],
 .woocommerce-account.fxw-my-account-styled textarea {
-	padding: 14px 18px;
+	padding: 12px 16px;
 	border: 2px solid var(--fxw-account-border);
 	border-radius: var(--fxw-account-radius-sm);
-	font-size: 1em;
-	min-height: 48px;
+	font-size: 0.95em;
+	min-height: 44px;
 	transition: border-color 0.2s;
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .woocommerce-account.fxw-my-account-styled input:focus,
@@ -244,18 +442,181 @@
 	box-shadow: 0 0 0 3px rgba(232, 93, 4, 0.25);
 }
 
-/* Addresses */
+/* Form rows — WC uses .form-row which has its own label/input layout
+   that produces the huge "First name" / "Last name" headings shown in
+   the screenshots. Force a single-column stack (label above input)
+   and make labels small + bold to match the rest of the FoodXpress
+   UI. `float: none` overrides WC's `.form-row--first/--last` 2-column
+   layout so every row stacks full-width. */
+.woocommerce-account.fxw-my-account-styled .form-row,
+.woocommerce-account.fxw-my-account-styled .form-row.form-row-first,
+.woocommerce-account.fxw-my-account-styled .form-row.form-row-last,
+.woocommerce-account.fxw-my-account-styled .form-row.form-row-wide {
+	display: block;
+	float: none !important;
+	width: 100% !important;
+	margin: 0 0 14px;
+	padding: 0;
+}
+
+.woocommerce-account.fxw-my-account-styled .form-row label,
+.woocommerce-account.fxw-my-account-styled .form-row .woocommerce-form-row__label {
+	display: block;
+	margin: 0 0 6px;
+	font-size: 0.82em;
+	font-weight: 600;
+	color: var(--fxw-account-text);
+	letter-spacing: 0.01em;
+	line-height: 1.3;
+}
+
+/* The required-asterisk wrapper inside labels — keep it inline at the
+   natural baseline instead of forcing a new line. */
+.woocommerce-account.fxw-my-account-styled .form-row label .required {
+	color: var(--fxw-account-primary);
+	margin-left: 2px;
+}
+
+/* Hint text under fields (e.g. "This will be how your name will be
+   displayed in the account section") */
+.woocommerce-account.fxw-my-account-styled .form-row em,
+.woocommerce-account.fxw-my-account-styled .form-row .description,
+.woocommerce-account.fxw-my-account-styled .form-row #account_display_name_description {
+	display: block;
+	margin: 6px 0 0;
+	font-size: 0.78em;
+	font-style: normal;
+	color: var(--fxw-account-text-muted);
+	line-height: 1.4;
+}
+
+/* Password fields block (current password / new password / confirm) */
+.woocommerce-account.fxw-my-account-styled fieldset {
+	margin: 0 0 18px;
+	padding: 16px 18px;
+	border: 1px solid var(--fxw-account-border);
+	border-radius: var(--fxw-account-radius);
+	background: var(--fxw-account-bg);
+}
+
+.woocommerce-account.fxw-my-account-styled fieldset legend {
+	padding: 0 8px;
+	font-size: 0.9em;
+	font-weight: 700;
+	color: var(--fxw-account-text);
+}
+
+/* Submit button row — give it breathing room above */
+.woocommerce-account.fxw-my-account-styled .form-row.form-row-wide.button-row,
+.woocommerce-account.fxw-my-account-styled p:has(button[name="save_account_details"]) {
+	margin-top: 8px;
+}
+
+/* Addresses — match the dashboard widget card style so the page
+   reads as one coherent surface instead of WC's bare default blocks. */
 .woocommerce-account.fxw-my-account-styled .u-columns {
 	display: grid;
-	gap: 1.5em;
+	gap: 16px;
 }
 
 .woocommerce-account.fxw-my-account-styled .u-column1,
 .woocommerce-account.fxw-my-account-styled .u-column2 {
-	padding: 1.5em;
+	padding: 18px 20px;
 	background: var(--fxw-account-bg);
-	border-radius: var(--fxw-account-radius-sm);
+	border-radius: var(--fxw-account-radius);
 	border: 1px solid var(--fxw-account-border);
+}
+
+/* Heading inside each address card — WC defaults these to a huge
+   serif/heading-2 which looks broken next to the compact dashboard
+   widgets. Match the dashboard's panel-title size. `!important` is
+   used to beat the kiosko block theme's theme.json h2 typography
+   (which sets `font-size: var(--wp--preset--font-size--xx-large)`). */
+.woocommerce-account.fxw-my-account-styled .woocommerce-Address-title h2,
+.woocommerce-account.fxw-my-account-styled .woocommerce-Address h2,
+.woocommerce-account.fxw-my-account-styled .u-column1 h2,
+.woocommerce-account.fxw-my-account-styled .u-column2 h2 {
+	margin: 0 0 8px !important;
+	font-size: 1.05em !important;
+	font-weight: 700 !important;
+	color: var(--fxw-account-text) !important;
+	letter-spacing: -0.005em;
+	line-height: 1.2 !important;
+	font-family: inherit !important;
+}
+
+/* Header row that contains the heading + edit link — keep them on one
+   row, edit link right-aligned. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-Address-title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid var(--fxw-account-border);
+}
+
+/* "Edit Billing address" / "Add ..." link — restyle to match the
+   dashboard's panel-link affordance. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-Address-title .edit,
+.woocommerce-account.fxw-my-account-styled .u-column1 .edit,
+.woocommerce-account.fxw-my-account-styled .u-column2 .edit {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 10px;
+	font-size: 0.82em;
+	font-weight: 600;
+	color: var(--fxw-account-primary) !important;
+	background: var(--fxw-account-primary-light);
+	border: 1px solid rgba(232, 93, 4, 0.22);
+	border-radius: var(--fxw-account-radius-sm);
+	text-decoration: none !important;
+	transition: background 0.15s ease;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-Address-title .edit:hover,
+.woocommerce-account.fxw-my-account-styled .u-column1 .edit:hover,
+.woocommerce-account.fxw-my-account-styled .u-column2 .edit:hover {
+	background: #FFE7D6;
+	text-decoration: none !important;
+}
+
+/* The address text itself — WC renders it in italic + serif, which
+   clashes with the FoodXpress sans-serif UI. Reset to normal body
+   styling with comfortable line-height. `!important` is used to beat
+   the kiosko block theme's typography defaults (the `<address>`
+   element gets font-style: italic from the user-agent, and the
+   theme's body font-family stack can override our reset). */
+.woocommerce-account.fxw-my-account-styled address,
+.woocommerce-account.fxw-my-account-styled .woocommerce-Address address {
+	margin: 0 !important;
+	padding: 0 !important;
+	font-style: normal !important;
+	font-size: 0.92em !important;
+	line-height: 1.55 !important;
+	color: var(--fxw-account-text) !important;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+	background: transparent !important;
+}
+
+.woocommerce-account.fxw-my-account-styled address p,
+.woocommerce-account.fxw-my-account-styled .woocommerce-Address address p {
+	margin: 0 0 2px !important;
+	font-style: normal !important;
+}
+
+/* The "The following addresses will be used on the checkout page by
+   default." lead paragraph — tone down and tighten. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content > p:first-of-type {
+	margin: 0 0 16px;
+	padding: 12px 16px;
+	background: var(--fxw-account-primary-light);
+	border-left: 3px solid var(--fxw-account-primary);
+	border-radius: var(--fxw-account-radius-sm);
+	font-size: 0.88em;
+	color: var(--fxw-account-text);
 }
 
 /* Order tracking block - integrate with food app style */
@@ -271,17 +632,24 @@
 	background: linear-gradient(135deg, var(--fxw-account-primary) 0%, var(--fxw-account-primary-dark) 100%) !important;
 }
 
-/* Mobile: horizontal scroll nav */
-@media (max-width: 600px) {
+/* Mobile fine-tuning (the desktop/mobile split is handled by the
+   .woocommerce grid + the 400px breakpoint above). */
+@media (max-width: 399px) {
 	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul {
-		overflow-x: auto;
+		flex-direction: row;
 		flex-wrap: nowrap;
-		padding-bottom: 8px;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
 		scrollbar-width: thin;
+		scroll-snap-type: x proximity;
+		padding-bottom: 8px;
+		gap: 0.4em;
 	}
 
 	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li {
+		width: auto;
 		flex: 0 0 auto;
+		scroll-snap-align: start;
 	}
 
 	.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a {
@@ -295,7 +663,23 @@
 	/* Responsive order table */
 	.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell,
 	.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table .order-actions {
-		padding: 10px 12px;
+		padding: 8px 12px;
+		font-size: 0.88em;
+	}
+
+	/* On mobile, the actions cell (View button) should be tight and
+	   right-aligned, not full-width. Force the button to size to its
+	   content and not stretch. */
+	.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell-order-actions {
+		text-align: right;
+		padding-top: 4px;
+		padding-bottom: 16px;
+	}
+	.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell-order-actions .button,
+	.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell-order-actions a.button {
+		display: inline-flex !important;
+		width: auto !important;
+		max-width: 120px !important;
 	}
 }
 
@@ -331,4 +715,217 @@
 	.woocommerce-account.fxw-my-account-styled *::after {
 		transition-duration: 0.01ms !important;
 	}
+}
+
+/* ============================================================
+ * v1.4.0 — Nav icons, theme chevron neutralisation, status pills
+ * ============================================================ */
+
+/* Reset any ">" / "›" / arrow pseudo-element the theme may inject
+   into the active nav item, and the dash/comma the WC default
+   sometimes adds between the link text and the count badge. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a::before,
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a::after {
+	content: none !important;
+	display: none !important;
+}
+
+/* Reintroduce a single icon as ::before — but only via attribute
+   targeting so we don't break themes that already use ::before. The
+   icon is an inline SVG data URL so we don't need a separate icon
+   font or asset request. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a {
+	position: relative;
+	padding-left: 32px;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li a::before {
+	display: inline-block !important;
+	content: "" !important;
+	position: absolute;
+	left: 10px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 14px;
+	height: 14px;
+	background-color: currentColor;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+	opacity: 0.85;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--dashboard a::before {
+	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='7' height='9' rx='1.5'/><rect x='14' y='3' width='7' height='5' rx='1.5'/><rect x='14' y='12' width='7' height='9' rx='1.5'/><rect x='3' y='16' width='7' height='5' rx='1.5'/></svg>");
+	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='7' height='9' rx='1.5'/><rect x='14' y='3' width='7' height='5' rx='1.5'/><rect x='14' y='12' width='7' height='9' rx='1.5'/><rect x='3' y='16' width='7' height='5' rx='1.5'/></svg>");
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--orders a::before {
+	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4h6a2 2 0 0 1 2 2v1h2a1 1 0 0 1 1 1v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a1 1 0 0 1 1-1h2V6a2 2 0 0 1 2-2z'/><path d='M7 16v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2'/></svg>");
+	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4h6a2 2 0 0 1 2 2v1h2a1 1 0 0 1 1 1v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8a1 1 0 0 1 1-1h2V6a2 2 0 0 1 2-2z'/><path d='M7 16v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2'/></svg>");
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--downloads a::before {
+	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='m7 10 5 5 5-5'/><path d='M5 21h14'/></svg>");
+	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='m7 10 5 5 5-5'/><path d='M5 21h14'/></svg>");
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--edit-address a::before {
+	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z'/><circle cx='12' cy='10' r='2.5'/></svg>");
+	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z'/><circle cx='12' cy='10' r='2.5'/></svg>");
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--edit-account a::before {
+	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg>");
+	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg>");
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--customer-logout a::before {
+	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3'/><path d='M10 17l-5-5 5-5'/><path d='M5 12h12'/></svg>");
+	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3'/><path d='M10 17l-5-5 5-5'/><path d='M5 12h12'/></svg>");
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.woocommerce-MyAccount-navigation-link--payment-methods a::before {
+	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='6' width='18' height='13' rx='2'/><path d='M3 10h18'/><path d='M7 15h3'/></svg>");
+	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='6' width='18' height='13' rx='2'/><path d='M3 10h18'/><path d='M7 15h3'/></svg>");
+}
+
+/* Make the icon a touch larger on the active item so the affordance
+   reads as "current". */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-navigation ul li.is-active a::before {
+	opacity: 1;
+	width: 18px;
+	height: 18px;
+}
+
+/* === Order status pills (used by /orders/ table and view-order) ==
+   Mirrors the .fxw-status-pill* tokens in my-account-dashboard.css
+   so status colour reads the same in every account surface. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table .order-status,
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table__cell-order-status .order-status,
+.woocommerce-account.fxw-my-account-styled .shop_table .order-status,
+.woocommerce-account.fxw-my-account-styled .woocommerce-order-overview__status .order-status,
+.woocommerce-account.fxw-my-account-styled .order-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 10px !important;
+	font-size: 0.78em !important;
+	font-weight: 600 !important;
+	letter-spacing: 0.02em;
+	border-radius: 999px !important;
+	background: #F0EEEA !important;
+	color: #5A5A5A !important;
+	line-height: 1.4 !important;
+	white-space: nowrap;
+}
+
+.woocommerce-account.fxw-my-account-styled .order-status::before {
+	content: "";
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentColor;
+	opacity: 0.7;
+}
+
+.woocommerce-account.fxw-my-account-styled .order-status.status-pending,
+.woocommerce-account.fxw-my-account-styled .order-status.status-on-hold {
+	background: #F0EEEA !important;
+	color: #5A5A5A !important;
+}
+
+.woocommerce-account.fxw-my-account-styled .order-status.status-processing,
+.woocommerce-account.fxw-my-account-styled .order-status.status-fxw-assigned,
+.woocommerce-account.fxw-my-account-styled .order-status.status-fxw-picked-up {
+	background: #E7F1FB !important;
+	color: #1E6FB8 !important;
+}
+
+.woocommerce-account.fxw-my-account-styled .order-status.status-fxw-in-kitchen {
+	background: #FFF4ED !important;
+	color: #D44D00 !important;
+}
+
+.woocommerce-account.fxw-my-account-styled .order-status.status-completed {
+	background: #E5F4EB !important;
+	color: #1F8A4C !important;
+}
+
+.woocommerce-account.fxw-my-account-styled .order-status.status-cancelled,
+.woocommerce-account.fxw-my-account-styled .order-status.status-failed,
+.woocommerce-account.fxw-my-account-styled .order-status.status-refunded {
+	background: #FCEDEC !important;
+	color: #C0322B !important;
+}
+
+/* Order number column on the orders list — make it pop in primary. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-orders-table td.woocommerce-orders-table__cell-order-number a,
+.woocommerce-account.fxw-my-account-styled .shop_table td.order-number a {
+	color: var(--fxw-account-primary) !important;
+	font-weight: 700;
+}
+
+/* Empty-orders state. WC prints a "No orders have been made yet."
+   paragraph; dress it up to match the food-delivery aesthetic so it
+   doesn't look like an error. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content .woocommerce-Message,
+.woocommerce-account.fxw-my-account-styled .woocommerce-info {
+	display: block;
+	padding: 28px 24px;
+	background: var(--fxw-account-card);
+	border: 1px dashed var(--fxw-account-border);
+	border-radius: var(--fxw-account-radius);
+	color: var(--fxw-account-text);
+	text-align: center;
+	font-size: 0.98em;
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content .woocommerce-Message .button,
+.woocommerce-account.fxw-my-account-styled .woocommerce-info .button {
+	margin-top: 12px;
+}
+
+/* Page title — give it breathing room and tie it to the orange theme. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content > h2:first-child,
+.woocommerce-account.fxw-my-account-styled .entry-title {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 18px;
+	padding: 0 0 14px;
+	font-size: 1.6em;
+	font-weight: 700;
+	color: var(--fxw-account-text);
+	letter-spacing: -0.01em;
+	border-bottom: 2px solid var(--fxw-account-primary-light);
+}
+
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content > h2:first-child::before,
+.woocommerce-account.fxw-my-account-styled .entry-title::before {
+	content: "";
+	display: inline-block;
+	width: 4px;
+	height: 1em;
+	background: var(--fxw-account-primary);
+	border-radius: 2px;
+}
+
+/* Sub-endpoint page headers (Orders, Addresses, Account details)
+   also benefit from the above, so re-scope just to the immediate
+   child to keep it scoped. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content > header h1,
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content > header h2,
+.woocommerce-account.fxw-my-account-styled .woocommerce-MyAccount-content > header h3 {
+	margin-top: 0;
+}
+
+/* Compact view-order header — give the H2 a coloured lead bar too. */
+.woocommerce-account.fxw-my-account-styled .woocommerce-order-overview {
+	border-radius: var(--fxw-account-radius) !important;
+	overflow: hidden;
 }

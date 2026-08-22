@@ -192,6 +192,7 @@ class FXWTestRunner
             'includes/class-fxw-order-admin.php' => 'Order Admin class',
             'includes/class-fxw-order-statuses.php' => 'Order Statuses class',
             'includes/class-fxw-shortcodes.php' => 'Shortcodes class',
+            'includes/class-fxw-my-account.php' => 'Customer My Account dashboard widgets',
             'includes/class-fxw-shipping-method.php' => 'Shipping Method class',
             'includes/services/class-fxw-mapping-service.php' => 'Mapping Service',
             'includes/services/class-fxw-map-providers.php' => 'Map provider registry',

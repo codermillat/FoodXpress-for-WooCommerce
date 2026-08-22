@@ -67,6 +67,17 @@ class FXW_Admin_Bar
 	/**
 	 * Handle the AJAX request to toggle the delivery status.
 	 *
+	 * The label shows the EFFECTIVE state (manual toggle AND schedule), so
+	 * clicking must act on the effective state too — otherwise a closed
+	 * weekly schedule made "Open" clicks invisible: each click flipped the
+	 * hidden fxw_is_open flag while the schedule kept the store closed and
+	 * the button never changed ("always Closed" bug).
+	 *
+	 * Close: set the manual flag off. Done — nothing else can keep it open.
+	 * Open: set the manual flag on AND apply an automatic force-open until
+	 * end of day (reusing the special-occasion override) so the button's
+	 * promise matches reality even when the weekly schedule says closed.
+	 *
 	 * @since    1.0.0
 	 */
 	public function toggle_delivery_status()
@@ -88,12 +99,31 @@ class FXW_Admin_Bar
 		if (!is_array($options)) {
 			$options = array();
 		}
-		$is_open = isset($options['fxw_is_open']) ? filter_var($options['fxw_is_open'], FILTER_VALIDATE_BOOLEAN) : true;
-		$options['fxw_is_open'] = !$is_open;
+
+		// Effective state BEFORE the click decides the action.
+		$effective_before = class_exists('FXW_Store_Hours') ? FXW_Store_Hours::is_store_open() : true;
+
+		if ($effective_before) {
+			// Closing just closes.
+			$options['fxw_is_open'] = false;
+			unset($options['fxw_hours_override_enabled'], $options['fxw_hours_override_until']);
+		} else {
+			// Opening must beat whatever closed the store. Manual flag on +
+			// force-open until 23:59 today via the special-occasion override
+			// (an existing later override time is kept as-is).
+			$options['fxw_is_open'] = true;
+			$existing_until = isset($options['fxw_hours_override_until']) ? strtotime((string) $options['fxw_hours_override_until']) : false;
+			$eod = strtotime('today 23:59', (int) current_time('timestamp'));
+			if (false === $existing_until || $existing_until < $eod) {
+				$options['fxw_hours_override_enabled'] = 'yes';
+				$options['fxw_hours_override_until'] = date('Y-m-d\TH:i', $eod);
+			}
+		}
+
 		update_option('fxw_settings', $options);
 
 		// Effective (schedule-aware) state after the toggle.
-		$effective = class_exists('FXW_Store_Hours') ? FXW_Store_Hours::is_store_open() : $options['fxw_is_open'];
+		$effective = class_exists('FXW_Store_Hours') ? FXW_Store_Hours::is_store_open() : !empty($options['fxw_is_open']);
 		$label = $effective
 			? __('Deliveries: Open', 'foodxpress')
 			: __('Deliveries: Closed', 'foodxpress')

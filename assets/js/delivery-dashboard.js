@@ -111,6 +111,7 @@ jQuery(function ($) {
             return;
         }
 
+        $(document).trigger('fxw:action-start');
         $button.prop('disabled', true).text('Updating...');
 
         if (typeof fxw_checkout_params === 'undefined' || !fxw_checkout_params.ajax_url) {
@@ -131,7 +132,6 @@ jQuery(function ($) {
             success: function (response) {
                 if (response.success) {
                     var $card = $button.closest('.fxw-order-card');
-                    var $currentTab = $card.closest('.fxw-tab-content');
 
                     var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                     var delay = reducedMotion ? 0 : 150;
@@ -141,41 +141,171 @@ jQuery(function ($) {
                             $card.css({ opacity: 0, transform: 'scale(0.98)' });
                         }
                         setTimeout(function () {
-                            $card.remove();
-                            if (typeof requestIdleCallback === 'function') {
-                                requestIdleCallback(updateTabCounters, { timeout: 100 });
-                            } else {
-                                updateTabCounters();
-                            }
-                            if ($currentTab.find('.fxw-order-card').length === 0) {
-                                var noOrdersMsg = getI18n().no_orders || 'No orders in this section.';
-                                $currentTab.append($('<div class="fxw-no-orders"></div>').append($('<p></p>').text(noOrdersMsg)));
-                            }
+                            // Reload so the order re-appears in its new tab
+                            // (New → In Progress on pickup, In Progress → done
+                            // on delivery) with fresh counters. Removing the
+                            // card alone left it missing until a manual
+                            // refresh.
+                            window.location.reload();
                         }, delay);
                     });
                 } else {
                     alert((response.data && response.data.message) ? response.data.message : 'Failed to update status.');
                     $button.prop('disabled', false).html(originalText);
+                    $(document).trigger('fxw:action-end');
                 }
             },
             error: function (jqXHR, textStatus, errorThrown) {
                 console.error('AJAX Error:', textStatus, errorThrown);
                 alert('Connection error. Please try again.');
                 $button.prop('disabled', false).html(originalText);
+                $(document).trigger('fxw:action-end');
             }
         });
     });
 
-    function getI18n() {
-        return (typeof fxw_checkout_params !== 'undefined' && fxw_checkout_params.i18n) ? fxw_checkout_params.i18n : {};
+    /**
+     * Agent PWA layer: toasts, service worker, heartbeat auto-reload,
+     * and order notifications. Everything is feature-detected so the
+     * dashboard degrades gracefully on old browsers.
+     */
+    function agentI18n(key, fallback) {
+        if (typeof fxwAgentDashboard === 'undefined' || !fxwAgentDashboard.i18n) {
+            return fallback;
+        }
+        return fxwAgentDashboard.i18n[key] || fallback;
     }
 
-    function updateTabCounters() {
-        var i18n = getI18n();
-        var newCount = $('#new-orders .fxw-order-card').length;
-        var inProgressCount = $('#in-progress .fxw-order-card').length;
-
-        $('[data-fxw-tab="new-orders"]').text((i18n.new_tab || 'New') + ' (' + newCount + ')');
-        $('[data-fxw-tab="in-progress"]').text((i18n.in_progress_tab || 'In Progress') + ' (' + inProgressCount + ')');
+    function agentConfig() {
+        return typeof fxwAgentDashboard !== 'undefined' ? fxwAgentDashboard : null;
     }
+
+    var toastTimer = null;
+    function showToast(message) {
+        var $toast = $('#fxw-toast');
+        if (!$toast.length) {
+            return;
+        }
+        $toast.text(message).attr('hidden', false).addClass('fxw-toast--visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+            $toast.removeClass('fxw-toast--visible').attr('hidden', true);
+        }, 3200);
+    }
+
+    // Confirmations that arrive via query flags after a status change.
+    if (window.location.search.indexOf('updated=1') !== -1) {
+        showToast(agentI18n('picked_up_toast', 'Order picked up'));
+    } else if (window.location.search.indexOf('delivered=1') !== -1) {
+        showToast(agentI18n('delivered_toast', 'Order delivered. Great job!'));
+    } else if (window.location.search.indexOf('settled=1') !== -1) {
+        showToast(agentI18n('settled_toast', 'Hand-over request sent — waiting for manager approval'));
+    }
+
+    // Cash hand-over: confirm before the POST (the amount is computed
+    // server-side; the dialog only restates what the button shows).
+    // Match by the hidden action input — the form's action URL is plain
+    // admin-post.php.
+    $(document).on('submit', 'form', function () {
+        if ('fxw_settle_agent_cash' !== String($(this).find('input[name="action"]').val() || '')) {
+            return;
+        }
+        var amount = $(this).find('.fxw-settle-btn').data('fxw-settle-amount') || '';
+        var message = agentI18n('settle_confirm', 'Send this cash hand-over to the manager for approval?');
+        if (amount) {
+            message = agentI18n('settle_confirm_amount', 'Send {amount} hand-over request to the manager for approval?').replace('{amount}', String(amount));
+        }
+        return window.confirm(message);
+    });
+
+    // Online / offline awareness for the installed app.
+    window.addEventListener('offline', function () {
+        showToast(agentI18n('offline', 'You are offline — orders will refresh when the connection returns'));
+    });
+    window.addEventListener('online', function () {
+        showToast(agentI18n('online', 'Back online'));
+    });
+
+    // --- Service worker (offline shell + static asset cache) ---
+    (function registerServiceWorker() {
+        var config = agentConfig();
+        if (!config || !config.swUrl || !('serviceWorker' in navigator)) {
+            return;
+        }
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            return; // SW requires a secure context.
+        }
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register(config.swUrl, { scope: '/' }).catch(function (error) {
+                console.warn('FXW agent service worker registration failed:', error);
+            });
+        });
+    })();
+
+    // --- Heartbeat: auto-reload on new orders / status changes ---
+    var actionInFlight = false;
+    $(document)
+        .on('fxw:action-start', function () { actionInFlight = true; })
+        .on('fxw:action-end', function () { actionInFlight = false; });
+
+    (function heartbeat() {
+        var config = agentConfig();
+        if (!config || !config.ajaxUrl || !config.stateNonce) {
+            return;
+        }
+
+        var STORAGE_KEY = 'fxwAgentStateSig';
+        var $shell = $('.fxw-app-dashboard');
+        var knownSignature = ($shell.data('fxw-state') || '') + '';
+
+        // Survive reloads: once a signature has been rendered, remember it
+        // so a reload does not trigger another reload.
+        try {
+            if (!knownSignature && sessionStorage.getItem(STORAGE_KEY)) {
+                knownSignature = sessionStorage.getItem(STORAGE_KEY);
+            }
+            if (knownSignature) {
+                sessionStorage.setItem(STORAGE_KEY, knownSignature);
+            }
+        } catch (e) { /* private mode */ }
+
+        var nonceExpired = false;
+
+        function poll() {
+            if (document.hidden || actionInFlight || nonceExpired) {
+                return;
+            }
+            $.get(config.ajaxUrl, {
+                action: 'fxw_agent_dashboard_state',
+                nonce: config.stateNonce
+            }).done(function (response) {
+                if (!response || !response.success || !response.data) {
+                    return;
+                }
+                var signature = response.data.signature;
+                if (!signature || signature === knownSignature) {
+                    return;
+                }
+                sessionStorage.setItem(STORAGE_KEY, signature);
+                // All updates surface inside the order list itself: reload
+                // and let the server-rendered cards tell the story.
+                window.location.reload();
+            }).fail(function (xhr) {
+                if (xhr && xhr.status === 403) {
+                    // Nonce expired (long-lived installed app): one silent
+                    // reload picks up a fresh nonce from the server render.
+                    nonceExpired = true;
+                    window.location.reload();
+                }
+            });
+        }
+
+        var interval = parseInt(config.pollIntervalMs, 10) || 30000;
+        setInterval(poll, interval);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                poll(); // refresh instantly when the agent returns to the app
+            }
+        });
+    })();
 });

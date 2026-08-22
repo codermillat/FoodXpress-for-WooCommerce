@@ -851,9 +851,10 @@ gmp-place-autocomplete::part(input):focus {
 
 .fxw-order-tracking__title {
     margin: 0 0 0.5em;
-    font-size: 1.25em;
+    font-size: 1.15em !important;
     font-weight: 600;
     color: #1d2327;
+    line-height: 1.3;
 }
 
 .fxw-order-tracking__status {

@@ -80,8 +80,21 @@ testsprite_*.json
 test-results/
 playwright-report/
 playwright/.cache/
+.playwright-mcp/
 # Browser binaries are per-machine; contributors run `npx playwright install`.
 # package.json + package-lock.json ARE committed so the harness is reproducible.
+# QA screenshots (audit-*.png, my-account-*.png, order-*.png, agent-pwa-*.png, etc.)
+# are session artifacts — keep the repo clean.
+audit-*.png
+audit-*.jpg
+agent-pwa-*.png
+customer-tracking-*.png
+my-account-*.png
+my-account-*.jpg
+myaccount-*.png
+orders-*.png
+order-*.png
+ma-*.png
 
 # Coverage
 coverage/

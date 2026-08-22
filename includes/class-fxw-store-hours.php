@@ -43,9 +43,35 @@ class FXW_Store_Hours
 	{
 		$days = array();
 		for ($i = 0; $i < 7; $i++) {
-			$days[$i] = array('open' => '09:00', 'close' => '22:00', 'closed' => '');
+			$days[$i] = array('open' => '09:00', 'close' => '22:00', 'closed' => '', 'all_day' => '');
 		}
 		return $days;
+	}
+
+	/**
+	 * Stored weekly hours with defaults filled in per day.
+	 *
+	 * Do NOT use wp_parse_args($hours, self::defaults()) here: with
+	 * numeric top-level keys it drops the stored day arrays and returns
+	 * the defaults, which made the settings grid ignore saved flags
+	 * (Sunday's "Closed" showed unchecked) while runtime checks read
+	 * different values.
+	 *
+	 * @return array
+	 * @since 1.4.0
+	 */
+	public static function get_hours()
+	{
+		$options = get_option('fxw_settings');
+		$stored = isset($options['fxw_hours']) && is_array($options['fxw_hours']) ? $options['fxw_hours'] : array();
+
+		$hours = array();
+		foreach (self::defaults() as $i => $defaults) {
+			$hours[$i] = isset($stored[$i]) && is_array($stored[$i])
+				? array_merge($defaults, $stored[$i]) // stored values win, defaults fill gaps
+				: $defaults;
+		}
+		return $hours;
 	}
 
 	/**
@@ -77,6 +103,14 @@ class FXW_Store_Hours
 			'foodxpress-settings',
 			'fxw_hours_section'
 		);
+
+		add_settings_field(
+			'fxw_hours_override',
+			__('Special Occasion Override', 'foodxpress'),
+			array($this, 'render_override_field'),
+			'foodxpress-settings',
+			'fxw_hours_section'
+		);
 	}
 
 	/** Describe the hours section. */
@@ -93,11 +127,49 @@ class FXW_Store_Hours
 		echo '<label><input type="checkbox" name="fxw_settings[fxw_hours_enabled]" value="1"' . checked($enabled, true, false) . ' /> ' . esc_html__('Close ordering automatically outside the hours below', 'foodxpress') . '</label>';
 	}
 
+	/**
+	 * Special-occasion override: force-open until a date/time even when
+	 * the weekly schedule (or today's "Closed all day") says closed.
+	 *
+	 * @since 1.4.0
+	 */
+	public function render_override_field()
+	{
+		$options = get_option('fxw_settings');
+		$until = isset($options['fxw_hours_override_until']) ? (string) $options['fxw_hours_override_until'] : '';
+		?>
+		<div class="fxw-hours-override">
+			<label>
+				<input type="checkbox" name="fxw_settings[fxw_hours_override_enabled]" value="1"
+					<?php checked(!empty($options['fxw_hours_override_enabled']) && '' !== $until); ?> />
+				<?php esc_html_e('Stay open regardless of the weekly schedule', 'foodxpress'); ?>
+			</label>
+			<p class="description" style="margin:4px 0 8px;">
+				<?php esc_html_e('For special occasions — a holiday the weekly schedule marks as closed, or an all-day event. Ordering stays open until the moment below (the manual Open/Closed admin-bar toggle still wins).', 'foodxpress'); ?>
+			</p>
+			<input type="datetime-local" name="fxw_settings[fxw_hours_override_until]"
+				value="<?php echo esc_attr($until); ?>" />
+			<p class="description">
+				<?php
+				if ('' !== $until) {
+					$ts = strtotime($until);
+					printf(
+						esc_html__('Currently forcing OPEN until %s.', 'foodxpress'),
+						esc_html(false === $ts ? $until : date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $ts))
+					);
+					echo ' ';
+				}
+				esc_html_e('Leave empty and untick to rely on the weekly schedule only.', 'foodxpress');
+				?>
+			</p>
+		</div>
+		<?php
+	}
+
 	/** Render the per-day open/close/closed grid. */
 	public function render_hours_field()
 	{
-		$options = get_option('fxw_settings');
-		$hours = isset($options['fxw_hours']) && is_array($options['fxw_hours']) ? wp_parse_args($options['fxw_hours'], self::defaults()) : self::defaults();
+		$hours = self::get_hours();
 
 		$day_names = array(
 			__('Sunday', 'foodxpress'), __('Monday', 'foodxpress'), __('Tuesday', 'foodxpress'),
@@ -105,14 +177,24 @@ class FXW_Store_Hours
 		);
 
 		echo '<table class="fxw-hours-table">';
+		echo '<tr class="fxw-hours-table__head"><th scope="col"></th><td><strong>' . esc_html__('Opens', 'foodxpress') . '</strong> &nbsp;–&nbsp; <strong>' . esc_html__('Closes', 'foodxpress') . '</strong></td></tr>';
 		foreach ($day_names as $i => $name) {
-			$day = isset($hours[$i]) && is_array($hours[$i]) ? wp_parse_args($hours[$i], array('open' => '09:00', 'close' => '22:00', 'closed' => '')) : array('open' => '09:00', 'close' => '22:00', 'closed' => '');
+			$day = $hours[$i]; // get_hours() already merged defaults per day.
 			printf(
-				'<tr><th scope="row">%1$s</th><td><input type="time" name="fxw_settings[fxw_hours][%2$d][open]" value="%3$s" /> – <input type="time" name="fxw_settings[fxw_hours][%2$d][close]" value="%4$s" /> <label style="margin-left:10px;"><input type="checkbox" name="fxw_settings[fxw_hours][%2$d][closed]" value="1"%5$s /> %6$s</label></td></tr>',
+				'<tr>
+					<th scope="row">%1$s</th>
+					<td class="fxw-hours-day">
+						<span class="fxw-hours-times"><input type="time" name="fxw_settings[fxw_hours][%2$d][open]" value="%3$s" /> – <input type="time" name="fxw_settings[fxw_hours][%2$d][close]" value="%4$s" /></span>
+						<label class="fxw-hours-flag"><input type="checkbox" name="fxw_settings[fxw_hours][%2$d][all_day]" value="1"%5$s /> %6$s</label>
+						<label class="fxw-hours-flag"><input type="checkbox" name="fxw_settings[fxw_hours][%2$d][closed]" value="1"%7$s /> %8$s</label>
+					</td>
+				</tr>',
 				esc_html($name),
 				$i,
 				esc_attr($day['open']),
 				esc_attr($day['close']),
+				checked(!empty($day['all_day']), true, false),
+				esc_html__('Open all day', 'foodxpress'),
 				checked(!empty($day['closed']), true, false),
 				esc_html__('Closed all day', 'foodxpress')
 			);
@@ -145,6 +227,11 @@ class FXW_Store_Hours
 				if (isset($existing['fxw_hours'])) {
 					$sanitized['fxw_hours'] = $existing['fxw_hours'];
 				}
+				foreach (array('fxw_hours_override_enabled', 'fxw_hours_override_until') as $key) {
+					if (isset($existing[$key])) {
+						$sanitized[$key] = $existing[$key];
+					}
+				}
 			}
 			return $sanitized;
 		}
@@ -166,13 +253,32 @@ class FXW_Store_Hours
 			if (!preg_match('/^([01]?\d|2[0-3]):[0-5]\d$/', $close)) {
 				$close = '22:00';
 			}
+			// "Open all day" and "Closed all day" are mutually exclusive;
+			// open-all-day wins if both end up ticked.
+			$all_day = isset($raw['all_day']) && !isset($raw['closed']);
 			$hours[$i] = array(
 				'open' => $open,
 				'close' => $close,
-				'closed' => isset($raw['closed']) ? 'yes' : '',
+				'all_day' => $all_day ? 'yes' : '',
+				'closed' => (!$all_day && isset($raw['closed'])) ? 'yes' : '',
 			);
 		}
 		$sanitized['fxw_hours'] = $hours;
+
+		// Special-occasion override: only kept while both the checkbox is
+		// ticked AND a parseable datetime-local value was posted.
+		if (isset($input['fxw_hours_override_enabled']) && !empty($input['fxw_hours_override_until'])) {
+			$until_raw = sanitize_text_field(wp_unslash($input['fxw_hours_override_until']));
+			if (preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', $until_raw) && false !== strtotime($until_raw)) {
+				$sanitized['fxw_hours_override_enabled'] = 'yes';
+				$sanitized['fxw_hours_override_until'] = $until_raw;
+			} else {
+				set_transient('fxw_admin_notice', __('Special-occasion override date was invalid; override not saved.', 'foodxpress'), 30);
+			}
+		} else {
+			$sanitized['fxw_hours_override_enabled'] = 'no';
+			$sanitized['fxw_hours_override_until'] = '';
+		}
 
 		return $sanitized;
 	}
@@ -220,19 +326,46 @@ class FXW_Store_Hours
 	public static function is_open_now()
 	{
 		$options = get_option('fxw_settings');
+
+		// Special-occasion override wins over the weekly schedule (but NOT
+		// over the manual admin-bar Open/Closed toggle — is_store_open()
+		// checks that before ever calling this).
+		if (!empty($options['fxw_hours_override_enabled']) && !empty($options['fxw_hours_override_until'])) {
+			$until = strtotime((string) $options['fxw_hours_override_until']);
+			if (false !== $until && current_time('timestamp') < $until) {
+				return true;
+			}
+		}
+
 		if (empty($options['fxw_hours_enabled'])) {
 			return true;
 		}
 
-		$hours = isset($options['fxw_hours']) && is_array($options['fxw_hours']) ? $options['fxw_hours'] : self::defaults();
+		$hours = self::get_hours();
 		$now = current_time('timestamp');
 		$day = (int) gmdate('w', $now);
 		$minutes = (int) gmdate('G', $now) * 60 + (int) gmdate('i', $now);
 
-		$today = isset($hours[$day]) && is_array($hours[$day]) ? $hours[$day] : array('open' => '09:00', 'close' => '22:00', 'closed' => '');
+		$today = $hours[$day];
+
+		// Open all day: 24h window for today.
+		if (!empty($today['all_day'])) {
+			return true;
+		}
+
 		if (!empty($today['closed'])) {
 			// Maybe we are inside yesterday's overnight span.
 			return self::in_overnight_span($hours, $day - 1, $minutes);
+		}
+
+		// A day marked "Open all day" yesterday still covers the early
+		// hours of today via its closing tail.
+		$yesterday = isset($hours[(($day - 1 % 7) + 7) % 7]) && is_array($hours[(($day - 1 % 7) + 7) % 7]) ? $hours[(($day - 1 % 7) + 7) % 7] : array();
+		if (!empty($yesterday['all_day'])) {
+			// Yesterday was open all day; if it ran past midnight its tail
+			// is today's first hours. Treat "all_day" as open-until-midnight
+			// only, so today's own rules govern from midnight on.
+			return true;
 		}
 
 		$open = self::to_minutes($today['open']);
@@ -297,7 +430,7 @@ class FXW_Store_Hours
 			return '';
 		}
 
-		$hours = isset($options['fxw_hours']) && is_array($options['fxw_hours']) ? $options['fxw_hours'] : self::defaults();
+		$hours = self::get_hours();
 		$now = current_time('timestamp');
 		$day = (int) gmdate('w', $now);
 		$minutes = (int) gmdate('G', $now) * 60 + (int) gmdate('i', $now);

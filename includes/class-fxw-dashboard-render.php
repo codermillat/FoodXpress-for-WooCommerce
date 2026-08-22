@@ -145,6 +145,7 @@ class FXW_Dashboard_Render
 						<th class="manage-column"><?php esc_html_e('Customer', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Status', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Payment', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Kitchen Note', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Actions', 'foodxpress'); ?></th>
 					</tr>
 				</thead>
@@ -164,6 +165,8 @@ class FXW_Dashboard_Render
 										<br><strong><?php echo wp_kses_post($order->get_formatted_order_total()); ?></strong>
 									<?php endif; ?>
 								</td>
+								<?php $this->kitchen_note_cell($order); ?>
+								<?php $this->kitchen_note_cell($order); ?>
 								<td>
 									<div class="fxw-action-buttons">
 										<button type="button" class="button button-small fxw-print-receipt"
@@ -201,7 +204,7 @@ class FXW_Dashboard_Render
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>
-							<td colspan="5"><?php esc_html_e('No unassigned orders.', 'foodxpress'); ?></td>
+							<td colspan="6"><?php esc_html_e('No unassigned orders.', 'foodxpress'); ?></td>
 						</tr>
 					<?php endif; ?>
 				</tbody>
@@ -216,6 +219,7 @@ class FXW_Dashboard_Render
 						<th class="manage-column"><?php esc_html_e('Delivery Boy', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Status', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Payment', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Kitchen Note', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Actions', 'foodxpress'); ?></th>
 					</tr>
 				</thead>
@@ -239,6 +243,7 @@ class FXW_Dashboard_Render
 										<br><strong><?php echo wp_kses_post($order->get_formatted_order_total()); ?></strong>
 									<?php endif; ?>
 								</td>
+								<?php $this->kitchen_note_cell($order); ?>
 								<td>
 									<div class="fxw-action-buttons">
 										<button type="button" class="button button-small fxw-print-receipt"
@@ -272,7 +277,7 @@ class FXW_Dashboard_Render
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>
-							<td colspan="6"><?php esc_html_e('No assigned orders.', 'foodxpress'); ?></td>
+							<td colspan="7"><?php esc_html_e('No assigned orders.', 'foodxpress'); ?></td>
 						</tr>
 					<?php endif; ?>
 				</tbody>
@@ -287,6 +292,7 @@ class FXW_Dashboard_Render
 						<th class="manage-column"><?php esc_html_e('Delivery Boy', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Status', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Payment', 'foodxpress'); ?></th>
+						<th class="manage-column"><?php esc_html_e('Kitchen Note', 'foodxpress'); ?></th>
 						<th class="manage-column"><?php esc_html_e('Actions', 'foodxpress'); ?></th>
 					</tr>
 				</thead>
@@ -310,6 +316,7 @@ class FXW_Dashboard_Render
 										<br><strong><?php echo wp_kses_post($order->get_formatted_order_total()); ?></strong>
 									<?php endif; ?>
 								</td>
+								<?php $this->kitchen_note_cell($order); ?>
 								<td>
 									<div class="fxw-action-buttons">
 										<button type="button" class="button button-small fxw-print-receipt"
@@ -332,13 +339,33 @@ class FXW_Dashboard_Render
 						<?php endforeach; ?>
 					<?php else: ?>
 						<tr>
-							<td colspan="6"><?php esc_html_e('No orders out for delivery.', 'foodxpress'); ?></td>
+							<td colspan="7"><?php esc_html_e('No orders out for delivery.', 'foodxpress'); ?></td>
 						</tr>
 					<?php endif; ?>
 				</tbody>
 			</table>
 		</div>
+
+		<?php if (class_exists('FXW_Dashboard_Agents')) { FXW_Dashboard_Agents::render(); } ?>
 		<?php
+	}
+
+	/**
+	 * Compact kitchen-note cell: the customer's checkout order note.
+	 * The manager/admin reads it here and passes it to the kitchen —
+	 * it is deliberately NOT shown to delivery agents.
+	 *
+	 * @param WC_Order $order Order being rendered.
+	 * @since 1.4.0
+	 */
+	private function kitchen_note_cell($order)
+	{
+		$note = trim((string) $order->get_customer_note());
+		if ('' === $note) {
+			echo '<td><span class="fxw-muted">—</span></td>';
+			return;
+		}
+		echo '<td class="fxw-kitchen-note" title="' . esc_attr($note) . '">' . esc_html(wp_html_excerpt($note, 60, '…')) . '</td>';
 	}
 }
 

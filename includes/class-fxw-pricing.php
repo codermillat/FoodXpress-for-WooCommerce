@@ -58,6 +58,8 @@ class FXW_Pricing
 		);
 
 		add_settings_field('fxw_fee_mode', __('Fee Structure', 'foodxpress'), array($this, 'render_mode_field'), 'foodxpress-settings', 'fxw_pricing_section');
+		add_settings_field('fxw_delivery_fee_base', __('Base Fee (starting amount)', 'foodxpress'), array($this, 'render_perkm_amount_field'), 'foodxpress-settings', 'fxw_pricing_section', array('id' => 'fxw_delivery_fee_base', 'default' => 5.00, 'step' => 0.01, 'hint' => __('The flat starting cost of every delivery, before distance is added.', 'foodxpress')));
+		add_settings_field('fxw_delivery_fee_per_km', __('Charge per kilometre', 'foodxpress'), array($this, 'render_perkm_amount_field'), 'foodxpress-settings', 'fxw_pricing_section', array('id' => 'fxw_delivery_fee_per_km', 'default' => 1.50, 'step' => 0.01, 'hint' => __('Added for each kilometre between your restaurant and the customer.', 'foodxpress')));
 		add_settings_field('fxw_fee_tiers', __('Distance Tiers', 'foodxpress'), array($this, 'render_tiers_field'), 'foodxpress-settings', 'fxw_pricing_section');
 		add_settings_field('fxw_free_delivery_threshold', __('Free Delivery From', 'foodxpress'), array($this, 'render_amount_field'), 'foodxpress-settings', 'fxw_pricing_section', array('id' => 'fxw_free_delivery_threshold', 'hint' => __('Order subtotal at or above this amount gets free delivery. 0 disables.', 'foodxpress')));
 		add_settings_field('fxw_minimum_order', __('Minimum Order', 'foodxpress'), array($this, 'render_amount_field'), 'foodxpress-settings', 'fxw_pricing_section', array('id' => 'fxw_minimum_order', 'hint' => __('Orders below this subtotal cannot be placed for delivery. 0 disables.', 'foodxpress')));
@@ -74,10 +76,31 @@ class FXW_Pricing
 	{
 		$options = get_option('fxw_settings');
 		$mode = isset($options['fxw_fee_mode']) ? $options['fxw_fee_mode'] : 'perkm';
-		echo '<select name="fxw_settings[fxw_fee_mode]">';
-		printf('<option value="perkm"%s>%s</option>', selected($mode, 'perkm', false), esc_html__('Base fee + per km (classic)', 'foodxpress'));
-		printf('<option value="tiers"%s>%s</option>', selected($mode, 'tiers', false), esc_html__('Distance tiers (flat fee per tier)', 'foodxpress'));
+		echo '<select name="fxw_settings[fxw_fee_mode]" data-fxw-fee-mode-select>';
+		printf('<option value="perkm"%s>%s</option>', selected($mode, 'perkm', false), esc_html__('Base fee + charge per km (simple)', 'foodxpress'));
+		printf('<option value="tiers"%s>%s</option>', selected($mode, 'tiers', false), esc_html__('Fixed price per distance zone (tiers)', 'foodxpress'));
 		echo '</select>';
+		echo '<p class="description">' . esc_html__('Pick how you want to charge for distance. Only the fields that belong to your choice are shown.', 'foodxpress') . '</p>';
+	}
+
+	/**
+	 * Amount field shown only in "base + per km" mode.
+	 *
+	 * @since 1.4.0
+	 */
+	public function render_perkm_amount_field($args)
+	{
+		$options = get_option('fxw_settings');
+		$id = $args['id'];
+		$default = isset($args['default']) ? $args['default'] : '';
+		$value = isset($options[$id]) ? $options[$id] : $default;
+		printf(
+			'<input type="number" step="%1$s" min="0" name="fxw_settings[%2$s]" value="%3$s" class="small-text" data-fxw-show-when="feemode:perkm" /><p class="description">%4$s</p>',
+			esc_attr(isset($args['step']) ? (string) $args['step'] : '1'),
+			esc_attr($id),
+			esc_attr($value),
+			esc_html($args['hint'])
+		);
 	}
 
 	/** Render the tier rows. */
@@ -86,6 +109,7 @@ class FXW_Pricing
 		$options = get_option('fxw_settings');
 		$tiers = self::effective_tiers(isset($options['fxw_fee_tiers']) ? $options['fxw_fee_tiers'] : array());
 
+		echo '<div data-fxw-show-when="feemode:tiers">';
 		echo '<table class="fxw-tiers-table"><tr><th scope="col">' . esc_html__('Up to (km)', 'foodxpress') . '</th><th scope="col">' . esc_html__('Delivery fee', 'foodxpress') . '</th></tr>';
 		for ($i = 0; $i < self::TIER_ROWS; $i++) {
 			$to = isset($tiers[$i]['to']) ? $tiers[$i]['to'] : '';
@@ -98,7 +122,8 @@ class FXW_Pricing
 			);
 		}
 		echo '</table>';
-		echo '<p class="description">' . esc_html__('Rows are matched top-down by distance. Enter 0 in the last used row\'s "Up to" column to mean "and above". Empty rows are ignored.', 'foodxpress') . '</p>';
+		echo '<p class="description">' . esc_html__('Example: a row "3 km → ₹40" means any order up to 3 km costs ₹40 delivery. Rows are matched top-down by distance. Enter 0 in the last used row\'s "Up to" column to mean "and above". Empty rows are ignored.', 'foodxpress') . '</p>';
+		echo '</div>';
 	}
 
 	/** Render an amount field (threshold / minimum). */

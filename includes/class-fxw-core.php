@@ -96,9 +96,16 @@ class FXW_Core
 			// (1.2.15). Its remaining hooks (shortcodes, enqueues, reorder) are
 			// no-ops on AJAX requests.
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-shortcodes.php';
+			// FXW_My_Account renders the dashboard widgets (welcome banner,
+			// stats, recent orders, address peek) on the /my-account/ root
+			// via the woocommerce_account_dashboard hook. Loaded alongside
+			// the other frontend classes; its hooks are no-ops on AJAX
+			// requests because the dashboard isn't a sub-endpoint URL.
+			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-my-account.php';
 		}
 
 		// Frontend-only files
+		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-agent-cash.php';
 		require_once FXW_PLUGIN_DIR . 'includes/class-fxw-delivery-boy-view.php';
 
 		// Loaded on every request (not just is_admin()): the meta box "Print
@@ -113,6 +120,7 @@ class FXW_Core
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings-extra.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings-maps.php';
+			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-settings-ui.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-dashboard.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-reporting.php';
 			require_once FXW_PLUGIN_DIR . 'includes/class-fxw-admin-bar.php';
@@ -160,6 +168,24 @@ class FXW_Core
 				'new_tab' => __('New', 'foodxpress'),
 				'in_progress_tab' => __('In Progress', 'foodxpress'),
 				'no_orders' => __('No orders in this section.', 'foodxpress'),
+			),
+		));
+		// Agent PWA config: heartbeat polling and service-worker
+		// registration. Separate nonce from the print-receipt one above
+		// (per-handler nonces, no central wrapper).
+		wp_localize_script('fxw-delivery-dashboard', 'fxwAgentDashboard', array(
+			'ajaxUrl' => admin_url('admin-ajax.php'),
+			'stateNonce' => wp_create_nonce('fxw_agent_state'),
+			'swUrl' => add_query_arg('fxw_agent_sw', '1', home_url('/')),
+			'pollIntervalMs' => 30000,
+			'i18n' => array(
+				'offline' => __('You are offline — orders will refresh when the connection returns', 'foodxpress'),
+				'online' => __('Back online', 'foodxpress'),
+				'picked_up_toast' => __('Order picked up', 'foodxpress'),
+				'delivered_toast' => __('Order delivered. Great job!', 'foodxpress'),
+				'settled_toast' => __('Hand-over request sent — waiting for manager approval', 'foodxpress'),
+				'settle_confirm' => __('Send this cash hand-over to the manager for approval?', 'foodxpress'),
+				'settle_confirm_amount' => __('Send {amount} hand-over request to the manager for approval?', 'foodxpress'),
 			),
 		));
 	}

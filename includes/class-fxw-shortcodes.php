@@ -247,8 +247,12 @@ foreach ($order->get_items() as $item) {
 
 		$delivery_boy_id = (int) $order->get_meta('_fxw_delivery_boy_id', true);
 		$delivery_boy = $delivery_boy_id ? get_user_by('id', $delivery_boy_id) : null;
-		$delivery_phone = $delivery_boy ? get_user_meta($delivery_boy_id, 'billing_phone', true) : '';
-		$delivery_phone = is_string($delivery_phone) ? trim($delivery_phone) : '';
+		// Agent mobile: dedicated profile field first, WC billing phone as
+		// a legacy fallback. This is the number the customer dials.
+		$delivery_phone = $delivery_boy ? trim((string) get_user_meta($delivery_boy_id, 'fxw_agent_phone', true) ) : '';
+		if ('' === $delivery_phone && $delivery_boy) {
+			$delivery_phone = trim((string) get_user_meta($delivery_boy_id, 'billing_phone', true));
+		}
 		?>
 		<section class="fxw-order-tracking fxw-order-tracking--myaccount">
 			<h2 class="fxw-order-tracking__title"><?php esc_html_e('Delivery Status', 'foodxpress'); ?></h2>

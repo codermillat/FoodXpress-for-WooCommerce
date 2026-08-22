@@ -4,7 +4,7 @@ All notable changes to FoodXpress for WooCommerce will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.4.0] — 2026-08-22
 
 ### Added (WP.org submission readiness)
 - **`readme.txt`** in WordPress.org plugin-directory format: standard headers, full description (checkout / store management / rider app / customer features), installation steps, FAQ, changelog, upgrade notice — plus a **Privacy & external services** section disclosing exactly what data leaves the site per map provider (Google Maps: checkout JS + server-side geocode/routing to `maps.googleapis.com`, customer coordinates sent, API key stays local; OpenStreetMap/Leaflet: tiles from `tile.openstreetmap.org`, geocoding via `nominatim.openstreetmap.org`). No telemetry or other outbound calls exist.

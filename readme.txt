@@ -57,10 +57,55 @@ The plugin is self-contained except for the map provider you choose:
 
 1. Install and activate WooCommerce first.
 2. Upload the plugin files to `/wp-content/plugins/foodxpress-for-woocommerce`, or install through the WordPress plugins screen.
-3. Go to WooCommerce → Settings → FoodXpress and pick a map provider. Google Maps needs an API key (Maps + Geocoding + Distance Matrix enabled); the OpenStreetMap option works with no key.
+3. Go to WooCommerce → Settings → FoodXpress and pick a map provider (see Configuration below for getting API keys).
 4. Set your restaurant location on the map, delivery radius, and delivery fee settings.
 5. Enable the FoodXpress Delivery method in your shipping zone(s), or let the plugin add it automatically.
 6. Create users with the "Delivery Boy" role — their mobile app lives at the Delivery Dashboard link on their profile menu.
+
+== Configuration ==
+
+= Map provider: which one? =
+
+* **OpenStreetMap (default, no key)** — free, works instantly. Best for small/low-volume stores; address lookups are throttled by OSM's usage policy.
+* **Google Maps** — best data quality and road distances; needs a Google Cloud account with billing enabled.
+* **MapTiler** — free key, 100k tile loads + geocodes/month; no road routing.
+* **Geoapify** — free key, 3,000 requests/day covering tiles, geocoding and road routing.
+
+You can switch providers at any time — orders already placed are not affected.
+
+= Getting a Google Maps key =
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) and create (or pick) a project.
+2. Enable **Maps JavaScript API**, **Geocoding API**, and **Distance Matrix API**.
+3. Create an API key under APIs & Services → Credentials.
+4. Paste it into WooCommerce → Settings → FoodXpress → Map Provider → "Google Maps JavaScript API Key".
+5. **Recommended:** also paste a *second* key into the "Server-side API Key" field and restrict each one:
+   * Browser key → restrict to your domain under Application restrictions → HTTP referrers (`https://*.yourdomain.com/*`).
+   * Server key → restrict to your server's IP address. The plugin automatically uses this one for behind-the-scenes distance/geocoding calls.
+
+= Getting a MapTiler or Geoapify key =
+
+MapTiler: sign up at [cloud.maptiler.com](https://cloud.maptiler.com/account/keys/) and copy a key.
+Geoapify: sign up at [myprojects.geoapify.com](https://myprojects.geoapify.com/) and create a project key.
+Paste either into the "Provider API Key" field that appears when you select that provider. Restrict the key to your domain in the provider's dashboard if it offers referrer restrictions.
+
+= Delivery fees =
+
+Choose flat rate, per-kilometre, or distance tiers under Delivery Fee Settings — only the fields relevant to your choice are shown. Optional free-delivery threshold and minimum order amount are on the same screen.
+
+= Opening hours =
+
+Set per-weekday times, tick "Open all day" for 24-hour days, or use the special-occasion override to stay open despite a closed schedule. The admin-bar "Deliveries: Open/Closed" toggle is always the master switch.
+
+== Security Recommendations ==
+
+This plugin handles real orders and real money (including cash on delivery). A few settings matter beyond the plugin itself:
+
+* **Use HTTPS.** Checkout coordinates, rider sessions, and admin logins must travel encrypted. Most hosts offer free Let's Encrypt certificates.
+* **Restrict your map keys.** Browser-exposed keys (Google JS, MapTiler, Geoapify tiles) should be locked to your domain in the provider's dashboard; the Google server-side key should be locked to your server IP. Keys without restrictions can be abused if extracted from your page source.
+* **Limit who sees what.** Managers/admins need `edit_shop_orders` or `manage_woocommerce`; riders only need the "Delivery Boy" role — they see only their own assigned orders and never other agents' data.
+* **Cash settlement is trust-based by design.** The plugin records exactly how much cash each rider collected and what was handed over (with who approved what, when), but physical cash counts must still be reconciled by a human.
+* **Back up before big changes.** Standard WordPress database backups cover all FoodXpress data (orders stay in WooCommerce's own tables).
 
 == Frequently Asked Questions ==
 
@@ -79,6 +124,10 @@ Yes. FoodXpress declares full HPOS compatibility and reads/writes order data onl
 = Which payment methods work? =
 
 All of them. FoodXpress handles fulfilment, not payment. For cash on delivery it additionally tracks how much each rider has collected and pending hand-over.
+
+= Are my API keys safe? =
+
+Keys are stored in your own WordPress database, never sent anywhere except the map provider they belong to, and never printed in frontend JavaScript data (only in the map-provider URLs that require them). Restricting keys to your domain/server IP as described under Security Recommendations closes the remaining abuse vector.
 
 = Can customers see the rider's contact details? =
 
